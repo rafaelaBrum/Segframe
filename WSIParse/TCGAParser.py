@@ -18,8 +18,10 @@ class TCGABarcode(object):
   BARCODE = 0
   UUID = 1
       
-  def __init__(self,code,dir_uuid):
+  def __init__(self,code,dir_uuid,verbose=0):
     self.matchP = None
+    self._verbose = verbose
+    
     if isinstance(code,str):
       self.code = code.split(".")
     else:
@@ -29,7 +31,7 @@ class TCGABarcode(object):
     self.matchP = self.recomp.match(self.code[self.BARCODE])
 
     if not self.matchP:
-      raise ValueError("File name does not match pattern.")
+      raise ValueError("File name does not match pattern: {0}.".format(code))
 
     self._dirUUID = dir_uuid
     self._hasAnnotation = False
@@ -126,12 +128,14 @@ class TCGABarcode(object):
 
       return state
 
-def checkFileName(fname):
+  @classmethod
+  def checkFileName(cls,fname):
     """
     Checks a file name for a pattern match.
     """
-    comp = re.compile(TCGABarcode._rex)
-    if comp.match(fname):
+    comp = re.compile(cls._rex)
+    code = fname.split('.')[cls.BARCODE]
+    if comp.match(code):
         return True
     else:
         return False
@@ -143,7 +147,8 @@ if __name__ == "__main__":
 
     #Unit testing
     filename = "TCGA-DU-7007-01A-01-TS1.b6621bdd-067f-4334-a452-935e39adccf4.svs"
-    t = TCGABarcode(filename)
+    uuid = 'a268ed54-3633-4597-82ea-3e4107a77d77'
+    t = TCGABarcode(filename,uuid)
 
     if not t:
         print("Not this time...")
@@ -160,6 +165,6 @@ if __name__ == "__main__":
     print(output.format("UUID",t.returnUUID()))
     print(output.format("Case ID",t.returnCaseID()))
 
-    if checkFileName(filename):
+    if TCGABarcode.checkFileName(filename):
         print("File name check.")
 

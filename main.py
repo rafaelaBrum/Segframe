@@ -4,7 +4,15 @@
 import os
 import argparse
 import sys
-import multiprocessing
+
+from multiprocessing import Process
+
+#Project imports
+from Preprocessing import Preprocess
+from Utils import Exitcodes,CacheManager
+
+#Supported image types
+img_types = ['svs', 'dicom', 'nii','tif','tiff', 'png']
 
 def main_exec(config):
     """
@@ -13,15 +21,21 @@ def main_exec(config):
     """
 
     if config.preprocess:
-        pass
-    
+        proc = Process(target=Preprocess.preprocess_data, args=(config,img_types))
+        proc.start()
+        proc.join()
+
+        if proc.exitcode != Exitcodes.ALL_GOOD:
+            print("System did not end well. Check logs or enhace verbosity level.")
+            sys.exit(proc.exitcode)
+        
     if config.train:
         pass
     
-    if config.postprocess:
+    if config.postproc:
         pass
 
-    if not (config.preprocess and config.train and config.postprocess):
+    if not (config.preprocess or config.train or config.postprocess):
         print("The problem begins with choice: preprocess, train or postprocess")
 
 if __name__ == "__main__":
@@ -37,16 +51,21 @@ if __name__ == "__main__":
     
     pre_args.add_argument('--pre', action='store_true', dest='preprocess', default=False, 
         help='Run preprocess steps')
+    pre_args.add_argument('-tile', action='store_true', dest='tile', default=False, 
+        help='Make tiles from input images')
+    pre_args.add_argument('-tcga', action='store_true', dest='tcga', default=False, 
+        help='Input is a TCGA image base.')    
     pre_args.add_argument('-presrc', dest='presrc', type=str,default='', 
-        help='Input image or directory of images (runs recursively)')
+        help='Input image or directory of images (runs recursively)',required=True)
     pre_args.add_argument('-predst', dest='predst', type=str,default='tiles', 
         help='Output tiles to directory')
     pre_args.add_argument('-img_type', dest='img_type', type=str, 
         help='Input image type: svs, \
         dicom, nii (Default: \'svs\').',
-        choices=['svs', 'dicom', 'nii'], default='svs')
+        choices=img_types, default='svs')
     pre_args.add_argument('-mag', dest='magnification', type=int, 
-        help='For SVS images only, use specific magnification level.', default=40)
+        help='For SVS images only, use specific magnification level.',
+       choices=[2,4,8,10,20,40],default=40)
     pre_args.add_argument('-tdim', dest='tile', nargs=2, type=int, 
         help='Tile width and heigth (Default: 100 100 for SVS 50 um).', 
         default=(100, 100), metavar=('Width', 'Height'))
@@ -58,7 +77,7 @@ if __name__ == "__main__":
     train_args = parser.add_argument_group('Training','Common network training options')
     arg_groups.append(train_args)
 
-    train_args = add_argument('--train', action='store_true', dest='train', default=False, 
+    train_args.add_argument('--train', action='store_true', dest='train', default=False, 
         help='Train model')
     train_args.add_argument('-b', dest='batch_size', type=int, 
         help='Batch size (Default: 8).', default=8)
@@ -110,10 +129,11 @@ if __name__ == "__main__":
     
     #Setup CacheManager - TODO: fill actual files
     files = {
-        'provar_cache.pik':os.path.join('piks','provar_cache.pik'),
-        'bh_cache.pik':os.path.join('piks','bh_cache.pik')}
+        'tcga.pik':os.path.join(config.presrc,'piks','tcga.pik'),
+        'datatree.pik':os.path.join(config.presrc,'datatree.pik'),
+        'tiles.pik':os.path.join(config.predst,'tiles.pik')}
 
-    cache_m = CacheManager(locations=files)    
+    cache_m = CacheManager.CacheManager(locations=files)    
 
     #Run main program
     main_exec(config)

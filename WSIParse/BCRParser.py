@@ -198,16 +198,16 @@ class BCRParser(object):
       
       self.__dict__.update(state)
       
-
-def checkFileName(fname):
-    """
-    Checks a file name for a pattern match.
-    """
-    comp = re.compile(BCRParser._rex)
-    if comp.match(fname):
-        return True
-    else:
-        return False
+  @classmethod
+  def checkFileName(cls,fname):
+      """
+      Checks a file name for a pattern match.
+      """
+      comp = re.compile(cls._rex)
+      if comp.match(fname):
+          return True
+      else:
+          return False
 
 if __name__ == "__main__":
     

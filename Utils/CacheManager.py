@@ -88,20 +88,22 @@ class _CacheManager(object):
         """
         Loads data from file. Pickled files.
         """
-        if fid in self.__locations:
+        if fid in self.__locations and os.path.isfile(self.__locations[fid]):
             fd = open(self.__locations[fid],'rb')
             data = pickle.load(fd)
             fd.close()
             return data
         else:
-            print("[CacheManager-LOAD] No such file ID registered: {0}".format(fid))
+            if self._verbose > 0:
+                print("[CacheManager-LOAD] No such file or ID not registered: {0}".format(fid))
             return None
 
     def multi_load(self,fid):
         """
         Keeps file descriptor opened until end of file is reached. Use with attention.
+        NOT THREAD SAFE!
         """
-        if not fid in self.__locations:
+        if not fid in self.__locations or not os.path.isfile(self.__locations[fid]):
             return None
         
         if self._multi_load_fd is None:
@@ -121,7 +123,7 @@ class _CacheManager(object):
             return data
             
         else:
-            print("File descriptor already opened for another file: {0}; resquested: {1}".format(self._multi_load_fd.name,fid))
+            print("[CacheManager-MULTILOAD] File descriptor already opened for another file: {0}; resquested: {1}".format(self._multi_load_fd.name,fid))
             return None
 
     def read(self,fid):

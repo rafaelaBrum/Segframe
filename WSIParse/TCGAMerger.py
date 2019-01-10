@@ -3,17 +3,17 @@
 
 import os,sys
 import pickle
-import TCGAParser
-import BCRParser
+from .TCGAParser import TCGABarcode
+from .BCRParser import BCRParser
+from .ImageSource import ImageSource
 
-class Merger:
+from Utils import CacheManager
+
+class Merger(ImageSource):
   """
   Builds a relation amongst cases and files
-  """
-  _pickFile = ".data.pik"
-  _wsiFile = ".wsi.pik"
-  
-  def __init__(self,dataset="."):
+  """  
+  def __init__(self,dataset=".",verbose=0):
     """
     Receives the path to a dataset as a parameter.
     The path should point to a directory containing file types compiled in dedicated directories:
@@ -29,15 +29,10 @@ class Merger:
     ------ subkey: "cdata" -> important case data (UNDER CONSIDERATION)
     """
 
-    if isinstance(dataset,str) and os.path.isdir(dataset):
-        self.dataset = dataset
-    else:
-        raise ValueError("Dataset should be a directory path as specified.")
+    super().__init__(dataset,['svs'],verbose)
 
     self._data = None
     self._wsi = None
-    self._pickfd = None
-    self._wsifd = None
     self._gbm = None
     self._lgg = None
     self.run()
@@ -47,65 +42,38 @@ class Merger:
     Starts processing the dataset.
     """
     #Searchs for pickled data
-    ls = os.listdir(self.dataset)
+    ls = os.listdir(self.path)
     
     try:
       ls.index("BCR")
       ls.index("WSI")
     except ValueError:
-      self.dataset = input("Enter dataset directory path: ")
-      ls = os.listdir(self.dataset)
+      if self._verbose > 0:
+          print("[TCGAMerger - WSI and/or BCR directories not found in path: {0}".format(self.path))
+          return None
       
-    try:
-        pickIndex = ls.index(self._pickFile)
-    except ValueError:
-        pickIndex = -1
-
-    try:
-        wsiIndex = ls.index(self._wsiFile)
-    except ValueError:
-        wsiIndex = -1
-                
-    if pickIndex >= 0:
-        self._pickfd = open(os.path.join(self.dataset,ls[pickIndex]),"r+b")
-        try:
-            self._data = pickle.load(self._pickfd)
-            self._pickfd.close()
-            print ("BCR data restored.")
-        except EOFError:
-            self._data = dict()
-            self.generateBCR(ls)
-    else:
-        self._data = dict()
-        self.generateBCR(ls)
+    self._data = dict()
+    self.generateBCR(ls)
         
-    if wsiIndex >= 0:
-        self._wsifd = open(os.path.join(self.dataset,ls[wsiIndex]),"r+b")
-        try:
-            self._wsi = pickle.load(self._wsifd)
-            print("WSI data restored.")
-            self._wsifd.close()            
-        except EOFError:
-            self._wsi = dict()
-            self.generateWSI(ls)
-    else:
-        self._wsi = dict()
-        self.generateWSI(ls)
+    self._wsi = dict()
+    self.generateWSI(ls)
 
 
-    
+  def getImgList(self):
+    return list(self._wsi.values())
+  
   def generateBCR(self,filelist):
     """
     Start processing BCR files.
     """
 
-    bcrlist = os.listdir(os.path.join(self.dataset,"BCR"))
+    bcrlist = os.listdir(os.path.join(self.path,"BCR"))
 
     for f in bcrlist:
-      case_files = os.listdir(os.path.join(self.dataset,"BCR",f))
+      case_files = os.listdir(os.path.join(self.path,"BCR",f))
       for item in case_files:
         if BCRParser.checkFileName(item):
-          bcr_obj = BCRParser.BCRParser(os.path.join(self.dataset,"BCR",f,item))
+          bcr_obj = BCRParser(os.path.join(self.path,"BCR",f,item))
           key = bcr_obj.returnPatientIDFromFile()
           if key in self._data:
             self._data[key]['bcr'].append(bcr_obj)
@@ -120,16 +88,16 @@ class Merger:
     Start processing WSI files.
     """
       
-    wsilist = os.listdir(os.path.join(self.dataset,"WSI"))
+    wsilist = os.listdir(os.path.join(self.path,"WSI"))
 
     for f in wsilist:
-      case_files = os.listdir(os.path.join(self.dataset,"WSI",f))
+      case_files = os.listdir(os.path.join(self.path,"WSI",f))
       has_annotation = False
       for item in case_files:
         if item == "annotations.txt":
           has_annotation = True
-        if TCGAParser.checkFileName(item):
-          tcga = TCGAParser.TCGABarcode(item,f)
+        if TCGABarcode.checkFileName(item):
+          tcga = TCGABarcode(item,f)
           self._wsi[f] = tcga
           self._data[tcga.returnCaseID()]['wsi'].append(tcga)
 
@@ -145,13 +113,13 @@ class Merger:
       print("Image already on record.")
       return
 
-    if isinstance(uuid,str) and os.path.isdir(os.path.join(self.dataset,"WSI",uuid)):
-      file_list = os.listdir(os.path.join(self.dataset,"WSI",uuid))
+    if isinstance(uuid,str) and os.path.isdir(os.path.join(self.path,"WSI",uuid)):
+      file_list = os.listdir(os.path.join(self.path,"WSI",uuid))
 
       has_annotation = False
       for f in file_list:
-        if TCGAParser.checkFileName(f):
-          tcga = TCGAParser.TCGABarcode(f,uuid)
+        if TCGABarcode.checkFileName(f):
+          tcga = TCGABarcode(f,uuid)
           key = tcga.returnCaseID()
           if key in self._data:
             self._data[key]['wsi'].append(tcga)
@@ -174,7 +142,7 @@ class Merger:
     """
     Revisits image base directory and add any new images to the cache.
     """
-    wsilist = os.listdir(os.path.join(self.dataset,"WSI"))
+    wsilist = os.listdir(os.path.join(self.path,"WSI"))
 
     for f in wsilist:
       if not f in self._wsi:
@@ -186,13 +154,13 @@ class Merger:
     Search for a BCR file that corresponds to a new image file.
     """
 
-    bcrlist = os.listdir(os.path.join(self.dataset,"BCR"))
+    bcrlist = os.listdir(os.path.join(self.path,"BCR"))
 
     for f in bcrlist:
-      case_files = os.listdir(os.path.join(self.dataset,"BCR",f))
+      case_files = os.listdir(os.path.join(self.path,"BCR",f))
       for item in case_files:
         if BCRParser.checkFileName(item):
-          bcr_obj = BCRParser.BCRParser(os.path.join(self.dataset,"BCR",f,item))
+          bcr_obj = BCRParser(os.path.join(self.path,"BCR",f,item))
           key = bcr_obj.returnPatientIDFromFile()
           if key == tcga.returnCaseID():
             return [bcr_obj]
@@ -416,10 +384,10 @@ class Merger:
     Dump dictionary before deletion.
     """
     if self._pickfd is None or self._pickfd.closed:
-      self._pickfd = open(os.path.join(self.dataset,self._pickFile),"wb")
+      self._pickfd = open(os.path.join(self.path,self._pickFile),"wb")
 
     if self._wsifd is None or self._wsifd.closed:
-      self._wsifd = open(os.path.join(self.dataset,self._wsiFile),"wb")
+      self._wsifd = open(os.path.join(self.path,self._wsiFile),"wb")
 
     print("Starting to dump WSI data.")
     pickle.dump(self._wsi,self._wsifd,-1)

@@ -3,9 +3,10 @@
 
 import sys
 
-__all__ = ['Preprocessing','Postprocessing','Models','Utils']
+__all__ = ['Preprocessing','Postprocessing','Models','Utils','WSIParser']
 
 from . import Preprocessing
 from . import Postprocessing
 from . import Models
 from . import Utils
+from . import WSIParser
