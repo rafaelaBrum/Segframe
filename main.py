@@ -124,6 +124,10 @@ if __name__ == "__main__":
         help='Return general info about data input, the CNN, etc.')
     parser.add_argument('-logdir', dest='logdir', type=str,default='logs', 
         help='Keep logs of current execution instance in dir.')
+    parser.add_argument('-mp', action='store_true', dest='multiprocess', default=False, 
+        help='Preprocess multiple images at a time (memory consuming).')
+    parser.add_argument('-pb', action='store_true', dest='progressbar', default=False, 
+        help='Print progress bars of processing execution.')
 
     config, unparsed = parser.parse_known_args()
     

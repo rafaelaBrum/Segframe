@@ -1,12 +1,15 @@
 #!/usr/bin/env python3
 #-*- coding: utf-8
 
-import openslide
+import cv2
+import os
+import numpy as np
+
 from .SegImage import SegImage
 
-class SVSImage( SegImage ):
+class GenericImage(SegImage):
     """
-    SVS images are not handled by OpenCV and need openslide to be handled
+    Represents any image handled by OpenCV.
     """
     def __init__(self,path,verbose=0):
         """
@@ -15,7 +18,7 @@ class SVSImage( SegImage ):
         super().__init__(path,verbose)
 
     def readImage(self):
-        pass        
+        pass
 
     def getImgDim(self):
         pass

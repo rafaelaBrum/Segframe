@@ -19,3 +19,7 @@ class ImageSource(ABC):
     @abstractmethod
     def getImgList(self):
         pass
+
+    @abstractmethod
+    def produceImage(self):
+        pass

@@ -4,6 +4,7 @@
 import os
 import imghdr
 from .ImageSource import ImageSource
+from ..Preprocessing import GenericImage
 
 class GenericData(ImageSource):
     """
@@ -41,8 +42,8 @@ class GenericData(ImageSource):
 
     def getImgList(self):
         """
-        Supported images found in directory
+        Returns a list of GenericImage objects (ones tractable by OpenCV).
         """
-        return self._data
+        return [GenericImage(p) for p in self._data]
         
-        
+

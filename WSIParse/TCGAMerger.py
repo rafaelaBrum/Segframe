@@ -60,7 +60,11 @@ class Merger(ImageSource):
 
 
   def getImgList(self):
-    return list(self._wsi.values())
+    """
+    Returns a list of SVSImage objects.
+    """
+    #TODO: change implementation to meet above definition
+    return [SVSImage(p) for p in self._wsi.values()]
   
   def generateBCR(self,filelist):
     """
