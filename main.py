@@ -35,6 +35,9 @@ def main_exec(config):
     if config.postproc:
         pass
 
+    if config.runtest:
+        pass
+
     if not (config.preprocess or config.train or config.postprocess):
         print("The problem begins with choice: preprocess, train or postprocess")
 
@@ -67,9 +70,9 @@ if __name__ == "__main__":
         help='For SVS images only, use specific magnification level.',
        choices=[2,4,8,10,20,40],default=40)
     pre_args.add_argument('-tdim', dest='tile', nargs=2, type=int, 
-        help='Tile width and heigth (Default: 100 100 for SVS 50 um).', 
-        default=(100, 100), metavar=('Width', 'Height'))
-    pre_args.add_argument('-norm', dest='normalize', type=str,default='target_40X.png', 
+        help='Tile width and heigth (Default: 200 200 for SVS 50 um).', 
+        default=(200, 200), metavar=('Width', 'Height'))
+    pre_args.add_argument('-norm', dest='normalize', type=str,default='Preprocessing/target_40X.png', 
         help='Normalize tiles based on reference image (given)')
     
 
@@ -128,6 +131,8 @@ if __name__ == "__main__":
         help='Preprocess multiple images at a time (memory consuming).')
     parser.add_argument('-pb', action='store_true', dest='progressbar', default=False, 
         help='Print progress bars of processing execution.')
+    parser.add_argument('-tt', action='store_true', dest='runtest', default=False, 
+        help='For debuging only. Run unit tests.')
 
     config, unparsed = parser.parse_known_args()
     
