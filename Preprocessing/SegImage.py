@@ -20,6 +20,14 @@ class SegImage(ABC):
         self._verbose = verbose
         self._keep = keepImg
         self._data = None
+        self._dim = None
+
+    def __str__(self):
+        """
+        String representation is file name
+        """
+        return os.path.basename(self.path)
+        
 
     @abstractmethod
     def readImage(self):
@@ -32,13 +40,16 @@ class SegImage(ABC):
     @abstractmethod
     def getImgDim(self):
         """
-        Should return dimensions as a tuple of (widthd,height)
+        Should return dimensions as a tuple of (widthd,height,channels)
         """
         pass
     
     @abstractmethod
-    def setKeepImg(self,keep)
+    def setKeepImg(self,keep):
         pass
     
     def getImgName(self):
         return os.path.basename(self._path).split('.')[0]
+
+    def getPath(self):
+        return self._path

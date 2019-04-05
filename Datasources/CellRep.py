@@ -6,27 +6,28 @@ import os
 
 #Local modules
 from Datasources import GenericDatasource as gd
-from Preprocessing import GenericImage
+from Preprocessing.GenericImage import GenericImage
 
 class CellRep(gd.GenericDS):
     """
     Class that parses label.txt text files and loads all images into memory
     """
 
-    def __init__(self,data_path,verbose=0,pbar=False):
+    def __init__(self,data_path,keepImg=False,verbose=0,pbar=False):
         """
         @param data_path <str>: path to directory where image patches are stored
         @param verbose <int>: verbosity level
         @param pbar <boolean>: display progress bars
         """
-        super().__init__(path,verbose,pbar)
+        super().__init__(data_path,keepImg,verbose,pbar)
+        self.nclasses = 2
 
 
     def _load_metadata_from_dir(self,d):
         """
         Create SegImages from a directory
         """
-        
+        class_set = set()
         labels = open(os.path.join(d,'label.txt'),'r')
 
         t_x,t_y = ([],[])
@@ -35,9 +36,15 @@ class CellRep(gd.GenericDS):
             f_name,f_label = tmp[0],tmp[1]
             origin = tmp[2]
             coord = (tmp[3],tmp[4])
-            seg = GenericImage(os.path.join(d,f_name),origin,coord,verbose=verbose)
+            seg = GenericImage(os.path.join(d,f_name),keepImg=self._keep,origin=origin,coord=coord,verbose=self._verbose)
             t_x.append(seg)
             t_y.append(int(f_label))
+            class_set.add(f_label)
+
+        #Non-lymphocyte patches are labeld 0 or -1 (no lymphocyte or below lymphocyte threshold)
+        # -1 and 0 labels are treated as the same as for now this is a binary classification problem
+        if self._verbose > 0:
+            print("On directory {2}:\n - Number of classes: {0};\n - Classes: {1}".format(len(class_set),class_set,os.path.basename(d)))
 
         return t_x,t_y
 

@@ -10,6 +10,8 @@ from multiprocessing import Process
 #Project imports
 from Preprocessing import Preprocess
 from Utils import Exitcodes,CacheManager
+from Testing import TrainTest
+from Models import GenericTrainer
 
 #Supported image types
 img_types = ['svs', 'dicom', 'nii','tif','tiff', 'png']
@@ -19,6 +21,9 @@ def main_exec(config):
     Main execution line. Dispatch processes according to parameter groups.
     Multiple processes here prevent main process from consuming too much memory.
     """
+
+    if not os.path.isdir(config.bdir):
+        os.mkdir(config.bdir)
 
     if config.preprocess:
         proc = Process(target=Preprocess.preprocess_data, args=(config,img_types))
@@ -30,16 +35,21 @@ def main_exec(config):
             sys.exit(proc.exitcode)
         
     if config.train:
-        pass
+        trainer = GenericTrainer.Trainer(config)
+        trainer.run()
     
     if config.postproc:
         pass
 
     if config.runtest:
-        pass
+        if config.tmode == 0:
+            pass
+        elif config.tmode == 1:
+            #Run train test
+            TrainTest.run()
 
-    if not (config.preprocess or config.train or config.postprocess):
-        print("The problem begins with choice: preprocess, train or postprocess")
+    if not (config.preprocess or config.train or config.postproc or config.runtest):
+        print("The problem begins with choice: preprocess, train, postprocess or test")
 
 if __name__ == "__main__":
 
@@ -59,7 +69,7 @@ if __name__ == "__main__":
     pre_args.add_argument('-tcga', action='store_true', dest='tcga', default=False, 
         help='Input is a TCGA image base.')    
     pre_args.add_argument('-presrc', dest='presrc', type=str,default='', 
-        help='Input image or directory of images (runs recursively)',required=True)
+        help='Input image or directory of images (runs recursively)',required=False)
     pre_args.add_argument('-predst', dest='predst', type=str,default='tiles', 
         help='Output tiles to directory')
     pre_args.add_argument('-img_type', dest='img_type', type=str, 
@@ -82,6 +92,8 @@ if __name__ == "__main__":
 
     train_args.add_argument('--train', action='store_true', dest='train', default=False, 
         help='Train model')
+    train_args.add_argument('-net',dest='network',type=str,help='Network name which should be trained.\n \
+    Check documentation for available models.')
     train_args.add_argument('-b', dest='batch_size', type=int, 
         help='Batch size (Default: 8).', default=8)
     train_args.add_argument('-e', dest='epochs', type=int, 
@@ -121,6 +133,8 @@ if __name__ == "__main__":
         help='Number of CPU cores available (Default: 1).', default=1)
 
     ##Runtime options
+    pre_args.add_argument('-out', dest='bdir', type=str,default='', 
+        help='Base dir to store all temporary data and general output',required=True)
     parser.add_argument('-v', action='count', default=0, dest='verbose',
         help='Amount of verbosity (more \'v\'s means more verbose).')
     parser.add_argument('-i', action='store_true', dest='info', default=False, 
@@ -128,19 +142,31 @@ if __name__ == "__main__":
     parser.add_argument('-logdir', dest='logdir', type=str,default='logs', 
         help='Keep logs of current execution instance in dir.')
     parser.add_argument('-mp', action='store_true', dest='multiprocess', default=False, 
-        help='Preprocess multiple images at a time (memory consuming).')
+        help='Preprocess multiple images at a time (memory consuming - multiple processes).')
     parser.add_argument('-pb', action='store_true', dest='progressbar', default=False, 
         help='Print progress bars of processing execution.')
-    parser.add_argument('-tt', action='store_true', dest='runtest', default=False, 
-        help='For debuging only. Run unit tests.')
 
+    ##System tests
+    test_args = parser.add_argument_group('Tests')
+    arg_groups.append(test_args)
+    
+    parser.add_argument('-t', action='store_true', dest='runtest', default=False, 
+        help='Run tests.')
+    test_args.add_argument('-tmode', dest='tmode', type=int, 
+        help='Run tests for individual subsystems: \n \
+        0 - Run all tests; \n \
+        1 - Run training test;',
+       choices=[0,1],default=0)
+        
     config, unparsed = parser.parse_known_args()
+    
     
     #Setup CacheManager - TODO: fill actual files
     files = {
         'tcga.pik':os.path.join(config.presrc,'piks','tcga.pik'),
         'datatree.pik':os.path.join(config.presrc,'datatree.pik'),
-        'tiles.pik':os.path.join(config.predst,'tiles.pik')}
+        'tiles.pik':os.path.join(config.predst,'tiles.pik'),
+        'cae_model.h5':os.path.join(config.model_path,'cae_model.h5')}
 
     cache_m = CacheManager.CacheManager(locations=files)    
 

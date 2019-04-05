@@ -49,6 +49,17 @@ class BCRParser(object):
   _PATIENT_UUID = 'bcr_patient_uuid'
   _PATIENT_ID = 'bcr_patient_barcode'
 
+  _nsmap = {'lgg':"http://tcga.nci/bcr/xml/clinical/lgg/2.7",
+            'xsi':"http://www.w3.org/2001/XMLSchema-instance",
+            'admin':"http://tcga.nci/bcr/xml/administration/2.7",
+            'clin_shared':"http://tcga.nci/bcr/xml/clinical/shared/2.7",
+            'shared':"http://tcga.nci/bcr/xml/shared/2.7",
+            'lgg_nte':"http://tcga.nci/bcr/xml/clinical/lgg/shared/new_tumor_event/2.7/1.0",
+            'nte':"http://tcga.nci/bcr/xml/clinical/shared/new_tumor_event/2.7",
+            'rx':"http://tcga.nci/bcr/xml/clinical/pharmaceutical/2.7",
+            'rad':"http://tcga.nci/bcr/xml/clinical/radiation/2.7",
+            'follow_up_v1.0':"http://tcga.nci/bcr/xml/clinical/lgg/followup/2.7/1.0"}
+
   def __init__(self,filename):
 
       if not (os.path.isfile(filename) and filename.endswith("xml")):
@@ -141,9 +152,12 @@ class BCRParser(object):
           self._xmlParser = etree.parse(fd)
           self._xmlRoot = self._xmlParser.getroot()
           fd.close()
-          
-      xml_namespace = self._xmlRoot[elementIndex].nsmap[namespace]
-      element = self._xmlRoot[elementIndex].find("{{{0}}}{1}".format(xml_namespace,elementName))
+
+      try:
+        xml_namespace = self._xmlRoot[elementIndex].nsmap[namespace]
+        element = self._xmlRoot[elementIndex].find("{{{0}}}{1}".format(xml_namespace,elementName))
+      except AttributeError:
+        element = self._xmlRoot[elementIndex].find('{{http://tcga.nci/bcr/xml/administration/2.7}}{0}'.format(elementName))
 
       return element
 

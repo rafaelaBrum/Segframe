@@ -74,13 +74,11 @@ def make_multiprocesstiling(data,config):
     datapoints = np.asarray(data)
     for i in range(step):
         # get a subset of datapoints
-        #end_idx = (i+1)*step_size
         end_idx = step_size
         
         if end_idx > len(data):
             end_idx = len(data)
         
-        #cur_datapoints = datapoints[i*step_size : end_idx]
         cur_datapoints = datapoints[:end_idx]
 
         if config.progressbar:

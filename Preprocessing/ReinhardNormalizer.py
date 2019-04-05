@@ -7,7 +7,6 @@ from __future__ import division
 import os
 import cv2 as cv
 import numpy as np
-import stain_utils as ut
 
 
 ### Some functions ###
@@ -106,6 +105,7 @@ class ReinhardNormalizer(object):
             target_40X = cv.imread(target_file)
         else:
             raise ValueError("[ReinhardNormalizer] Target file should be an image file")
+        
         self.n_40X = Normalizer()
         self.n_40X.fit(target_40X)
 

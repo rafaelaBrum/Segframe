@@ -4,7 +4,7 @@
 import os
 import imghdr
 from .ImageSource import ImageSource
-from ..Preprocessing import GenericImage
+from Preprocessing import GenericImage
 
 class GenericData(ImageSource):
     """

@@ -12,13 +12,16 @@ class TCGABarcode(object):
   Expected filenames are like: TCGA-02-0321-01A-01-BS1.c8aacb16-a44d-457f-95ac-40f9cd146a2f.svs
   
   First part, separeted by a dot is the barcode. Second part is a UUID. Third part is file extension.
+
+  @param code <str>: SVS file code
+  @param dir_path <str>: path to directory containing image
   """
 
   _rex = r'(?P<tcga>TCGA)-(?P<tss>[\w]{2})-(?P<part>[\w]{4})-(?P<sample>[\d]{2}[A-Z]{0,1})-(?P<portion>[\d]{2}[A-Z]{0,1})-(?P<plate>[\w]{4}){0,1}(?P<tissue>(TS|BS|MS)\w)'
   BARCODE = 0
   UUID = 1
       
-  def __init__(self,code,dir_uuid,verbose=0):
+  def __init__(self,code,dir_path,verbose=0):
     self.matchP = None
     self._verbose = verbose
     
@@ -33,9 +36,13 @@ class TCGABarcode(object):
     if not self.matchP:
       raise ValueError("File name does not match pattern: {0}.".format(code))
 
-    self._dirUUID = dir_uuid
+    self._dirUUID = os.path.basename(dir_path)
+    self._path = os.path.join(dir_path,code)
     self._hasAnnotation = False
 
+  def getPath(self):
+    return self._path
+  
   def setAnnotation(self):
     """
     Set if slide is accompanied by annotations.
@@ -147,7 +154,7 @@ if __name__ == "__main__":
 
     #Unit testing
     filename = "TCGA-DU-7007-01A-01-TS1.b6621bdd-067f-4334-a452-935e39adccf4.svs"
-    uuid = 'a268ed54-3633-4597-82ea-3e4107a77d77'
+    uuid = '/Volumes/Trabalho/Doutorado/Dataset/WSI/a268ed54-3633-4597-82ea-3e4107a77d77'
     t = TCGABarcode(filename,uuid)
 
     if not t:
