@@ -31,6 +31,9 @@ class GenericDS(ABC):
     def _load_metadata_from_dir(self,d):
         pass
 
+    @abstractmethod
+    def get_dataset_dimensions(self):
+        pass
 
     def load_metadata(self):
         """
@@ -88,6 +91,8 @@ class GenericDS(ABC):
             X_data[i] = futures[i].result()
             if self._pbar:
                 l.update(1)
+            elif self._verbose > 0:
+                print("[load_data] Read image: {0}".format(i))
             
         if self._pbar:
             l.close()

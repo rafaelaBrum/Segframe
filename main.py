@@ -10,7 +10,7 @@ from multiprocessing import Process
 #Project imports
 from Preprocessing import Preprocess
 from Utils import Exitcodes,CacheManager
-from Testing import TrainTest
+from Testing import TrainTest,DatasourcesTest
 from Models import GenericTrainer
 
 #Supported image types
@@ -47,6 +47,8 @@ def main_exec(config):
         elif config.tmode == 1:
             #Run train test
             TrainTest.run()
+        elif config.tmode == 2:
+            DatasourcesTest.run()
 
     if not (config.preprocess or config.train or config.postproc or config.runtest):
         print("The problem begins with choice: preprocess, train, postprocess or test")
@@ -94,6 +96,8 @@ if __name__ == "__main__":
         help='Train model')
     train_args.add_argument('-net',dest='network',type=str,help='Network name which should be trained.\n \
     Check documentation for available models.')
+    train_args.add_argument('-data',dest='data',type=str,help='Dataset to train model.\n \
+    Check documentation for available datasets.',default='')
     train_args.add_argument('-b', dest='batch_size', type=int, 
         help='Batch size (Default: 8).', default=8)
     train_args.add_argument('-e', dest='epochs', type=int, 
@@ -103,6 +107,9 @@ if __name__ == "__main__":
     train_args.add_argument('-wpath', dest='weights_path',
         help='Use weights file contained in path - usefull for sequential training (Default: None).',
         default=None)
+    train_args.add_argument('-split', dest='split', nargs=3, type=float, 
+        help='Split data in as much as 3 sets (Default: 80% train, 10% validation, 10% test).', 
+        default=(0.8, 0.1,0.1), metavar=('Train', 'Validation','Test'))
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')
@@ -155,8 +162,9 @@ if __name__ == "__main__":
     test_args.add_argument('-tmode', dest='tmode', type=int, 
         help='Run tests for individual subsystems: \n \
         0 - Run all tests; \n \
-        1 - Run training test;',
-       choices=[0,1],default=0)
+        1 - Run training test; \n \
+        2 - Run Datasources test;',
+       choices=[0,1,2],default=0)
         
     config, unparsed = parser.parse_known_args()
     

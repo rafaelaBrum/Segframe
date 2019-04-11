@@ -48,6 +48,21 @@ class CellRep(gd.GenericDS):
 
         return t_x,t_y
 
+    def get_dataset_dimensions(self):
+        """
+        Returns the dimensions of the images in the dataset. It's possible to have different image dimensions.
+
+        Return: list of tuples (# samples,width,height,channels)
+        """
+
+        dims = set()
+        samples = len(self.X)
+        
+        for seg in self.X:
+            dims.add((samples,) + seg.getImgDim())
+        
+        return list(dims)
+
     def _release_data(self):
         del self. X
         del self.Y
