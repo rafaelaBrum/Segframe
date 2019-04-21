@@ -1,4 +1,4 @@
 #!/usr/bin/env python3
 #-*- coding: utf-8
 
-from .CacheManager import CacheManager
+__all__ = ['VGG']

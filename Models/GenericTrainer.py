@@ -2,6 +2,7 @@
 #-*- coding: utf-8
 
 import importlib
+from Datasources.CellRep import CellRep
 
 #Keras
 from keras import backend as K
@@ -14,6 +15,9 @@ class Trainer(object):
 
     Specialized training my be needed for some models and those should be 
     implemented elsewhere.
+
+    @param config <argparse config>: configurations as specified by user
+    @param ds <datasource>: some subclass of a GenericDatasource
     """
 
     def __init__(self,config):
@@ -22,6 +26,7 @@ class Trainer(object):
         """
         self._config = config
         self._verbose = config.verbose
+        self._ds = None
 
     def run(self):
         """
@@ -33,7 +38,12 @@ class Trainer(object):
         """
         net_name = config.network
         net_module = importlib.import_module(net_name,net_name)
-        t_x,t_y = net_module.load_data()
+        if self._config.data:
+            self._ds = importlib.import_module('Datasources',self._config.data)()
+        else:
+            self._ds = CellRep()
+
+        t_x,t_y = self._ds.load_data(split=self._config.split,keepImg=False)
 
         model = net_module.build()
                 

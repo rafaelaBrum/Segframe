@@ -1,17 +1,15 @@
 #!/usr/bin/env python3
 #-*- coding: utf-8
 
-import importlib
-from Datasources.CellRep import CellRep
+from Models import GenericModel
 
 #Network
-from keras.models import Sequential
+from keras.models import Sequential,Model
 from keras.layers import Dense, Dropout, Flatten
-from keras.layers import ZeroPadding2D,Convolution2D, MaxPooling2D
-from keras.layers import AveragePooling2D
-from keras.models import Model
+from keras.layers import ZeroPadding2D,Convolution2D, MaxPooling2D,AveragePooling2D
+from keras.layers import Conv2DTranspose
 from keras.layers import Activation, LeakyReLU,BatchNormalization
-from keras.layers import Input,InputLayer
+from keras.layers import Input,Dot
 from keras import backend, optimizers
 from keras.utils import multi_gpu_model
 from keras import regularizers
@@ -20,7 +18,7 @@ import keras
 import numpy as np
 import tensorflow as tf
 
-class RepCae(object):
+class RepCae(GenericModel):
     """
     This is the CAE model as implemented in:
     'Spatial Organization And Molecular Correlation Of Tumor-Infiltrating Lymphocytes Using Deep Learning On Pathology Images'
@@ -31,8 +29,7 @@ class RepCae(object):
         """
         Configuration defined by user
         """
-        self._config = config
-        self._ds = None
+        super().__init__(config)
 
     def build(self):
         """
@@ -55,66 +52,74 @@ class RepCae(object):
             input_shape = (channels, height, width)
         else:
             input_shape = (height, width, channels)
-            
-        #Should we use serial or parallel model?
-        if not parallel_model is None:
-            model = parallel_model
-        else:
-            model = serial_model
+
+
 
         #Builds CAE model
-        model = Sequential()
-
+        input_img = Input(shape=input_shape)
+        
         #Layer 1
-        model.add(Convolution2D(100, (5, 5),strides=1,padding='same',
-                    kernel_initializer='he_normal',dilation_rate=1,input_shape=input_shape))
-        model.add(LeakyRelu(alpha=0.2))
-        model.add(GroupNormalization(groups=4,axis=-1))
+        l = Convolution2D(100, (5, 5),strides=1,padding='same',
+                    kernel_initializer='he_normal',dilation_rate=1,input_shape=input_shape)(input_img)
+        l = LeakyRelu(alpha=0.2)(l)
+        l = GroupNormalization(groups=4,axis=-1)(l)
         #Layer 2
-        model.add(Convolution2D(120, (5, 5),strides=1,padding='same',kernel_initializer='he_normal'))
-        model.add(LeakyRelu(alpha=0.2))
-        model.add(GroupNormalization(groups=4,axis=-1))
-        model.add(AveragePooling2D(pool_size=(2, 2),strides=2))
+        l = Convolution2D(120, (5, 5),strides=1,padding='same',kernel_initializer='he_normal')(l)
+        l = LeakyRelu(alpha=0.2)(l)
+        l = GroupNormalization(groups=4,axis=-1)(l)
+        l = AveragePooling2D(pool_size=(2, 2),strides=2)(l)
         #Layer 3
-        model.add(Convolution2D(240, (3, 3),strides=1,padding='same',kernel_initializer='he_normal'))
-        model.add(LeakyRelu(alpha=0.2))        
-        model.add(GroupNormalization(groups=4,axis=-1))
+        l = Convolution2D(240, (3, 3),strides=1,padding='same',kernel_initializer='he_normal')(l)
+        l = LeakyRelu(alpha=0.2)(l)
+        l = GroupNormalization(groups=4,axis=-1)(l)
         #Layer 4
-        model.add(Convolution2D(320, (3, 3),strides=1,padding='same',kernel_initializer='he_normal'))
-        model.add(LeakyRelu(alpha=0.2))        
-        model.add(GroupNormalization(groups=4,axis=-1))
-        model.add(AveragePooling2D(pool_size=(2, 2),strides=2))
+        l = Convolution2D(320, (3, 3),strides=1,padding='same',kernel_initializer='he_normal')(l)
+        l = LeakyRelu(alpha=0.2)(l)
+        l = GroupNormalization(groups=4,axis=-1)(l)
+        l = AveragePooling2D(pool_size=(2, 2),strides=2)(l)
         #Layer 5
-        model.add(Convolution2D(640, (3, 3),strides=1,padding='same',kernel_initializer='he_normal'))
-        model.add(LeakyRelu(alpha=0.2))        
-        model.add(GroupNormalization(groups=4,axis=-1))
+        l = Convolution2D(640, (3, 3),strides=1,padding='same',kernel_initializer='he_normal')(l)
+        l = LeakyRelu(alpha=0.2)(l)
+        l = GroupNormalization(groups=4,axis=-1)(l)
         #Layer 6
-        model.add(Convolution2D(1024, (3, 3),strides=1,padding='same',kernel_initializer='he_normal'))
-        model.add(LeakyRelu(alpha=0.2))        
-        model.add(GroupNormalization(groups=4,axis=-1))
-        model.add(AveragePooling2D(pool_size=(2, 2),strides=2))
+        l = Convolution2D(1024, (3, 3),strides=1,padding='same',kernel_initializer='he_normal')(l)
+        l = LeakyRelu(alpha=0.2)(l)
+        l = GroupNormalization(groups=4,axis=-1)(l)
+        l = AveragePooling2D(pool_size=(2, 2),strides=2)(l)
 
         #Linearize - END Encoder
-        model.add(Convolution2D(640, (1, 1),strides=1,padding='same',kernel_initializer='he_normal'))
-        model.add(LeakyRelu(alpha=0.2))        
-        model.add(GroupNormalization(groups=4,axis=-1))
-        model.add(Convolution2D(100, (1, 1),strides=1,padding='same',kernel_initializer='he_normal',name='feat_map'))
-        model.add(Activation('relu'))        
-        model.add(GroupNormalization(groups=4,axis=-1))
-        model.add(Convolution2D(100, (1, 1),strides=1,padding='same',kernel_initializer='he_normal'))
-        model.add(LeakyRelu(alpha=0.2))        
-        model.add(GroupNormalization(groups=4,axis=-1))
-        model.add(Convolution2D(1, (1, 1),strides=1,padding='same',kernel_initializer='he_normal'))
-        
-    def load_data(self):
-        """
-        Model knows which data it should load
-        """
-        if self._config.data:
-            self._ds = importlib.import_module('Datasources',self._config.data)()
-        else:
-            self._ds = CellRep()
+        l = Convolution2D(640, (1, 1),strides=1,padding='same',kernel_initializer='he_normal')(l)
+        l = LeakyRelu(alpha=0.2)(l)
+        l = GroupNormalization(groups=4,axis=-1)(l)
+        l = Convolution2D(100, (1, 1),strides=1,padding='same',kernel_initializer='he_normal',name='feat_map')(l)
+        l = Activation('relu')(l)
+        feat_map = GroupNormalization(groups=4,axis=-1)(l)
+        l = Convolution2D(100, (1, 1),strides=1,padding='same',kernel_initializer='he_normal')(feat_map)
+        l = LeakyRelu(alpha=0.2)(l)
+        l = GroupNormalization(groups=4,axis=-1)(l)
+        l = Convolution2D(1, (1, 1),strides=1,padding='same',kernel_initializer='he_normal')(l)
+        ## Original CAE applies a threshold layer before the Dot layer
+        mask_rep = GroupNormalization(groups=1,axis=-1)(l)
+        l = Dot(axes=1,name='Encoder')([feat_map,mask_rep])
 
-        t_x,t_y = self._ds.load_data(self._config.split)
-        return t_x,t_y
-        
+        #Start decoder
+        # Layer -6
+        l = Conv2DTranspose(1024, (3, 3),strides=1,padding='same',kernel_initializer='he_normal')(l)
+        l = LeakyRelu(alpha=0.2)(l)
+        l = GroupNormalization(groups=4,axis=-1)(l)
+        # Layer -5
+        l = Conv2DTranspose(640, (3, 3),strides=1,padding='same',kernel_initializer='he_normal')(l)
+        l = LeakyRelu(alpha=0.2)(l)
+        l = GroupNormalization(groups=4,axis=-1)(l)
+        # Layer -5 
+        l = Conv2DTranspose(640, (4, 4),strides=2,padding='same',output_padding=(1,1),kernel_initializer='he_normal')(l)
+        l = LeakyRelu(alpha=0.2)(l)
+        l = GroupNormalization(groups=4,axis=-1)(l)
+        # Layer -4
+        l = Conv2DTranspose(320, (3, 3),strides=1,padding='same',kernel_initializer='he_normal')(l)
+        l = LeakyRelu(alpha=0.2)(l)
+        l = GroupNormalization(groups=4,axis=-1)(l)
+
+        #TODO: complete model
+        model = Model()
+                

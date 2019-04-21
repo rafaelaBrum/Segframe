@@ -7,6 +7,9 @@ from tqdm import tqdm
 import concurrent.futures
 import numpy as np
 import os
+import random
+
+from Utils import CacheManager
 
 class GenericDS(ABC):
     """
@@ -23,7 +26,7 @@ class GenericDS(ABC):
         self._pbar = pbar
         self.X = None
         self.Y = None
-        
+        self._cache = CacheManager()
         self._keep = bool(keepImg)
 
 
@@ -39,20 +42,33 @@ class GenericDS(ABC):
         """
         Iterates over data patches and creates an instance of a GenericImage subclass for each one
         Returns two tuples of lists (X,Y): X instances of GenericImage subclasses, Y labels;
+
+        OBS: Dataset metadata is shuffled once here. Random sample generation is done during training.
         """
         files = os.listdir(self.path)
 
         X,Y = ([],[])
         
-        for f in files:
-            if os.path.isdir(os.path.join(self.path,f)):
-                t_x,t_y = self._load_metadata_from_dir(os.path.join(self.path,f))
-                if self._verbose > 1:
-                    print(t_x,t_y)
+        if self._cache.checkFileExistence('split_data.pik'):
+            X,Y = self._cache.load('split_data.pik')
+            if self._verbose > 0:
+                print("[GenericDatasource] Loaded split data cache.")
+        else:
+            for f in files:
+                if os.path.isdir(os.path.join(self.path,f)):
+                    t_x,t_y = self._load_metadata_from_dir(os.path.join(self.path,f))
+                    if self._verbose > 1:
+                        print(t_x,t_y)
                     
-                X.extend(t_x)
-                Y.extend(t_y)
-
+                    X.extend(t_x)
+                    Y.extend(t_y)
+            #Shuffle samples and labels maintaining relative order
+            combined = list(zip(X,Y))
+            random.shuffle(combined)
+            X[:],Y[:] = zip(*combined)
+            
+            self._cache.dump((X,Y),'split_data.pik')
+            
         self.X = X
         self.Y = Y
         return X,Y
@@ -64,7 +80,7 @@ class GenericDS(ABC):
 
         @param split <tuple>: items are spliting fractions
 
-        If a spliting ratio is provided, return a list of tuples of at most size 3:
+        If a spliting ratio is provided, return a list of tuples of size at most 3:
         1 - Train;
         2 - Validation;
         3 - Test;

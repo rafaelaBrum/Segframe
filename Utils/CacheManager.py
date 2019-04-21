@@ -52,6 +52,15 @@ class _CacheManager(object):
             return self.__locations[fid]
         else:
             return None
+
+    def checkFileExistence(self,fid):
+        """
+        Returns True if cache file exists. False otherwise
+        """
+        if fid in self.__locations and os.path.isfile(self.__locations[fid]):
+            return True
+        else:
+            return False
         
     def registerFile(self,path,fid,overwrite=False):
         """
@@ -74,6 +83,9 @@ class _CacheManager(object):
         @param single <boolean>: dump whole data at once
         """
         if fid in self.__locations:
+            dump_dir = os.path.dirname(self.__locations[fid])
+            if not os.path.isdir(dump_dir):
+                os.makedirs(dump_dir)
             fd = open(self.__locations[fid],'wb')
             if isinstance(data,list) and not single:
                 for item in data:

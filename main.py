@@ -75,12 +75,11 @@ if __name__ == "__main__":
     pre_args.add_argument('-predst', dest='predst', type=str,default='tiles', 
         help='Output tiles to directory')
     pre_args.add_argument('-img_type', dest='img_type', type=str, 
-        help='Input image type: svs, \
-        dicom, nii (Default: \'svs\').',
+        help='Input image type: svs, dicom, nii (Default: \'svs\').',
         choices=img_types, default='svs')
     pre_args.add_argument('-mag', dest='magnification', type=int, 
         help='For SVS images only, use specific magnification level.',
-       choices=[2,4,8,10,20,40],default=40)
+        choices=[2,4,8,10,20,40],default=40)
     pre_args.add_argument('-tdim', dest='tile', nargs=2, type=int, 
         help='Tile width and heigth (Default: 200 200 for SVS 50 um).', 
         default=(200, 200), metavar=('Width', 'Height'))
@@ -108,7 +107,7 @@ if __name__ == "__main__":
         help='Use weights file contained in path - usefull for sequential training (Default: None).',
         default=None)
     train_args.add_argument('-split', dest='split', nargs=3, type=float, 
-        help='Split data in as much as 3 sets (Default: 80% train, 10% validation, 10% test).', 
+        help='Split data in as much as 3 sets (Default: 80%% train, 10%% validation, 10%% test).',
         default=(0.8, 0.1,0.1), metavar=('Train', 'Validation','Test'))
     
     ##Postprocessing options
@@ -142,6 +141,8 @@ if __name__ == "__main__":
     ##Runtime options
     pre_args.add_argument('-out', dest='bdir', type=str,default='', 
         help='Base dir to store all temporary data and general output',required=True)
+    pre_args.add_argument('-cache', dest='cache', type=str,default='cache', 
+        help='Keeps caches in this directory',required=False)
     parser.add_argument('-v', action='count', default=0, dest='verbose',
         help='Amount of verbosity (more \'v\'s means more verbose).')
     parser.add_argument('-i', action='store_true', dest='info', default=False, 
@@ -149,7 +150,7 @@ if __name__ == "__main__":
     parser.add_argument('-logdir', dest='logdir', type=str,default='logs', 
         help='Keep logs of current execution instance in dir.')
     parser.add_argument('-mp', action='store_true', dest='multiprocess', default=False, 
-        help='Preprocess multiple images at a time (memory consuming - multiple processes).')
+        help='[TODO] Preprocess multiple images at a time (memory consuming - multiple processes).')
     parser.add_argument('-pb', action='store_true', dest='progressbar', default=False, 
         help='Print progress bars of processing execution.')
 
@@ -168,15 +169,15 @@ if __name__ == "__main__":
         
     config, unparsed = parser.parse_known_args()
     
-    
     #Setup CacheManager - TODO: fill actual files
     files = {
         'tcga.pik':os.path.join(config.presrc,'piks','tcga.pik'),
-        'datatree.pik':os.path.join(config.presrc,'datatree.pik'),
+        'split_data.pik':os.path.join(config.cache,'split_data.pik'),
         'tiles.pik':os.path.join(config.predst,'tiles.pik'),
-        'cae_model.h5':os.path.join(config.model_path,'cae_model.h5')}
+        'cae_model.h5':os.path.join(config.model_path,'cae_model.h5'),
+        'vgg.h5':os.path.join(config.model_path,'vgg.h5')}
 
-    cache_m = CacheManager.CacheManager(locations=files)    
+    cache_m = CacheManager(locations=files)    
 
     #Run main program
     main_exec(config)
