@@ -5,6 +5,7 @@ import os
 import argparse
 import sys
 
+import multiprocessing as mp
 from multiprocessing import Process
 
 #Project imports
@@ -35,8 +36,18 @@ def main_exec(config):
             sys.exit(proc.exitcode)
         
     if config.train:
-        trainer = GenericTrainer.Trainer(config)
-        trainer.run()
+        if config.multiprocess:
+            ctx = mp.get_context('spawn')
+            cache_m = CacheManager()
+            proc = ctx.Process(target=GenericTrainer.run_training, args=(config,cache_m.getLocations()))
+            proc.start()
+            proc.join()
+
+            if proc.exitcode != Exitcodes.ALL_GOOD:
+                print("System did not end well. Check logs or enhace verbosity level.")
+                sys.exit(proc.exitcode)
+        else:
+            GenericTrainer.run_training(config,None)
     
     if config.postproc:
         pass
@@ -46,7 +57,7 @@ def main_exec(config):
             pass
         elif config.tmode == 1:
             #Run train test
-            TrainTest.run()
+            TrainTest.run(config)
         elif config.tmode == 2:
             DatasourcesTest.run()
 
@@ -93,19 +104,19 @@ if __name__ == "__main__":
 
     train_args.add_argument('--train', action='store_true', dest='train', default=False, 
         help='Train model')
-    train_args.add_argument('-net',dest='network',type=str,help='Network name which should be trained.\n \
+    train_args.add_argument('-net',dest='network',type=str,default='',help='Network name which should be trained.\n \
     Check documentation for available models.')
-    train_args.add_argument('-data',dest='data',type=str,help='Dataset to train model.\n \
+    train_args.add_argument('-data',dest='data',type=str,help='Dataset name to train model.\n \
     Check documentation for available datasets.',default='')
     train_args.add_argument('-b', dest='batch_size', type=int, 
         help='Batch size (Default: 8).', default=8)
     train_args.add_argument('-e', dest='epochs', type=int, 
         help='Number of epochs (Default: 1).', default=1)
     train_args.add_argument('-tn', action='store_true', dest='new_net',
-        help='Erase older weights file.')
+        help='Do not use older weights file.')
     train_args.add_argument('-wpath', dest='weights_path',
         help='Use weights file contained in path - usefull for sequential training (Default: None).',
-        default=None)
+        default='ModelWeights')
     train_args.add_argument('-split', dest='split', nargs=3, type=float, 
         help='Split data in as much as 3 sets (Default: 80%% train, 10%% validation, 10%% test).',
         default=(0.8, 0.1,0.1), metavar=('Train', 'Validation','Test'))
@@ -153,6 +164,8 @@ if __name__ == "__main__":
         help='[TODO] Preprocess multiple images at a time (memory consuming - multiple processes).')
     parser.add_argument('-pb', action='store_true', dest='progressbar', default=False, 
         help='Print progress bars of processing execution.')
+    parser.add_argument('-k', action='store_true', dest='keepimg', default=False, 
+        help='Keep loaded images in memory.')
 
     ##System tests
     test_args = parser.add_argument_group('Tests')
@@ -175,7 +188,7 @@ if __name__ == "__main__":
         'split_data.pik':os.path.join(config.cache,'split_data.pik'),
         'tiles.pik':os.path.join(config.predst,'tiles.pik'),
         'cae_model.h5':os.path.join(config.model_path,'cae_model.h5'),
-        'vgg.h5':os.path.join(config.model_path,'vgg.h5')}
+        'vgg16_weights_notop.h5':os.path.join(config.model_path,'vgg16_weights_notop.h5')}
 
     cache_m = CacheManager(locations=files)    
 

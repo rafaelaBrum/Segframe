@@ -19,7 +19,7 @@ class _CacheManager(object):
 
     def __init__(self,*args,**kwds):
         """
-        Controls all __FrameExam creation.
+        Controls all __locations creation.
 
         @param locations <dict>: Use the locations specified in the given dictionary
         @param verbose <int>: verbosity level
@@ -43,6 +43,9 @@ class _CacheManager(object):
 
         self._multi_load_fd = None
 
+    def getLocations(self):
+        return self.__locations.copy()
+    
     def fileLocation(self,fid):
         """
         Returns the registered file location (if it is registered)

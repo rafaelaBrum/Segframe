@@ -20,7 +20,7 @@ class GenericDS(ABC):
         if isinstance(data_path,str) and os.path.isdir(data_path):
             self.path = data_path
         else:
-            raise ValueError("[GenericImage] Path does not correspond to a file.")
+            raise ValueError("[GenericImage] Path does not correspond to a file ({0}).".format(data_path))
 
         self._verbose = verbose
         self._pbar = pbar
@@ -59,9 +59,9 @@ class GenericDS(ABC):
                     t_x,t_y = self._load_metadata_from_dir(os.path.join(self.path,f))
                     if self._verbose > 1:
                         print(t_x,t_y)
-                    
                     X.extend(t_x)
                     Y.extend(t_y)
+                    
             #Shuffle samples and labels maintaining relative order
             combined = list(zip(X,Y))
             random.shuffle(combined)
@@ -88,6 +88,11 @@ class GenericDS(ABC):
         @param keepImg <bool>: Keep image data in memory
         """
 
+        if self.X is None or self.Y is None:
+            if self._verbose > 0:
+                print("[GenericDatasource] Metadata not ready, loading...")
+            self.load_metadata()
+            
         samples = len(self.X)
         y = np.array(self.Y, dtype=np.int32)
         X_data = np.zeros(shape=(tuple([samples] + list(self.X[0].getImgDim()))), dtype=np.int32)

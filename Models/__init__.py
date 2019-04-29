@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 #-*- coding: utf-8
 
-__all__ = ['GenericModel','GenericTrainer','RepCae','VGG','UNet']
+__all__ = ['GenericTrainer','RepCae','VGG16','UNet']
 
-from .GenericModel import GenericModel
+from .GenericTrainer import Trainer
+from .VGG import VGG16

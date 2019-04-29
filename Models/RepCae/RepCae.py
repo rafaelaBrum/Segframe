@@ -25,35 +25,24 @@ class RepCae(GenericModel):
     Published in Cell Reports
     """
 
-    def __init__(self,config):
+    def __init__(self,config,ds):
         """
         Configuration defined by user
         """
-        super().__init__(config)
+        super().__init__(config,ds,'RepCae')
 
     def build(self):
         """
         Builds and returns a trainable model. 
         """
         
-        #Image shape by OpenCV reports height x width
-        if not self._ds is None:
-            dims = self._ds.get_dataset_dimensions()
-        else:
-            dims = [(None,100,100,3)]
-
-        #Dataset may have images of different sizes. What to do? Currently, chooses the biggest....
-        _,width,height,channels = 0,0,0,0
-        for d in dims:
-            if width < d[1] or length < d[2]:
-                _,width,height,channels = d
-            
+        width,height,channels = self._check_input_shape()
+        
         if backend.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
         else:
             input_shape = (height, width, channels)
-
-
+            
 
         #Builds CAE model
         input_img = Input(shape=input_shape)
