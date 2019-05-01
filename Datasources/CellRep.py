@@ -34,8 +34,12 @@ class CellRep(gd.GenericDS):
         for f in labels:
             tmp = f.strip().split()
             f_name,f_label = tmp[0],tmp[1]
-            origin = tmp[2]
-            coord = (tmp[3],tmp[4])
+            origin=''
+            coord=None
+            if len(tmp) > 2:
+                origin = tmp[2]
+            if len(tmp) > 4:
+                coord = (tmp[3],tmp[4])
             seg = GenericImage(os.path.join(d,f_name),keepImg=self._keep,origin=origin,coord=coord,verbose=self._verbose)
             t_x.append(seg)
             t_y.append(int(f_label))
