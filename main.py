@@ -169,6 +169,8 @@ if __name__ == "__main__":
         help='Print progress bars of processing execution.')
     parser.add_argument('-k', action='store_true', dest='keepimg', default=False, 
         help='Keep loaded images in memory.')
+    parser.add_argument('-d', action='store_true', dest='delay_load', default=True, 
+        help='Delay the loading of images to the latest moment possible (memory efficiency).')
 
     ##System tests
     test_args = parser.add_argument_group('Tests')

@@ -74,7 +74,7 @@ def multiprocess_run(exec_function,exec_params,data,cpu_count,pbar,step_size,out
 
     if pbar:
         l.close()
-        print("\n\n\n")
+        print("\n"*cpu_count)
 
     #Free all possible memory
     pool.close()

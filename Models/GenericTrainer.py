@@ -72,18 +72,19 @@ class Trainer(object):
         net_model = getattr(net_module,net_name)(self._config,self._ds)
 
         self._ds.load_metadata()
-        train,val,_ = self._ds.load_data(split=self._config.split,keepImg=False)
-                
-        return self.train_model(net_model,train,val)
+
+        if self._config.delay_load:
+            return self.train_model_iterator(net_model)
+        else:
+            return self.train_model(net_model)
     
-    def train_model(self,model,train,val):
+    def train_model(self,model):
         """
         Execute training according to configurations. 
 
         @param model <Keras trainable model>: model to be trained
-        @param train <numpy array>: training data
-        @param val <numpy array>: validation data
         """
+        train,val,_ = self._ds.load_data(split=self._config.split,keepImg=False)
         x_train,y_train = train
         x_val,y_val = val
 
@@ -181,9 +182,119 @@ class Trainer(object):
 
         return Exitcodes.ALL_GOOD
     
-    def train_model_iterator(self,model,train_it,val_it):
+    def train_model_iterator(self,model):
         """
         Use the fit_iterator to control the sample production
         TODO: for future use
         """
-        pass
+        from Models import SingleGenerator
+        
+        # session setup
+        sess = K.get_session()
+        ses_config = tf.ConfigProto(
+            device_count={"CPU":self._config.cpu_count,"GPU":self._config.gpu_count},
+            intra_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count, 
+            inter_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count,
+            log_device_placement=True if self._verbose > 1 else False
+            )
+        sess.config = ses_config
+        K.set_session(sess)
+
+        #Setup of generators, augmentation, preprocessing
+        train_data,val_data,_ = self._ds.split_metadata(self._config.split)
+        if self._config.info:
+            print("Train set: {0} items".format(len(train_data[0])))
+            print("Validate set: {0} items".format(len(val_data[1])))
+            
+        train_prep = ImageDataGenerator(
+            samplewise_center=False,
+            samplewise_std_normalization=False,
+            rotation_range=10,
+            width_shift_range=.1,
+            height_shift_range=.1,
+            zoom_range=.08,
+            shear_range=.03,
+            horizontal_flip=True,
+            vertical_flip=True)
+
+        train_generator = SingleGenerator(dps=train_data,
+                                            classes=self._ds.nclasses,
+                                            batch_size=self._config.batch_size,
+                                            image_generator=train_prep,
+                                            shuffle=True,
+                                            verbose=self._config.verbose)
+
+        val_prep = ImageDataGenerator(
+            samplewise_center=False,
+            samplewise_std_normalization=False)
+        val_generator = SingleGenerator(dps=val_data,
+                                            classes=self._ds.nclasses,
+                                            batch_size=1,
+                                            image_generator=val_prep,
+                                            shuffle=True,
+                                            verbose=self._config.verbose)
+
+
+        # try to resume the training
+        weights = list(filter(lambda f: f.endswith(".hdf5") and f.startswith(model.name),os.listdir(self._config.model_path)))
+        weights.sort()
+        old_e_offset = 0
+        if len(weights) > 0 and not self._config.new_net:
+            # get last file (which is the furthest on the training) if exists
+            ep_weights_file = weights[len(weights)-1]
+            old_e_offset = int(ep_weights_file.split(
+                ".hdf5")[0].split('-')[1].split("e")[0].split("t")[1])
+
+            # load weights
+            try:
+                model.load_weights(os.path.join(self._config.model_path,
+                    ep_weights_file))
+                if self._verbose > 0:
+                    print("Sucessfully loaded previous weights: {0}".format(ep_weights_file))
+            except ValueError:
+                model.load_weights(os.path.join(self._config.model_path,"{0}_cnn_weights.h5".format(model.name)))
+                if self._verbose > 0:
+                    print("Sucessfully loaded previous weights from consolidated file.")
+            except ValueError:
+                print("[ALERT] Could not load previous weights, training from scratch")
+                
+        wf_header = "{0}-t{1}".format(model.name,old_e_offset+1)
+
+        ### Define special behaviour CALLBACKS
+        callbacks = []
+        ## ModelCheckpoint
+        callbacks.append(ModelCheckpoint(os.path.join(
+            self._config.weights_path, wf_header + "e{epoch:02d}.hdf5"), 
+            save_weights_only=True, period=1,save_best_only=True,monitor='val_acc'))
+        ## ReduceLROnPlateau
+        callbacks.append(ReduceLROnPlateau(monitor='val_loss',factor=0.4,\
+                                           patience=3,verbose=self._verbose,\
+                                           mode='auto',min_lr=1e-6))        
+
+        single,parallel = model.build()
+        if not parallel is None:
+            training_model = parallel
+        else:
+            training_model = single
+
+        if self._config.info:
+            print(training_model.summary())
+
+        training_model.fit_generator(
+            generator = train_generator,
+            steps_per_epoch = len(train_data[0]) // self._config.batch_size,
+            epochs = self._config.epochs,
+            validation_data = val_generator,
+            validation_steps = len(val_data[0]) //self._config.batch_size,
+            verbose = 1 if self._verbose > 0 else 0,
+            use_multiprocessing = False,
+            workers=3,
+            max_queue_size=45,
+            callbacks=callbacks,
+            )
+
+        #Weights should be saved only through the plain model
+        single.save_weights(model.get_weights_cache())
+        single.save(cache_m.fileLocation(model.get_model_cache()))
+
+        return Exitcodes.ALL_GOOD        

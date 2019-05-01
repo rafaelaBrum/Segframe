@@ -52,7 +52,32 @@ class GenericDS(ABC):
             Y.extend(t_y)
 
         return (X,Y)
-        
+
+    def _split_data(self,split,X,Y):
+        """
+        Split data in at most N sets. Returns a tuple (set1,set2,set3,setN) with the divided
+        data
+        """
+        if sum(split) == 1.0:
+            it_count = 0
+            split_data = []
+            start_idx = 0
+            samples = len(X)
+            for frac in split:
+                it_count = int(frac * samples)
+                split_data.append((X[start_idx:start_idx+it_count],Y[start_idx:start_idx+it_count]))
+                start_idx += it_count
+            return split_data
+                
+        else:
+            raise ValueError("[GenericDatasource] Spliting values have to equal 1.0")
+
+    def split_metadata(self,split):
+        """
+        Returns all metadata split into N sets, defined by the spliting tuples
+        """
+        return self._split_data(split,self.X,self.Y)
+    
     def load_metadata(self):
         """
         Iterates over data patches and creates an instance of a GenericImage subclass for each one
@@ -141,16 +166,5 @@ class GenericDS(ABC):
 
         if split is None:
             return (X_data,y)
-        elif sum(split) == 1.0:
-            it_count = 0
-            split_data = []
-            start_idx = 0
-            for frac in split:
-                it_count = int(frac * samples)
-                split_data.append((X_data[start_idx:start_idx+it_count],y[start_idx:start_idx+it_count]))
-                start_idx += it_count
-            return split_data
-                
         else:
-            raise ValueError("[GenericDatasource] Spliting values have to equal 1.0")
-
+            return self._split_data(split,X_data,y)

@@ -20,7 +20,7 @@ def run(config):
 
     #Check image dimensions
     print("Dataset has size: {0}".format(cr.get_dataset_dimensions()))
-
+    
      #Show a random patch
     img = d_x[random.randint(0,len(d_x) - 1)]
     plt.imshow(img)
@@ -32,3 +32,9 @@ def run(config):
     print("Train set: {0} items, {1} labels".format(len(dataset[0][0]),len(dataset[0][1])))
     print("Validate set: {0} items, {1} labels".format(len(dataset[1][0]),len(dataset[1][1])))
     print("Test set: {0} items, {1} labels".format(len(dataset[2][0]),len(dataset[2][1])))    
+
+    #Split metadata
+    dataset = cr.split_metadata(split=(0.8,0.1,0.1))
+    print("Metadata Train set: {0} items, {1} labels".format(len(dataset[0][0]),len(dataset[0][1])))
+    print("Metadata Validate set: {0} items, {1} labels".format(len(dataset[1][0]),len(dataset[1][1])))
+    print("Metadata Test set: {0} items, {1} labels".format(len(dataset[2][0]),len(dataset[2][1])))    

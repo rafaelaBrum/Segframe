@@ -10,6 +10,7 @@ def run(config):
     #Run all tests below
     config.data = 'CellRep'
     config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
+    config.network = 'VGG16'
     
     #Start training
     trainer = Trainer(config)
