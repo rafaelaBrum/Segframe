@@ -64,9 +64,11 @@ class Trainer(object):
                 
         if self._config.data:
             dsm = importlib.import_module('Datasources',self._config.data)
-            self._ds = getattr(dsm,self._config.data)(self._config.predst,self._config.keepimg,self._config.verbose,self._config.progressbar)
+            self._ds = getattr(dsm,self._config.data)(self._config.predst,self._config.keepimg,
+                                                          self._config.verbose,self._config.progressbar,self._config.cpu_count)
         else:
-            self._ds = CellRep(self._config.predst,self._config.keepimg,self._config.verbose,self._config.progressbar)
+            self._ds = CellRep(self._config.predst,self._config.keepimg,
+                                   self._config.verbose,self._config.progressbar,self._config.cpu_count)
 
         net_module = importlib.import_module('Models',net_name)
         net_model = getattr(net_module,net_name)(self._config,self._ds)

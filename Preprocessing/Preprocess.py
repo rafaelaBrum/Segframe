@@ -49,7 +49,8 @@ def preprocess_data(config,img_types):
     #at a time, but work divided in threads
     if config.tile:
         if config.multiprocess:
-            make_multiprocesstiling(datatree,config)
+            multiprocess_run(make_singleprocesstiling,(config,),datatree,step_size=20)
+            #make_multiprocesstiling(datatree,config)
         else:
             make_singleprocesstiling(datatree,config)
 
@@ -58,67 +59,9 @@ def make_multiprocesstiling(data,config):
     """
     Generates tiles from input images using multiple processes (process pool).
     """
-    # Perform extractions of frames in parallel and in steps
     step_size = 20
-    step = int(len(data) / step_size) + (len(data)%step_size>0)
-    datapoints_db = []
-    semaphores = []
-
-    process_counter = 0
-    pool = multiprocessing.Pool(processes=config.cpu_count,maxtasksperchild=50,
-                                    initializer=tqdm.set_lock, initargs=(multiprocessing.RLock(),))
-
-    if config.progressbar:
-        l = tqdm(desc="Making tiles...",total=step,position=0)
-   
-    datapoints = np.asarray(data)
-    for i in range(step):
-        # get a subset of datapoints
-        end_idx = step_size
-        
-        if end_idx > len(data):
-            end_idx = len(data)
-        
-        cur_datapoints = datapoints[:end_idx]
-
-        if config.progressbar:
-            semaphores.append(pool.apply_async(thread_pool_tiler,
-                                args=(cur_datapoints,dp_path,config.tdim,config.progressbar,config.verbose,process_counter+1),
-                                callback=lambda x: l.update(1)))
-        else:
-            semaphores.append(pool.apply_async(thread_pool_tiler,
-                                args=(cur_datapoints,dp_path,config.tdim,config.progressbar,config.verbose,process_counter+1)))
-        
-        datapoints = np.delete(datapoints,np.s_[:end_idx],axis=0)
-
-        if config.progressbar:
-            if process_counter == processes:
-                semaphores[process_counter].wait()
-                process_counter = 0
-            else:
-                process_counter += 1
-
-        #datapoints = np.delete(datapoints,np.s_[i*step_size : end_idx],axis=0)        
-        #del cur_datapoints    
-            
-    for i in range(len(semaphores)):
-        datapoints_db.extend(semaphores[i].get())
-        if not config.progressbar and config.verbose > 0:
-            print("[{2}] Done transformations (step {0}/{1})".format(i,len(semaphores)-1,label))
-
-    if config.progressbar:
-        l.close()
-        print("\n\n\n")
-
-    #Free all possible memory
-    pool.close()
-    pool.join()
-
-    del datapoints
-    
-    # remove None points
-    return list(filter(lambda x: not x is None, datapoints_db))
-
+    exec_function = thread_pool_tiler
+    dp_path,config.tdim,config.progressbar,config.verbose,process_counter+1
 
 def make_singleprocesstiling(data,config):
     """

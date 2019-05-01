@@ -9,25 +9,27 @@ import numpy as np
 import os
 import random
 
-from Utils import CacheManager
+from Utils import CacheManager,multiprocess_run
 
 class GenericDS(ABC):
     """
     Generic class for data feeders used to provide training points to Neural Nets.
     """
-    def __init__(self,data_path,keepImg=False,verbose=0,pbar=False):
+    def __init__(self,data_path,keepImg=False,config=None):
         self.path = None
         if isinstance(data_path,str) and os.path.isdir(data_path):
             self.path = data_path
         else:
             raise ValueError("[GenericImage] Path does not correspond to a file ({0}).".format(data_path))
 
-        self._verbose = verbose
-        self._pbar = pbar
         self.X = None
         self.Y = None
         self._cache = CacheManager()
         self._keep = bool(keepImg)
+        self._cpu_count = config.cpu_count if not config is None else 1
+        self._verbose = config.verbose if not config is None else 0
+        self._pbar = config.progressbar if not config is None else False
+        self._config = config
 
 
     @abstractmethod
@@ -38,6 +40,19 @@ class GenericDS(ABC):
     def get_dataset_dimensions(self):
         pass
 
+    def _run_multiprocess(self,data):
+        """
+        This method should not be called directly. It's intended
+        only for multiprocess metadata loading.
+        """
+        X,Y = ([],[])
+        for item in data:
+            t_x,t_y = self._load_metadata_from_dir(item)
+            X.extend(t_x)
+            Y.extend(t_y)
+
+        return (X,Y)
+        
     def load_metadata(self):
         """
         Iterates over data patches and creates an instance of a GenericImage subclass for each one
@@ -54,13 +69,19 @@ class GenericDS(ABC):
             if self._verbose > 0:
                 print("[GenericDatasource] Loaded split data cache.")
         else:
+            dlist = []
             for f in files:
-                if os.path.isdir(os.path.join(self.path,f)):
-                    t_x,t_y = self._load_metadata_from_dir(os.path.join(self.path,f))
-                    if self._verbose > 1:
-                        print(t_x,t_y)
-                    X.extend(t_x)
-                    Y.extend(t_y)
+                item = os.path.join(self.path,f)
+                if os.path.isdir(item):
+                    dlist.append(item)
+
+            mdata = multiprocess_run(self._run_multiprocess,tuple(),dlist,
+                                         self._cpu_count,self._pbar,
+                                         step_size=1,output_dim=2,txt_label='directories',verbose=self._verbose)
+
+            
+            X.extend(mdata[0]) #samples
+            Y.extend(mdata[1]) #labels
                     
             #Shuffle samples and labels maintaining relative order
             combined = list(zip(X,Y))

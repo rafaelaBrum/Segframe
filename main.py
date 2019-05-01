@@ -27,13 +27,16 @@ def main_exec(config):
         os.mkdir(config.bdir)
 
     if config.preprocess:
-        proc = Process(target=Preprocess.preprocess_data, args=(config,img_types))
-        proc.start()
-        proc.join()
+        if config.multiprocess:
+            proc = Process(target=Preprocess.preprocess_data, args=(config,img_types))
+            proc.start()
+            proc.join()
 
-        if proc.exitcode != Exitcodes.ALL_GOOD:
-            print("System did not end well. Check logs or enhace verbosity level.")
-            sys.exit(proc.exitcode)
+            if proc.exitcode != Exitcodes.ALL_GOOD:
+                print("System did not end well. Check logs or enhace verbosity level.")
+                sys.exit(proc.exitcode)
+        else:
+            Preprocess.preprocess_data(config,img_types)
         
     if config.train:
         if config.multiprocess:
@@ -59,7 +62,7 @@ def main_exec(config):
             #Run train test
             TrainTest.run(config)
         elif config.tmode == 2:
-            DatasourcesTest.run()
+            DatasourcesTest.run(config)
 
     if not (config.preprocess or config.train or config.postproc or config.runtest):
         print("The problem begins with choice: preprocess, train, postprocess or test")

@@ -13,13 +13,13 @@ class CellRep(gd.GenericDS):
     Class that parses label.txt text files and loads all images into memory
     """
 
-    def __init__(self,data_path,keepImg=False,verbose=0,pbar=False):
+    def __init__(self,data_path,keepImg=False,config=None):
         """
         @param data_path <str>: path to directory where image patches are stored
-        @param verbose <int>: verbosity level
-        @param pbar <boolean>: display progress bars
+        @param config <argparse>: configuration object
+        @param keepImg <boolean>: keep image data in memory
         """
-        super().__init__(data_path,keepImg,verbose,pbar)
+        super().__init__(data_path,keepImg,config)
         self.nclasses = 2
 
 
@@ -43,7 +43,7 @@ class CellRep(gd.GenericDS):
 
         #Non-lymphocyte patches are labeld 0 or -1 (no lymphocyte or below lymphocyte threshold)
         # -1 and 0 labels are treated as the same as for now this is a binary classification problem
-        if self._verbose > 0:
+        if self._verbose > 1:
             print("On directory {2}:\n - Number of classes: {0};\n - Classes: {1}".format(len(class_set),class_set,os.path.basename(d)))
 
         return t_x,t_y

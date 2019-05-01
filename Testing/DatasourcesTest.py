@@ -7,13 +7,13 @@ from matplotlib import pyplot as plt
 
 from Datasources.CellRep import CellRep
 
-def run():
+def run(config):
     #Run all tests below
     config.data = 'CellRep'
     config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
 
-    cr = CellRep(config.predst,verbose=1,pbar=True)
-    X,Y = cr.load_metadata(keepImg=True)
+    cr = CellRep(config.predst,keepImg=True,config=config)
+    X,Y = cr.load_metadata()
     d_x,d_y = cr.load_data()
     print("X size: {0} \n ************* \n".format(len(X)))
     print("Y size: {0} \n ************* \n".format(len(Y)))
