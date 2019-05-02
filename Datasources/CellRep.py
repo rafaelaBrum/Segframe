@@ -3,6 +3,7 @@
 
 import numpy as np
 import os
+import random
 
 #Local modules
 from Datasources import GenericDatasource as gd
@@ -55,14 +56,19 @@ class CellRep(gd.GenericDS):
     def get_dataset_dimensions(self):
         """
         Returns the dimensions of the images in the dataset. It's possible to have different image dimensions.
+        WARNING: big datasets will take forever to run. For now, checks a sample of the images.
+        TODO: Reimplement this function to be fully parallel (threads in case).
 
         Return: list of tuples (# samples,width,height,channels)
         """
 
         dims = set()
         samples = len(self.X)
-        
-        for seg in self.X:
+
+        if self._config.info:
+            print("Checking a sample of dataset images for different dimensions...")
+
+        for seg in random.sample(self.X,int(0.05*samples)):
             dims.add((samples,) + seg.getImgDim())
         
         return list(dims)
