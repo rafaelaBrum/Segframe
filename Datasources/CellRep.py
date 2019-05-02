@@ -6,7 +6,7 @@ import os
 
 #Local modules
 from Datasources import GenericDatasource as gd
-from Preprocessing.GenericImage import GenericImage
+from Preprocessing import PImage
 
 class CellRep(gd.GenericDS):
     """
@@ -40,7 +40,7 @@ class CellRep(gd.GenericDS):
                 origin = tmp[2]
             if len(tmp) > 4:
                 coord = (tmp[3],tmp[4])
-            seg = GenericImage(os.path.join(d,f_name),keepImg=self._keep,origin=origin,coord=coord,verbose=self._verbose)
+            seg = PImage(os.path.join(d,f_name),keepImg=self._keep,origin=origin,coord=coord,verbose=self._verbose)
             t_x.append(seg)
             t_y.append(int(f_label))
             class_set.add(f_label)

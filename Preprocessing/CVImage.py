@@ -7,7 +7,7 @@ import numpy as np
 
 from .SegImage import SegImage
 
-class GenericImage(SegImage):
+class CVImage(SegImage):
     """
     Represents any image handled by OpenCV.
     """

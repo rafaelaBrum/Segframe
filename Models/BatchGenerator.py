@@ -53,9 +53,6 @@ class GenericIterator(Iterator):
             raise TypeError("Image generator should be an " \
             "ImageDataGenerator instance")
 
-        if verbose > 1:
-            print("Acquired a total of {0:d} examples from {1:d} video directories.".format(len(self.data),self.image_data_generator.returnSetSize()))
-        
         #TODO: Data length needs adjustment, total data is not necessarily the number of exam directories
         super(GenericIterator, self).__init__(n=len(self.data), batch_size=batch_size, shuffle=shuffle, seed=seed)
 

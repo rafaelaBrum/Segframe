@@ -4,7 +4,7 @@
 import os
 import imghdr
 from .ImageSource import ImageSource
-from Preprocessing import GenericImage
+from Preprocessing import PImage
 
 class GenericData(ImageSource):
     """
@@ -44,6 +44,6 @@ class GenericData(ImageSource):
         """
         Returns a list of GenericImage objects (ones tractable by OpenCV).
         """
-        return [GenericImage(p) for p in self._data]
+        return [PImage(p) for p in self._data]
         
 

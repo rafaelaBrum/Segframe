@@ -288,7 +288,7 @@ class Trainer(object):
             validation_steps = len(val_data[0]) //self._config.batch_size,
             verbose = 1 if self._verbose > 0 else 0,
             use_multiprocessing = False,
-            workers=3,
+            workers=5,
             max_queue_size=45,
             callbacks=callbacks,
             )
