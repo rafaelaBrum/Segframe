@@ -191,6 +191,7 @@ if __name__ == "__main__":
     files = {
         'tcga.pik':os.path.join(config.presrc,'piks','tcga.pik'),
         'split_data.pik':os.path.join(config.cache,'split_data.pik'),
+        'data_dims.pik':os.path.join(config.cache,'data_dims.pik'),
         'tiles.pik':os.path.join(config.predst,'tiles.pik'),
         'cae_model.h5':os.path.join(config.model_path,'cae_model.h5'),
         'vgg16_weights_notop.h5':os.path.join(config.model_path,'vgg16_weights_notop.h5')}

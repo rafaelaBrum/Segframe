@@ -8,6 +8,7 @@ import random
 #Local modules
 from Datasources import GenericDatasource as gd
 from Preprocessing import PImage
+from Utils import CacheManager
 
 class CellRep(gd.GenericDS):
     """
@@ -65,12 +66,17 @@ class CellRep(gd.GenericDS):
         dims = set()
         samples = len(self.X)
 
-        if self._config.info:
-            print("Checking a sample of dataset images for different dimensions...")
+        cache_m = CacheManager()
+        if cache_m.checkFileExistence('data_dims.pik'):
+            dims = cache_m.load('data_dims.pik')
+        else:
+            if self._config.info:
+                print("Checking a sample of dataset images for different dimensions...")
 
-        for seg in random.sample(self.X,int(0.05*samples)):
-            dims.add((samples,) + seg.getImgDim())
-        
+            for seg in random.sample(self.X,int(0.05*samples)):
+                dims.add((samples,) + seg.getImgDim())
+            cache_m.dump(dims,'data_dims.pik')
+            
         return list(dims)
 
     def _release_data(self):
