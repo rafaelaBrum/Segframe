@@ -48,7 +48,7 @@ class CellRep(gd.GenericDS):
                 t_x.append(seg)
                 t_y.append(int(f_label))
                 class_set.add(f_label)
-            elif self._verbose > 0:
+            elif self._verbose > 1:
                 print("Label file contains reference to {0}, but no such file exists.".format(t_path))
 
         #Non-lymphocyte patches are labeld 0 or -1 (no lymphocyte or below lymphocyte threshold)

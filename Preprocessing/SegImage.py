@@ -27,8 +27,14 @@ class SegImage(ABC):
         String representation is file name
         """
         return os.path.basename(self.path)
-        
 
+    def __eq__(self,other):
+        return self._path == other.getPath()
+
+    @abstractmethod
+    def __hash__(self):
+        pass
+    
     @abstractmethod
     def readImage(self,size=None):
         pass

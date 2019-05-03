@@ -2,6 +2,7 @@
 #-*- coding: utf-8
 
 import random
+import os
 from matplotlib import pyplot as plt
 
 from Datasources.CellRep import CellRep
@@ -11,6 +12,8 @@ def run(config):
     config.data = 'CellRep'
     config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
 
+    print("Verbosity: {0}".format(config.verbose))
+
     cr = CellRep(config.predst,keepImg=True,config=config)
     X,Y = cr.load_metadata()
     d_x,d_y = cr.load_data()
@@ -18,10 +21,11 @@ def run(config):
     print("Y size: {0} \n ************* \n".format(len(Y)))
 
     #Check image dimensions
-    print("Dataset has size: {0}".format(cr.get_dataset_dimensions()))
+    print("Dataset has size(s): {0}".format(cr.get_dataset_dimensions()))
     
      #Show a random patch
     img = d_x[random.randint(0,len(d_x) - 1)]
+    print("Image array shape: {0}; dtype: {1}".format(d_x.shape,d_x.dtype))
     plt.imshow(img)
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
     plt.show()
@@ -37,3 +41,35 @@ def run(config):
     print("Metadata Train set: {0} items, {1} labels".format(len(dataset[0][0]),len(dataset[0][1])))
     print("Metadata Validate set: {0} items, {1} labels".format(len(dataset[1][0]),len(dataset[1][1])))
     print("Metadata Test set: {0} items, {1} labels".format(len(dataset[2][0]),len(dataset[2][1])))    
+
+    check_labels(config,cr)
+
+def check_data_split(split_data):
+    pass
+
+def check_labels(config,ds):
+    """
+    Checks all labels from a sequential run against the ones produced by the Datasource classes.
+    """
+    files = os.listdir(config.predst)
+    dlist = []
+    
+    for f in files:
+        item = os.path.join(config.predst,f)
+        if os.path.isdir(item):
+            dlist.append(item)
+    reference = {}
+    for item in dlist:
+            t_x,t_y = ds._load_metadata_from_dir(item)
+            t_dct = {t_x[i]:t_y[i] for i in range(len(t_x))}
+            reference.update(t_dct)
+            
+    #Now the DS metadata
+    X2,Y2 = ds.load_metadata()
+
+    for j in range(len(X2)):
+        if reference[X2[j]] != Y2[j]:
+            print("Item labels differ.\n - Reference item: {0};\n - Reference label: {1};\n Metadata label: {2}".format(
+                X2[j],reference[X2[j]],y2[j]))
+
+    print("If no messages reporting misslabeling was displayed, everything is good.")

@@ -30,17 +30,23 @@ class PImage(SegImage):
         if not (self._coord is None and self._origin is None):
             return "{0}-{1}".format(self._coord,self._origin)
         else:
-            return os.path.basename(self.path)
+            return os.path.basename(self._path)
 
     def __repr__(self):
         return self.__str__()
+
+    def __hash__(self):
+        # Hashes current dir and file name
+        return hash((self._path.split(os.path.sep)[-2],os.path.basename(self._path)))
     
-    def readImage(self,keepImg=False,size=None):
+    def readImage(self,keepImg=None,size=None):
         
         data = None
 
-        #Change seting if we are going to keep the image in memory now
-        if keepImg:
+        if keepImg is None:
+            keepImg = self._keep
+        elif keepImg:
+            #Change seting if we are going to keep the image in memory now
             self.setKeepImg(keepImg)
             
         if self._data is None:
@@ -52,6 +58,8 @@ class PImage(SegImage):
                 data = data[:,:,0:3];
                 
             if not size is None and data.shape != size:
+                if self._verbose > 1:
+                    print("Resizing image {0} from {1} to {2}".format(os.path.basename(self._path),data.shape,size))
                 data = skimage.transform.resize(data,size)
                 
             h,w,c = data.shape
@@ -64,7 +72,7 @@ class PImage(SegImage):
             if self._verbose > 1:
                 print("Data already loaded:\n - {0}".format(self._path))
             data = self._data
-            
+
         return data
     
     def readImageRegion(self,x,y,dx,dy):

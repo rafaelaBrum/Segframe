@@ -25,7 +25,7 @@ class GenericDS(ABC):
         self.X = None
         self.Y = None
         self._cache = CacheManager()
-        self._keep = bool(keepImg)
+        self._keep = keepImg
         self._cpu_count = config.cpu_count if not config is None else 1
         self._verbose = config.verbose if not config is None else 0
         self._pbar = config.progressbar if not config is None else False
@@ -141,8 +141,10 @@ class GenericDS(ABC):
             
         samples = len(self.X)
         y = np.array(self.Y, dtype=np.int32)
-        img_dim = self.get_dataset_dimensions()[0][1:]
-        X_data = np.zeros(shape=(tuple([samples] + list(img_dim))), dtype=np.int32)
+        dataset_dim = self.get_dataset_dimensions()[0]
+        img_dim = dataset_dim[1:]
+        X_data = np.zeros(shape=(dataset_dim), dtype=np.float32)
+        #tuple([samples] + list(img_dim))
         
         counter = 0
         futures = []
