@@ -42,10 +42,14 @@ class CellRep(gd.GenericDS):
                 origin = tmp[2]
             if len(tmp) > 4:
                 coord = (tmp[3],tmp[4])
-            seg = PImage(os.path.join(d,f_name),keepImg=self._keep,origin=origin,coord=coord,verbose=self._verbose)
-            t_x.append(seg)
-            t_y.append(int(f_label))
-            class_set.add(f_label)
+            t_path = os.path.join(d,f_name)
+            if os.path.isfile(t_path):
+                seg = PImage(t_path,keepImg=self._keep,origin=origin,coord=coord,verbose=self._verbose)
+                t_x.append(seg)
+                t_y.append(int(f_label))
+                class_set.add(f_label)
+            elif self._verbose > 0:
+                print("Label file contains reference to {0}, but no such file exists.".format(t_path))
 
         #Non-lymphocyte patches are labeld 0 or -1 (no lymphocyte or below lymphocyte threshold)
         # -1 and 0 labels are treated as the same as for now this is a binary classification problem

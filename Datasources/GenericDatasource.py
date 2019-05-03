@@ -141,14 +141,15 @@ class GenericDS(ABC):
             
         samples = len(self.X)
         y = np.array(self.Y, dtype=np.int32)
-        X_data = np.zeros(shape=(tuple([samples] + list(self.X[0].getImgDim()))), dtype=np.int32)
+        img_dim = self.get_dataset_dimensions()[0][1:]
+        X_data = np.zeros(shape=(tuple([samples] + list(img_dim))), dtype=np.int32)
         
         counter = 0
         futures = []
 
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
         for i in range(samples):
-            futures.append(executor.submit(self.X[i].readImage,keepImg))
+            futures.append(executor.submit(self.X[i].readImage,keepImg,img_dim))
 
         if self._pbar:
             l = tqdm(desc="Reading images...",total=samples,position=0)

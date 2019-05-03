@@ -19,11 +19,8 @@ class GenericModel(ABC):
         else:
             dims = [(None,100,100,3)]
 
-        #Dataset may have images of different sizes. What to do? Currently, chooses the biggest....
-        _,width,height,channels = 0,0,0,0
-        for d in dims:
-            if width < d[1] or length < d[2]:
-                _,width,height,channels = d
+        #Dataset may have images of different sizes. What to do? Currently, chooses the smallest....
+        _,width,height,channels = dims[0]
 
         return (width,height,channels)
             
