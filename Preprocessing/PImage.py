@@ -3,6 +3,7 @@
 
 import os
 import numpy as np
+import skimage
 from skimage import io
 
 from .SegImage import SegImage
@@ -34,7 +35,7 @@ class PImage(SegImage):
     def __repr__(self):
         return self.__str__()
     
-    def readImage(self,keepImg=False):
+    def readImage(self,keepImg=False,size=None):
         
         data = None
 
@@ -45,9 +46,14 @@ class PImage(SegImage):
         if self._data is None:
             if self._verbose > 1:
                 print("Reading image: {0}".format(self._path))
+                
             data = io.imread(self._path);
             if(data.shape[2] > 3): # remove the alpha
                 data = data[:,:,0:3];
+                
+            if not size is None and data.shape != size:
+                data = skimage.transform.resize(data,size)
+                
             h,w,c = data.shape
             self._dim = (w,h,c)
             

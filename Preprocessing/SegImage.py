@@ -30,7 +30,7 @@ class SegImage(ABC):
         
 
     @abstractmethod
-    def readImage(self):
+    def readImage(self,size=None):
         pass
 
     @abstractmethod

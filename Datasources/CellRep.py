@@ -60,7 +60,7 @@ class CellRep(gd.GenericDS):
         WARNING: big datasets will take forever to run. For now, checks a sample of the images.
         TODO: Reimplement this function to be fully parallel (threads in case).
 
-        Return: list of tuples (# samples,width,height,channels)
+        Return: SORTED list of tuples (# samples,width,height,channels)
         """
 
         dims = set()
@@ -73,11 +73,13 @@ class CellRep(gd.GenericDS):
             if self._config.info:
                 print("Checking a sample of dataset images for different dimensions...")
 
-            for seg in random.sample(self.X,int(0.05*samples)):
+            for seg in random.sample(self.X,int(0.01*samples)):
                 dims.add((samples,) + seg.getImgDim())
             cache_m.dump(dims,'data_dims.pik')
-            
-        return list(dims)
+
+        l = list(dims)
+        l.sort()
+        return l
 
     def _release_data(self):
         del self. X

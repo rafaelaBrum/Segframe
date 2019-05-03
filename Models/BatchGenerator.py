@@ -29,6 +29,7 @@ class GenericIterator(Iterator):
     def __init__(self,
                      data,
                      classes,
+                     dim=None,
                      batch_size=8,
                      image_generator=None,
                      shuffle=True,
@@ -39,6 +40,7 @@ class GenericIterator(Iterator):
 
         self.data = data
         self.classes = classes
+        self.dim = dim
         self.black_region = black_region
         self.mean = data_mean
         self.image_generator = None
@@ -97,6 +99,7 @@ class SingleGenerator(GenericIterator):
     def __init__(self, 
                      dps,
                      classes,
+                     dim=None,
                      batch_size=8,
                      image_generator=None,
                      shuffle=True,
@@ -111,6 +114,7 @@ class SingleGenerator(GenericIterator):
         
         super(SingleGenerator, self).__init__(data=dps,
                                                 classes=classes,
+                                                dim=dim,
                                                 batch_size=batch_size,
                                                 image_generator=image_generator,
                                                 shuffle=shuffle,
@@ -149,7 +153,7 @@ class SingleGenerator(GenericIterator):
             t_x = X[j]
             t_y = Y[j]
                 
-            example = t_x.readImage()
+            example = t_x.readImage(size=self.dim)
             
             if batch_x is None:
                 self.shape = example.shape
