@@ -217,7 +217,7 @@ class Trainer(object):
             horizontal_flip=True,
             vertical_flip=True)
 
-        fix_dim = self._ds.get_dataset_dimensions()[0]
+        fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
         train_generator = SingleGenerator(dps=train_data,
                                             classes=self._ds.nclasses,
                                             dim=fix_dim,
