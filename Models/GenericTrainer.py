@@ -217,8 +217,10 @@ class Trainer(object):
             horizontal_flip=True,
             vertical_flip=True)
 
+        fix_dim = self._ds.get_dataset_dimensions()[0]
         train_generator = SingleGenerator(dps=train_data,
                                             classes=self._ds.nclasses,
+                                            dim=fix_dim,
                                             batch_size=self._config.batch_size,
                                             image_generator=train_prep,
                                             shuffle=True,
@@ -229,6 +231,7 @@ class Trainer(object):
             samplewise_std_normalization=False)
         val_generator = SingleGenerator(dps=val_data,
                                             classes=self._ds.nclasses,
+                                            dim=fix_dim,
                                             batch_size=1,
                                             image_generator=val_prep,
                                             shuffle=True,
