@@ -7,7 +7,7 @@ import numpy as np
 import multiprocessing
 import tqdm
 import concurrent.futures
-import cv2
+from skimage import io
 
 from WSIParse import TCGAMerger,GenericData
 from Utils import Exitcodes
@@ -157,7 +157,7 @@ def save_normalize_tile(img,dimensions,normalizer,outdir,verbose):
     #TODO: CHECK TILE SIZES AND PAD IF NECESSARY!
     
     #Save tile to disk
-    cv2.imwrite(os.path.join(outdir,img.getImgName(),"{0}-{1}_{2}x{3}.png".format(x,y,dx,dy)),tile)
+    io.imsave(os.path.join(outdir,img.getImgName(),"{0}-{1}_{2}x{3}.png".format(x,y,dx,dy)),tile)
     
     return dimensions
 

@@ -130,12 +130,12 @@ class Trainer(object):
 
             # load weights
             try:
-                model.load_weights(os.path.join(self._config.model_path,
+                model.load_weights(os.path.join(self._config.weights_path,
                     ep_weights_file))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights: {0}".format(ep_weights_file))
             except ValueError:
-                model.load_weights(os.path.join(self._config.model_path,"{0}_cnn_weights.h5".format(model.name)))
+                model.load_weights(os.path.join(self._config.weights_path,"{0}_cnn_weights.h5".format(model.name)))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights from consolidated file.")
             except ValueError:
@@ -177,6 +177,7 @@ class Trainer(object):
             )
 
         #Weights should be saved only through the plain model
+        cache_m = CacheManager()
         single.save_weights(model.get_weights_cache())
         single.save(cache_m.fileLocation(model.get_model_cache()))
 
@@ -188,7 +189,7 @@ class Trainer(object):
         TODO: for future use
         """
         from Models import SingleGenerator
-        
+
         # session setup
         sess = K.get_session()
         ses_config = tf.ConfigProto(
@@ -250,12 +251,12 @@ class Trainer(object):
 
             # load weights
             try:
-                model.load_weights(os.path.join(self._config.model_path,
+                model.load_weights(os.path.join(self._config.weights_path,
                     ep_weights_file))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights: {0}".format(ep_weights_file))
             except ValueError:
-                model.load_weights(os.path.join(self._config.model_path,"{0}_cnn_weights.h5".format(model.name)))
+                model.load_weights(os.path.join(self._config.weights_path,"{0}_cnn_weights.h5".format(model.name)))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights from consolidated file.")
             except ValueError:
@@ -297,6 +298,7 @@ class Trainer(object):
             )
 
         #Weights should be saved only through the plain model
+        cache_m = CacheManager()
         single.save_weights(model.get_weights_cache())
         single.save(cache_m.fileLocation(model.get_model_cache()))
 

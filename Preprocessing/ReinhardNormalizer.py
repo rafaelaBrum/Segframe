@@ -5,9 +5,8 @@
 from __future__ import division
 
 import os
-import cv2 as cv
 import numpy as np
-
+from skimage import color,io
 
 ### Some functions ###
 
@@ -18,9 +17,9 @@ def lab_split(I):
     :param I: uint8
     :return:
     """
-    I = cv.cvtColor(I, cv.COLOR_RGB2LAB)
+    I = color.rgb2lab(I)
     I = I.astype(np.float32)
-    I1, I2, I3 = cv.split(I)
+    I1, I2, I3 = I[0],I[1],I[2]
     I1 /= 2.55
     I2 -= 128.0
     I3 -= 128.0
@@ -38,8 +37,8 @@ def merge_back(I1, I2, I3):
     I1 *= 2.55
     I2 += 128.0
     I3 += 128.0
-    I = np.clip(cv.merge((I1, I2, I3)), 0, 255).astype(np.uint8)
-    return cv.cvtColor(I, cv.COLOR_LAB2RGB)
+    I = np.clip(np.dstack((I1, I2, I3)), 0, 255).astype(np.uint8)
+    return color.lab2rgb(I)
 
 
 def get_mean_std(I):
@@ -49,9 +48,13 @@ def get_mean_std(I):
     :return:
     """
     I1, I2, I3 = lab_split(I)
-    m1, sd1 = cv.meanStdDev(I1)
-    m2, sd2 = cv.meanStdDev(I2)
-    m3, sd3 = cv.meanStdDev(I3)
+    m1 = np.mean(I1)
+    sd1 = np.std(I1)
+    m2 = np.mean(I2)
+    sd2 = np.std(I2)
+    m3 = np.mean(I3)
+    sd3 = np.std(I3)
+
     means = m1, m2, m3
     stds = sd1, sd2, sd3
     return means, stds
@@ -102,7 +105,7 @@ class Normalizer(object):
 class ReinhardNormalizer(object):
     def __init__(self, target_file):
         if isinstance(target_file,str) and os.path.isfile(target_file):
-            target_40X = cv.imread(target_file)
+            target_40X = io.imopen(target_file)
         else:
             raise ValueError("[ReinhardNormalizer] Target file should be an image file")
         
