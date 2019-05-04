@@ -11,8 +11,8 @@ from multiprocessing import Process
 #Project imports
 from Preprocessing import Preprocess
 from Utils import Exitcodes,CacheManager
-from Testing import TrainTest,DatasourcesTest
-from Models import GenericTrainer
+from Testing import TrainTest,DatasourcesTest,PredictionTest
+from Models import GenericTrainer,Predictor
 
 #Supported image types
 img_types = ['svs', 'dicom', 'nii','tif','tiff', 'png']
@@ -39,6 +39,11 @@ def main_exec(config):
             Preprocess.preprocess_data(config,img_types)
         
     if config.train:
+        if not os.path.isdir(config.weights_path):
+            os.mkdir(config.weights_path)
+        if not os.path.isdir(config.model_path):
+            os.mkdir(config.model_path)
+            
         if config.multiprocess:
             ctx = mp.get_context('spawn')
             cache_m = CacheManager()
@@ -51,7 +56,21 @@ def main_exec(config):
                 sys.exit(proc.exitcode)
         else:
             GenericTrainer.run_training(config,None)
-    
+            
+    if config.pred:
+        if config.multiprocess:
+            ctx = mp.get_context('spawn')
+            cache_m = CacheManager()
+            proc = Process(target=Predictor.run_prediction, args=(config,cache_m.getLocations()))
+            proc.start()
+            proc.join()
+
+            if proc.exitcode != Exitcodes.ALL_GOOD:
+                print("System did not end well. Check logs or enhace verbosity level.")
+                sys.exit(proc.exitcode)
+        else:
+            Predictor.run_prediction(config,None)
+            
     if config.postproc:
         pass
 
@@ -63,6 +82,8 @@ def main_exec(config):
             TrainTest.run(config)
         elif config.tmode == 2:
             DatasourcesTest.run(config)
+        elif config.tmode == 3:
+            PredictionTest.run(config)
 
     if not (config.preprocess or config.train or config.postproc or config.runtest):
         print("The problem begins with choice: preprocess, train, postprocess or test")
@@ -87,7 +108,7 @@ if __name__ == "__main__":
     pre_args.add_argument('-presrc', dest='presrc', type=str,default='', 
         help='Input image or directory of images (runs recursively)',required=False)
     pre_args.add_argument('-predst', dest='predst', type=str,default='tiles', 
-        help='Output tiles to directory')
+        help='Output tiles go to this directory')
     pre_args.add_argument('-img_type', dest='img_type', type=str, 
         help='Input image type: svs, dicom, nii (Default: \'svs\').',
         choices=img_types, default='svs')
@@ -172,6 +193,10 @@ if __name__ == "__main__":
     parser.add_argument('-d', action='store_true', dest='delay_load', default=True, 
         help='Delay the loading of images to the latest moment possible (memory efficiency).')
 
+    ##Run prediction options
+    parser.add_argument('--pred', action='store_true', dest='pred', default=False, 
+        help='Runs prediction with a given model (use -net parameter).')
+    
     ##System tests
     test_args = parser.add_argument_group('Tests')
     arg_groups.append(test_args)
@@ -182,17 +207,20 @@ if __name__ == "__main__":
         help='Run tests for individual subsystems: \n \
         0 - Run all tests; \n \
         1 - Run training test; \n \
-        2 - Run Datasources test;',
-       choices=[0,1,2],default=0)
+        2 - Run Datasources test; \n \
+        3 - Run Prediction test.',
+       choices=[0,1,2,3],default=0)
         
     config, unparsed = parser.parse_known_args()
     
     #Setup CacheManager - TODO: fill actual files
     files = {
         'tcga.pik':os.path.join(config.presrc,'piks','tcga.pik'),
-        'split_data.pik':os.path.join(config.cache,'split_data.pik'),
+        'metadata.pik':os.path.join(config.cache,'metadata.pik'),
+        'split_ratio.pik':os.path.join(config.cache,'split_ratio.pik'),
         'data_dims.pik':os.path.join(config.cache,'data_dims.pik'),
         'tiles.pik':os.path.join(config.predst,'tiles.pik'),
+        'test_pred.pik':os.path.join(config.logdir,'test_pred.pik'),
         'cae_model.h5':os.path.join(config.model_path,'cae_model.h5'),
         'vgg16_weights_notop.h5':os.path.join(config.model_path,'vgg16_weights_notop.h5')}
 

@@ -22,7 +22,7 @@ def run_training(config,locations=None):
     Main training function, to work as a new process
     """
     if config.info:
-        print("Starting training process.")
+        print("Starting training process....")
 
     if not locations is None:
         cache_m = CacheManager(locations=locations)
@@ -43,7 +43,7 @@ class Trainer(object):
 
     def __init__(self,config):
         """
-        @config <parsed configurations>: configurations
+        @param config <parsed configurations>: configurations
         """
         self._config = config
         self._verbose = config.verbose
@@ -80,7 +80,7 @@ class Trainer(object):
     
     def train_model(self,model):
         """
-        Execute training according to configurations. 
+        Execute training according to configurations. Load all data at once.
 
         @param model <Keras trainable model>: model to be trained
         """
@@ -179,7 +179,8 @@ class Trainer(object):
         #Weights should be saved only through the plain model
         cache_m = CacheManager()
         single.save_weights(model.get_weights_cache())
-        single.save(cache_m.fileLocation(model.get_model_cache()))
+        single.save(model.get_model_cache())
+        cache_m.dump(self._config.split,'split_ratio.pik')
 
         return Exitcodes.ALL_GOOD
     
@@ -300,6 +301,9 @@ class Trainer(object):
         #Weights should be saved only through the plain model
         cache_m = CacheManager()
         single.save_weights(model.get_weights_cache())
-        single.save(cache_m.fileLocation(model.get_model_cache()))
-
+        single.save(model.get_model_cache())
+        cache_m.dump(self._config.split,'split_ratio.pik')
+        
         return Exitcodes.ALL_GOOD        
+
+        

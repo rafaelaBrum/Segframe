@@ -36,7 +36,7 @@ class VGG16(GenericModel):
         
         self.cache_m = CacheManager()
         self.cache_m.registerFile(os.path.join(config.model_path,self._modelCache),self._modelCache)
-        self.cache_m.registerFile(os.path.join(config.weights_path,self._modelCache),self._weightsCache)
+        self.cache_m.registerFile(os.path.join(config.weights_path,self._weightsCache),self._weightsCache)
 
     def get_model_cache(self):
         """

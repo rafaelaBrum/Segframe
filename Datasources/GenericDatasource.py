@@ -89,10 +89,10 @@ class GenericDS(ABC):
 
         X,Y = ([],[])
         
-        if self._cache.checkFileExistence('split_data.pik'):
-            X,Y = self._cache.load('split_data.pik')
+        if self._cache.checkFileExistence('metadata.pik'):
+            X,Y = self._cache.load('metadata.pik')
             if self._verbose > 0:
-                print("[GenericDatasource] Loaded split data cache.")
+                print("[GenericDatasource] Loaded split data cache. Used previously defined splitting.")
         else:
             dlist = []
             for f in files:
@@ -113,13 +113,13 @@ class GenericDS(ABC):
             random.shuffle(combined)
             X[:],Y[:] = zip(*combined)
             
-            self._cache.dump((X,Y),'split_data.pik')
+            self._cache.dump((X,Y),'metadata.pik')
             
         self.X = X
         self.Y = Y
         return X,Y
     
-    def load_data(self,split=None,keepImg=False):
+    def load_data(self,split=None,keepImg=False,data=None):
         """
         Actually reads images and returns data ready for training
         Returns two tuples of NP arrays (X,Y): X data points, Y labels;
@@ -132,26 +132,34 @@ class GenericDS(ABC):
         3 - Test;
         
         @param keepImg <bool>: Keep image data in memory
+        @param data <tuple>: metadata defining images to load. If not provided, full dataset is used.
         """
 
-        if self.X is None or self.Y is None:
+        if data is None and (self.X is None or self.Y is None):
             if self._verbose > 0:
                 print("[GenericDatasource] Metadata not ready, loading...")
             self.load_metadata()
+
+        #Which data to use?
+        X,Y = None,None
+        if data is None:
+            X = self.X
+            Y = self.Y
+        else:
+            X,Y = data
             
-        samples = len(self.X)
-        y = np.array(self.Y, dtype=np.int32)
+        samples = len(X)
+        y = np.array(Y, dtype=np.int32)
         dataset_dim = self.get_dataset_dimensions()[0]
         img_dim = dataset_dim[1:]
-        X_data = np.zeros(shape=(dataset_dim), dtype=np.float32)
-        #tuple([samples] + list(img_dim))
+        X_data = np.zeros(shape=(samples,)+img_dim, dtype=np.float32)
         
         counter = 0
         futures = []
 
-        executor = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+        executor = concurrent.futures.ThreadPoolExecutor(max_workers=7)
         for i in range(samples):
-            futures.append(executor.submit(self.X[i].readImage,keepImg,img_dim))
+            futures.append(executor.submit(X[i].readImage,keepImg,img_dim))
 
         if self._pbar:
             l = tqdm(desc="Reading images...",total=samples,position=0)

@@ -43,10 +43,26 @@ def run(config):
     print("Metadata Test set: {0} items, {1} labels".format(len(dataset[2][0]),len(dataset[2][1])))    
 
     check_labels(config,cr)
+    check_data_split(dataset)
 
 def check_data_split(split_data):
-    pass
-
+    """
+    Checks if there is no reocurrence of samples between sets
+    """
+    train,val,test = split_data
+    x_train,y_train = train
+    x_val,y_val = val
+    x_test,y_test = test
+    
+    val_d = {x_val[i]:y_val[i] for i in range(len(x_val))}
+    test_d = {x_test[i]:y_test[i] for i in range(len(x_test))}
+    for s in x_train:
+        if s in val_d:
+            print("Item {0} of training set is also in validation set".format(s))
+        if s in test_d:
+            print("Item {0} of training set is also in test set".format(s))
+    print("Done checking data split")
+        
 def check_labels(config,ds):
     """
     Checks all labels from a sequential run against the ones produced by the Datasource classes.

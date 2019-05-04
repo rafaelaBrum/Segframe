@@ -77,7 +77,7 @@ class CellRep(gd.GenericDS):
             if self._config.info:
                 print("Checking a sample of dataset images for different dimensions...")
 
-            for seg in random.sample(self.X,int(0.01*samples)):
+            for seg in random.sample(self.X,int(0.02*samples)):
                 dims.add((samples,) + seg.getImgDim())
             cache_m.dump(dims,'data_dims.pik')
 
