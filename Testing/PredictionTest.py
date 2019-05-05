@@ -9,7 +9,7 @@ from Models.Predictor import print_previous_prediction
 def run(config):
     #Run all tests below
     config.data = 'CellRep'
-    config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
+    config.predst = '../data/lym_cnn_training_data/'
     config.network = 'VGG16'
 
     #Start predictions
