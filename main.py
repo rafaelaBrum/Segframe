@@ -12,7 +12,7 @@ from multiprocessing import Process
 from Preprocessing import Preprocess
 from Utils import Exitcodes,CacheManager
 from Testing import TrainTest,DatasourcesTest,PredictionTest
-from Models import GenericTrainer,Predictor
+from Models import GenericTrainer,Predictions
 
 #Supported image types
 img_types = ['svs', 'dicom', 'nii','tif','tiff', 'png']
@@ -61,7 +61,7 @@ def main_exec(config):
         if config.multiprocess:
             ctx = mp.get_context('spawn')
             cache_m = CacheManager()
-            proc = Process(target=Predictor.run_prediction, args=(config,cache_m.getLocations()))
+            proc = Process(target=Predictions.run_prediction, args=(config,cache_m.getLocations()))
             proc.start()
             proc.join()
 
@@ -69,7 +69,7 @@ def main_exec(config):
                 print("System did not end well. Check logs or enhace verbosity level.")
                 sys.exit(proc.exitcode)
         else:
-            Predictor.run_prediction(config,None)
+            Predictions.run_prediction(config,None)
             
     if config.postproc:
         pass
@@ -85,8 +85,8 @@ def main_exec(config):
         elif config.tmode == 3:
             PredictionTest.run(config)
 
-    if not (config.preprocess or config.train or config.postproc or config.runtest):
-        print("The problem begins with choice: preprocess, train, postprocess or test")
+    if not (config.preprocess or config.train or config.postproc or config.pred or config.runtest):
+        print("The problem begins with choice: preprocess, train, postprocess or predict")
 
 if __name__ == "__main__":
 

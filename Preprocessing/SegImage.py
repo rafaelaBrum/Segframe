@@ -36,7 +36,7 @@ class SegImage(ABC):
         pass
     
     @abstractmethod
-    def readImage(self,size=None):
+    def readImage(self,size=None,verbose=None):
         pass
 
     @abstractmethod

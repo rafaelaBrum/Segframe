@@ -153,7 +153,7 @@ class SingleGenerator(GenericIterator):
             t_x = X[j]
             t_y = Y[j]
                 
-            example = t_x.readImage(size=self.dim)
+            example = t_x.readImage(size=self.dim,verbose=self.verbose)
             
             if batch_x is None:
                 self.shape = example.shape

@@ -154,9 +154,10 @@ class Predictor(object):
         y_pred = np.argmax(Y_pred, axis=1)
         expected = np.argmax(Y, axis=1)
 
-        if self._config.verbose > 1:
+        if self._config.verbose > 0:
             print("Y ({1}):\n{0}".format(Y,Y.shape))
             print("expected ({1}):\n{0}".format(expected,expected.shape))
+            print("Predicted probs ({1}):\n{0}".format(Y_pred,Y_pred.shape))
             print("Predicted ({1}):\n{0}".format(y_pred,y_pred.shape))
             
         #Save predictions

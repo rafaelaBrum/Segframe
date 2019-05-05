@@ -3,8 +3,8 @@
 
 import random
 import os
+import numpy as np
 from matplotlib import pyplot as plt
-
 from Datasources.CellRep import CellRep
 
 def run(config):
@@ -33,9 +33,20 @@ def run(config):
     #Split dataset
     dataset = cr.load_data(split=(0.8,0.1,0.1))
     print("Train set: {0} items, {1} labels".format(len(dataset[0][0]),len(dataset[0][1])))
-    print("Validate set: {0} items, {1} labels".format(len(dataset[1][0]),len(dataset[1][1])))
-    print("Test set: {0} items, {1} labels".format(len(dataset[2][0]),len(dataset[2][1])))    
+    unique,count = np.unique(dataset[0][1],return_counts=True)
+    l_count = dict(zip(unique,count))
+    print("Train labels: {0} are 0; {1} are 1;".format(l_count[0],l_count[1]))
 
+    print("Validate set: {0} items, {1} labels".format(len(dataset[1][0]),len(dataset[1][1])))
+    unique,count = np.unique(dataset[1][1],return_counts=True)
+    l_count = dict(zip(unique,count))
+    print("Validade labels: {0} are 0; {1} are 1;".format(l_count[0],l_count[1]))
+    
+    print("Test set: {0} items, {1} labels".format(len(dataset[2][0]),len(dataset[2][1])))
+    unique,count = np.unique(dataset[2][1],return_counts=True)
+    l_count = dict(zip(unique,count))
+    print("Test labels: {0} are 0; {1} are 1;".format(l_count[0],l_count[1]))
+    
     #Split metadata
     dataset = cr.split_metadata(split=(0.8,0.1,0.1))
     print("Metadata Train set: {0} items, {1} labels".format(len(dataset[0][0]),len(dataset[0][1])))
