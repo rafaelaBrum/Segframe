@@ -170,9 +170,9 @@ class SingleGenerator(GenericIterator):
             y[i] = t_y
 
         #Center data
-        batch_x -= self.mean
+        #batch_x -= self.mean
         #Normalize data pixels
-        batch_x /= 255
+        #batch_x /= 255
 
         if self.variable_shape:
             self.shape = None

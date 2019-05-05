@@ -3,6 +3,8 @@
 
 import importlib
 import os,sys
+from tqdm import tqdm
+import numpy as np
 
 from Datasources.CellRep import CellRep
 from Utils import SaveLRCallback
@@ -34,6 +36,22 @@ def run_prediction(config,locations=None):
     predictor = Predictor(config)
     predictor.run()
 
+def print_previous_prediction(config):
+    cache_m = CacheManager()
+
+    if not os.path.isfile(cache_m.fileLocation('test_pred.pik')):
+        return None
+    
+    #Load predictions
+    (expected,Y_pred,nclasses) = cache_m.load('test_pred.pik')
+    y_pred = np.argmax(Y_pred, axis=1)
+    
+    #Output metrics
+    f1 = metrics.f1_score(expected,y_pred,pos_label=1)
+    print("F1 score: {0:.2f}".format(f1))
+
+    m_conf = PrintConfusionMatrix(y_pred,expected,nclasses,config,"TILs")
+    
 class Predictor(object):
     """
     Class responsible for running the predictions and outputing results
@@ -88,6 +106,8 @@ class Predictor(object):
         
         _,_,(x_test,y_test) = self._ds.split_metadata(split)
         X,Y = self._ds.load_data(data=(x_test,y_test))
+        if self._config.verbose > 1:
+            print("Y original ({1}):\n{0}".format(Y,Y.shape))        
         Y = to_categorical(Y,self._ds.nclasses)
     
         #During test phase multi-gpu mode is not necessary, load full model (multi-gpu would need to load training weights)
@@ -108,30 +128,42 @@ class Predictor(object):
             )
         sess.config = ses_config
         K.set_session(sess)
+        stp = len(X)
 
-        if self._config.progress_bar:
+        image_generator = ImageDataGenerator(samplewise_center=False, samplewise_std_normalization=False)
+        test_generator = image_generator.flow(x=X,
+                                            y=Y,
+                                            batch_size=1,
+                                            shuffle=False)
+        
+        if self._config.progressbar:
             l = tqdm(desc="Making predictions...",total=stp)
 
-        stp = len(X)
         Y_pred = np.zeros((stp,self._ds.nclasses),dtype=np.float32)
         for i in range(stp):
-            Y_pred[i] = pred_model.predict_on_batch(X[i])
-            if self._config.progress_bar:
+            example = test_generator.next()
+            Y_pred[i] = pred_model.predict_on_batch(example[0])
+            if self._config.progressbar:
                 l.update(1)
             elif self._config.verbose > 0:
                 print("Batch prediction ({0}/{1})".format(i,stp))
 
-        if self._config.progress_bar:
+        if self._config.progressbar:
             l.close()
 
         y_pred = np.argmax(Y_pred, axis=1)
         expected = np.argmax(Y, axis=1)
 
+        if self._config.verbose > 1:
+            print("Y ({1}):\n{0}".format(Y,Y.shape))
+            print("expected ({1}):\n{0}".format(expected,expected.shape))
+            print("Predicted ({1}):\n{0}".format(y_pred,y_pred.shape))
+            
         #Save predictions
-        cache_m.dump((expected,Y_pred),'test_pred.pik')
+        cache_m.dump((expected,Y_pred,self._ds.nclasses),'test_pred.pik')
 
         #Output metrics
         f1 = metrics.f1_score(expected,y_pred,pos_label=1)
         print("F1 score: {0:.2f}".format(f1))
 
-        m_conf = PrintConfusionMatrix(y_pred,expected,classes,config,"TILs")
+        m_conf = PrintConfusionMatrix(y_pred,expected,self._ds.nclasses,self._config,"TILs")

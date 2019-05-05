@@ -34,8 +34,8 @@ def PrintConfusionMatrix(y_pred,expected,classes,args,label):
     m_conf_2[classes+2][classes] = ''
 
 
-    col = list(classes.values()) + ['Expected Total']
-    ind = list(classes.values()) + \
+    col = [i for i in range(classes)] + ['Expected Total']
+    ind = [i for i in range(classes)] + \
       ['Predicted Total', 'Correct Rate', 'Accuracy']
         
     if args.info:

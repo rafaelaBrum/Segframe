@@ -38,6 +38,9 @@ class CellRep(gd.GenericDS):
             f_name,f_label = tmp[0],tmp[1]
             origin=''
             coord=None
+            label = int(f_label)
+            if label < 1:
+                label = 0
             if len(tmp) > 2:
                 origin = tmp[2]
             if len(tmp) > 4:
@@ -46,8 +49,8 @@ class CellRep(gd.GenericDS):
             if os.path.isfile(t_path):
                 seg = PImage(t_path,keepImg=self._keep,origin=origin,coord=coord,verbose=self._verbose)
                 t_x.append(seg)
-                t_y.append(int(f_label))
-                class_set.add(f_label)
+                t_y.append(label)
+                class_set.add(label)
             elif self._verbose > 1:
                 print("Label file contains reference to {0}, but no such file exists.".format(t_path))
 
