@@ -168,3 +168,15 @@ class Predictor(object):
         print("F1 score: {0:.2f}".format(f1))
 
         m_conf = PrintConfusionMatrix(y_pred,expected,self._ds.nclasses,self._config,"TILs")
+
+        #ROC AUC
+        scores = np.ndarray(expected.size,dtype=np.float32)
+        for idx in range(0,expected.size):
+            label = expected[idx]
+            scores[idx] = Y_pred[idx][label]        
+        fpr,tpr,thresholds = metrics.roc_curve(expected,scores,pos_label=1)
+        print("False positive rates: {0}".format(fpr))
+        print("True positive rates: {0}".format(tpr))
+        print("Thresholds: {0}".format(thresholds))
+        print("AUC: {0:f}".format(metrics.roc_auc_score(expected,scores)))
+        
