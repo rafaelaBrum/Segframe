@@ -4,7 +4,7 @@
 import random
 from Datasources.CellRep import CellRep
 from Models import Predictor
-from Models.Predictor import print_previous_prediction
+from Models.Predictions import print_previous_prediction
 
 def run(config):
     #Run all tests below

@@ -12,7 +12,7 @@ class PImage(SegImage):
     """
     Represents any image handled by OpenCV.
     """
-    def __init__(self,path,keepImg=False,origin=None,coord=None,verbose=0,):
+    def __init__(self,path,keepImg=False,origin=None,coord=None,verbose=0):
         """
         @param path <str>: path to image
         @param keepImg <bool>: keep image data in memory
@@ -39,7 +39,7 @@ class PImage(SegImage):
         # Hashes current dir and file name
         return hash((self._path.split(os.path.sep)[-2],os.path.basename(self._path)))
     
-    def readImage(self,keepImg=None,size=None):
+    def readImage(self,keepImg=None,size=None,verbose=None):
         
         data = None
 
@@ -48,6 +48,8 @@ class PImage(SegImage):
         elif keepImg:
             #Change seting if we are going to keep the image in memory now
             self.setKeepImg(keepImg)
+        if not verbose is None:
+            self._verbose = verbose
             
         if self._data is None:
             if self._verbose > 1:

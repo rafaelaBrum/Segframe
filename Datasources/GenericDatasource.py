@@ -159,7 +159,7 @@ class GenericDS(ABC):
 
         executor = concurrent.futures.ThreadPoolExecutor(max_workers=7)
         for i in range(samples):
-            futures.append(executor.submit(X[i].readImage,keepImg,img_dim))
+            futures.append(executor.submit(X[i].readImage,keepImg,img_dim,self._verbose))
 
         if self._pbar:
             l = tqdm(desc="Reading images...",total=samples,position=0)
