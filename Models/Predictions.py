@@ -33,8 +33,11 @@ def run_prediction(config,locations=None):
 
     if not locations is None:
         cache_m = CacheManager(locations=locations)
-    predictor = Predictor(config)
-    predictor.run()
+    if config.print_pred:
+        print_previous_prediction(config)
+    else:
+        predictor = Predictor(config)
+        predictor.run()
 
 def print_previous_prediction(config):
     cache_m = CacheManager()
@@ -51,6 +54,18 @@ def print_previous_prediction(config):
     print("F1 score: {0:.2f}".format(f1))
 
     m_conf = PrintConfusionMatrix(y_pred,expected,nclasses,config,"TILs")
+
+    #ROC AUC
+    scores = np.ndarray(expected.size,dtype=np.float32)
+    for idx in range(0,expected.size):
+        label = expected[idx]
+        scores[idx] = Y_pred[idx][label]
+        
+    fpr,tpr,thresholds = metrics.roc_curve(expected,scores,pos_label=1)
+    print("False positive rates: {0}".format(fpr))
+    print("True positive rates: {0}".format(tpr))
+    print("Thresholds: {0}".format(thresholds))
+    print("AUC: {0:f}".format(metrics.roc_auc_score(expected,scores)))
     
 class Predictor(object):
     """
@@ -164,19 +179,4 @@ class Predictor(object):
         cache_m.dump((expected,Y_pred,self._ds.nclasses),'test_pred.pik')
 
         #Output metrics
-        f1 = metrics.f1_score(expected,y_pred,pos_label=1)
-        print("F1 score: {0:.2f}".format(f1))
-
-        m_conf = PrintConfusionMatrix(y_pred,expected,self._ds.nclasses,self._config,"TILs")
-
-        #ROC AUC
-        scores = np.ndarray(expected.size,dtype=np.float32)
-        for idx in range(0,expected.size):
-            label = expected[idx]
-            scores[idx] = Y_pred[idx][label]        
-        fpr,tpr,thresholds = metrics.roc_curve(expected,scores,pos_label=1)
-        print("False positive rates: {0}".format(fpr))
-        print("True positive rates: {0}".format(tpr))
-        print("Thresholds: {0}".format(thresholds))
-        print("AUC: {0:f}".format(metrics.roc_auc_score(expected,scores)))
-        
+        print_previous_prediction(self._config)
