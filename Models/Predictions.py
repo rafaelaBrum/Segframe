@@ -128,6 +128,8 @@ class Predictor(object):
         #During test phase multi-gpu mode is not necessary, load full model (multi-gpu would need to load training weights)
         if os.path.isfile(model.get_model_cache()):
             pred_model = load_model(model.get_model_cache())
+            if self._config.info:
+                print("Model loaded from: {0}".format(model.get_model_cache()))
         else:
             if self._config.info:
                 print("Model not found at: {0}".format(model.get_model_cache()))

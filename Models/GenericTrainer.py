@@ -270,12 +270,12 @@ class Trainer(object):
                 old_e_offset = 0
             # load weights
             try:
-                training_model.load_weights(os.path.join(self._config.weights_path,
+                single.load_weights(os.path.join(self._config.weights_path,
                     ep_weights_file))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights: {0}".format(ep_weights_file))
             except ValueError:
-                training_model.load_weights(os.path.join(self._config.weights_path,"{0}-weights.h5".format(model.name)))
+                single.load_weights(os.path.join(self._config.weights_path,"{0}-weights.h5".format(model.name)))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights from consolidated file.")
             except ValueError:
