@@ -31,7 +31,7 @@ def PrintConfusionMatrix(y_pred,expected,classes,args,label):
     #Total samples
     m_conf_2[classes][classes] = "{0:.0f}".format(m_conf.sum())
     m_conf_2[classes+1][classes] = ''
-    m_conf_2[classes+2][classes] = ''
+    m_conf_2[classes+2][classes] = '{0:.2f}'.format(sum(np.diag(m_conf))/m_conf.sum())
 
 
     col = [i for i in range(classes)] + ['Expected Total']

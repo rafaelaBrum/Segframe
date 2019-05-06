@@ -160,8 +160,11 @@ class Predictor(object):
             Y_pred[i] = pred_model.predict_on_batch(example[0])
             if self._config.progressbar:
                 l.update(1)
-            elif self._config.verbose > 0:
+            elif self._config.info:
                 print("Batch prediction ({0}/{1})".format(i,stp))
+            if self._config.verbose > 0:
+                if not np.array_equal(Y[i],example[1][0]):
+                    print("Datasource label ({0}) and batch label ({1}) differ".format(Y[i],example[1][0]))
 
         if self._config.progressbar:
             l.close()
