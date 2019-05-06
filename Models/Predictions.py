@@ -128,6 +128,8 @@ class Predictor(object):
         #During test phase multi-gpu mode is not necessary, load full model (multi-gpu would need to load training weights)
         if os.path.isfile(model.get_model_cache()):
             pred_model = load_model(model.get_model_cache())
+            if self._config.info:
+                print("Model loaded from: {0}".format(model.get_model_cache()))
         else:
             if self._config.info:
                 print("Model not found at: {0}".format(model.get_model_cache()))
@@ -166,6 +168,9 @@ class Predictor(object):
                 if not np.array_equal(Y[i],example[1][0]):
                     print("Datasource label ({0}) and batch label ({1}) differ".format(Y[i],example[1][0]))
 
+        del(X)
+        del(test_generator)
+        
         if self._config.progressbar:
             l.close()
 

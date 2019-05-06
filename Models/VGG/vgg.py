@@ -69,6 +69,10 @@ class VGG16(GenericModel):
                                          include_top=False,
                                          input_shape=input_shape)
 
+        #Freeze initial layers, except for the last 4:
+        for layer in original_vgg16.layers[:-4]:
+            layer.trainable = False
+            
         model = Sequential()
         model.add(original_vgg16)
         model.add(Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal'))
