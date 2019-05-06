@@ -93,10 +93,15 @@ def check_labels(config,ds):
         if os.path.isdir(item):
             dlist.append(item)
     reference = {}
+    count = 0
+    item_c = len(dlist)
     for item in dlist:
-            t_x,t_y = ds._load_metadata_from_dir(item)
-            t_dct = {t_x[i]:t_y[i] for i in range(len(t_x))}
-            reference.update(t_dct)
+        t_x,t_y = ds._load_metadata_from_dir(item)
+        t_dct = {t_x[i]:t_y[i] for i in range(len(t_x))}
+        reference.update(t_dct)
+        if config.info:
+            print("Processing dirs ({0}/{1})".format(count,item_c))
+        count += 1
             
     #Now the DS metadata
     X2,Y2 = ds.load_metadata()

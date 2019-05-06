@@ -3,6 +3,7 @@
 
 import importlib
 import os,sys
+import re
 
 from Datasources.CellRep import CellRep
 from Utils import SaveLRCallback
@@ -48,6 +49,7 @@ class Trainer(object):
         self._config = config
         self._verbose = config.verbose
         self._ds = None
+        self._rex = None
 
     def run(self):
         """
@@ -73,6 +75,8 @@ class Trainer(object):
 
         self._ds.load_metadata()
 
+        self._rex = r'{0}-t(?P<try>[0-9]+)e(?P<epoch>[0-9]+).h5'.format(net_model.name)
+        
         if self._config.delay_load:
             return self.train_model_iterator(net_model)
         else:
@@ -84,6 +88,8 @@ class Trainer(object):
 
         @param model <Keras trainable model>: model to be trained
         """
+        rcomp = re.compile(self._rex)
+        
         train,val,_ = self._ds.load_data(split=self._config.split,keepImg=False)
         x_train,y_train = train
         x_val,y_val = val
@@ -118,24 +124,34 @@ class Trainer(object):
             samplewise_center=False,
             samplewise_std_normalization=False)
 
+
+        single,parallel = model.build()
+        if not parallel is None:
+            training_model = parallel
+        else:
+            training_model = single
+        
         # try to resume the training
-        weights = list(filter(lambda f: f.endswith(".hdf5") and f.startswith(model.name),os.listdir(self._config.weights_path)))
+        weights = list(filter(lambda f: f.endswith(".h5") and f.startswith(model.name),os.listdir(self._config.weights_path)))
         weights.sort()
         old_e_offset = 0
         if len(weights) > 0 and not self._config.new_net:
             # get last file (which is the furthest on the training) if exists
-            ep_weights_file = weights[len(weights)-1]
-            old_e_offset = int(ep_weights_file.split(
-                ".hdf5")[0].split('-')[1].split("e")[0].split("t")[1])
+            ep_weights_file = weights[len(weights)-2]
+            match = rcomp.fullmatch(ep_weights_file)
+            if match:
+                old_e_offset = int(match.group('epoch'))
+            else:
+                old_e_offset = 0
 
             # load weights
             try:
-                model.load_weights(os.path.join(self._config.weights_path,
+                training_model.load_weights(os.path.join(self._config.weights_path,
                     ep_weights_file))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights: {0}".format(ep_weights_file))
             except ValueError:
-                model.load_weights(os.path.join(self._config.weights_path,"{0}_cnn_weights.h5".format(model.name)))
+                training_model.load_weights(os.path.join(self._config.weights_path,"{0}-weights.h5".format(model.name)))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights from consolidated file.")
             except ValueError:
@@ -147,18 +163,12 @@ class Trainer(object):
         callbacks = []
         ## ModelCheckpoint
         callbacks.append(ModelCheckpoint(os.path.join(
-            self._config.weights_path, wf_header + "e{epoch:02d}.hdf5"), 
+            self._config.weights_path, wf_header + "e{epoch:02d}.h5"), 
             save_weights_only=True, period=1,save_best_only=True,monitor='val_acc'))
         ## ReduceLROnPlateau
         callbacks.append(ReduceLROnPlateau(monitor='val_loss',factor=0.4,\
                                            patience=3,verbose=self._verbose,\
                                            mode='auto',min_lr=1e-6))        
-
-        single,parallel = model.build()
-        if not parallel is None:
-            training_model = parallel
-        else:
-            training_model = single
 
         if self._config.info:
             print(training_model.summary())
@@ -190,6 +200,8 @@ class Trainer(object):
         """
         from Models import SingleGenerator
 
+        rcomp = re.compile(self._rex)
+        
         # session setup
         sess = K.get_session()
         ses_config = tf.ConfigProto(
@@ -205,7 +217,7 @@ class Trainer(object):
         train_data,val_data,_ = self._ds.split_metadata(self._config.split)
         if self._config.info:
             print("Train set: {0} items".format(len(train_data[0])))
-            print("Validate set: {0} items".format(len(val_data[1])))
+            print("Validate set: {0} items".format(len(val_data[0])))
             
         train_prep = ImageDataGenerator(
             samplewise_center=False,
@@ -238,25 +250,32 @@ class Trainer(object):
                                             shuffle=True,
                                             verbose=self._config.verbose)
 
-
+        single,parallel = model.build()
+        if not parallel is None:
+            training_model = parallel
+        else:
+            training_model = single
+            
         # try to resume the training
-        weights = list(filter(lambda f: f.endswith(".hdf5") and f.startswith(model.name),os.listdir(self._config.weights_path)))
+        weights = list(filter(lambda f: f.endswith(".h5") and f.startswith(model.name),os.listdir(self._config.weights_path)))
         weights.sort()
         old_e_offset = 0
         if len(weights) > 0 and not self._config.new_net:
             # get last file (which is the furthest on the training) if exists
-            ep_weights_file = weights[len(weights)-1]
-            old_e_offset = int(ep_weights_file.split(
-                ".hdf5")[0].split('-')[1].split("e")[0].split("t")[1])
-
+            ep_weights_file = weights[len(weights)-2]
+            match = rcomp.fullmatch(ep_weights_file)
+            if match:
+                old_e_offset = int(match.group('epoch'))
+            else:
+                old_e_offset = 0
             # load weights
             try:
-                model.load_weights(os.path.join(self._config.weights_path,
+                training_model.load_weights(os.path.join(self._config.weights_path,
                     ep_weights_file))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights: {0}".format(ep_weights_file))
             except ValueError:
-                model.load_weights(os.path.join(self._config.weights_path,"{0}_cnn_weights.h5".format(model.name)))
+                training_model.load_weights(os.path.join(self._config.weights_path,"{0}-weights.h5".format(model.name)))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights from consolidated file.")
             except ValueError:
@@ -268,18 +287,12 @@ class Trainer(object):
         callbacks = []
         ## ModelCheckpoint
         callbacks.append(ModelCheckpoint(os.path.join(
-            self._config.weights_path, wf_header + "e{epoch:02d}.hdf5"), 
+            self._config.weights_path, wf_header + "e{epoch:02d}.h5"), 
             save_weights_only=True, period=1,save_best_only=True,monitor='val_acc'))
         ## ReduceLROnPlateau
         callbacks.append(ReduceLROnPlateau(monitor='val_loss',factor=0.4,\
                                            patience=3,verbose=self._verbose,\
-                                           mode='auto',min_lr=1e-6))        
-
-        single,parallel = model.build()
-        if not parallel is None:
-            training_model = parallel
-        else:
-            training_model = single
+                                           mode='auto',min_lr=1e-6))
 
         if self._config.info:
             print(training_model.summary())
