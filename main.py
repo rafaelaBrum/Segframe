@@ -196,6 +196,8 @@ if __name__ == "__main__":
     ##Run prediction options
     parser.add_argument('--pred', action='store_true', dest='pred', default=False, 
         help='Runs prediction with a given model (use -net parameter).')
+    parser.add_argument('-print', action='store_true', dest='print_pred', default=False, 
+        help='Prints stored prediction results.')    
     
     ##System tests
     test_args = parser.add_argument_group('Tests')
