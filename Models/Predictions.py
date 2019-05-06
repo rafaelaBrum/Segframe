@@ -168,6 +168,9 @@ class Predictor(object):
                 if not np.array_equal(Y[i],example[1][0]):
                     print("Datasource label ({0}) and batch label ({1}) differ".format(Y[i],example[1][0]))
 
+        del(X)
+        del(test_generator)
+        
         if self._config.progressbar:
             l.close()
 
