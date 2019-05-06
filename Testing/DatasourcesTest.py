@@ -10,28 +10,26 @@ from Datasources.CellRep import CellRep
 def run(config):
     #Run all tests below
     config.data = 'CellRep'
-    config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
+    if config.local_test:
+        config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
+    else:
+        config.predst = '../data/lym_cnn_training_data/'
 
     print("Verbosity: {0}".format(config.verbose))
 
     cr = CellRep(config.predst,keepImg=True,config=config)
     X,Y = cr.load_metadata()
-    d_x,d_y = cr.load_data()
-    print("X size: {0} \n ************* \n".format(len(X)))
-    print("Y size: {0} \n ************* \n".format(len(Y)))
-
     #Check image dimensions
     print("Dataset has size(s): {0}".format(cr.get_dataset_dimensions()))
+
+    run_all(config,cr)
     
-     #Show a random patch
-    img = d_x[random.randint(0,len(d_x) - 1)]
-    print("Image array shape: {0}; dtype: {1}".format(d_x.shape,d_x.dtype))
-    plt.imshow(img)
-    plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
-    plt.show()
-     
+    if config.local_test:
+        run_local(config,cr,X,Y)
+        
+def run_all(config,cr):
     #Split dataset
-    dataset = cr.load_data(split=(0.8,0.1,0.1))
+    dataset = cr.split_metadata(split=(0.8,0.1,0.1))
     print("Train set: {0} items, {1} labels".format(len(dataset[0][0]),len(dataset[0][1])))
     unique,count = np.unique(dataset[0][1],return_counts=True)
     l_count = dict(zip(unique,count))
@@ -45,17 +43,26 @@ def run(config):
     print("Test set: {0} items, {1} labels".format(len(dataset[2][0]),len(dataset[2][1])))
     unique,count = np.unique(dataset[2][1],return_counts=True)
     l_count = dict(zip(unique,count))
-    print("Test labels: {0} are 0; {1} are 1;".format(l_count[0],l_count[1]))
-    
-    #Split metadata
-    dataset = cr.split_metadata(split=(0.8,0.1,0.1))
-    print("Metadata Train set: {0} items, {1} labels".format(len(dataset[0][0]),len(dataset[0][1])))
-    print("Metadata Validate set: {0} items, {1} labels".format(len(dataset[1][0]),len(dataset[1][1])))
-    print("Metadata Test set: {0} items, {1} labels".format(len(dataset[2][0]),len(dataset[2][1])))    
+    print("Test labels: {0} are 0; {1} are 1;".format(l_count[0],l_count[1]))    
 
     check_labels(config,cr)
     check_data_split(dataset)
 
+def run_local(config,cr,X,Y):
+    """
+    Full dataset is too big for these
+    """
+    d_x,d_y = cr.load_data()
+    print("X size: {0} \n ************* \n".format(len(X)))
+    print("Y size: {0} \n ************* \n".format(len(Y)))
+
+    #Show a random patch
+    img = d_x[random.randint(0,len(d_x) - 1)]
+    print("Image array shape: {0}; dtype: {1}".format(d_x.shape,d_x.dtype))
+    plt.imshow(img)
+    plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
+    plt.show()
+    
 def check_data_split(split_data):
     """
     Checks if there is no reocurrence of samples between sets
