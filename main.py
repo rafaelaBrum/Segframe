@@ -212,7 +212,9 @@ if __name__ == "__main__":
         2 - Run Datasources test; \n \
         3 - Run Prediction test.',
        choices=[0,1,2,3],default=0)
-        
+    parser.add_argument('-tlocal', action='store_true', dest='local_test', default=False, 
+        help='Test is local (assumes a small dataset).')
+    
     config, unparsed = parser.parse_known_args()
     
     #Setup CacheManager - TODO: fill actual files

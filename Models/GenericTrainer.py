@@ -119,7 +119,7 @@ class Trainer(object):
             samplewise_std_normalization=False)
 
         # try to resume the training
-        weights = list(filter(lambda f: f.endswith(".hdf5") and f.startswith(model.name),os.listdir(self._config.model_path)))
+        weights = list(filter(lambda f: f.endswith(".hdf5") and f.startswith(model.name),os.listdir(self._config.weights_path)))
         weights.sort()
         old_e_offset = 0
         if len(weights) > 0 and not self._config.new_net:
@@ -173,8 +173,7 @@ class Trainer(object):
             use_multiprocessing = False,
             workers=3,
             max_queue_size=45,
-            callbacks=callbacks,
-            )
+            callbacks=callbacks)
 
         #Weights should be saved only through the plain model
         cache_m = CacheManager()
@@ -241,7 +240,7 @@ class Trainer(object):
 
 
         # try to resume the training
-        weights = list(filter(lambda f: f.endswith(".hdf5") and f.startswith(model.name),os.listdir(self._config.model_path)))
+        weights = list(filter(lambda f: f.endswith(".hdf5") and f.startswith(model.name),os.listdir(self._config.weights_path)))
         weights.sort()
         old_e_offset = 0
         if len(weights) > 0 and not self._config.new_net:
