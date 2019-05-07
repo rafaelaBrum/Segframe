@@ -141,11 +141,6 @@ class SingleGenerator(GenericIterator):
             batch_x = None
         y = np.zeros(tuple([len(index_array)]),dtype=int)
                 
-        # initialize output lists
-        #batch_x = np.zeros((len(index_array), self.n_frames) + input_shape, 
-        #    dtype=K.floatx())
-        #y = np.zeros(len(index_array), dtype=int)
-
         # generate a random batch of points
         X = self.data[0]
         Y = self.data[1]
