@@ -134,7 +134,7 @@ class SingleGenerator(GenericIterator):
             a batch of transformed samples
         """
         #For debuging
-        if self.verbose > 1:
+        if self.verbose > 0:
             print(" index_array: {0}".format(index_array))
             
         # calculate dimensions of each data point

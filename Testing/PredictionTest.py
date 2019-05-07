@@ -9,7 +9,11 @@ from Models.Predictions import print_previous_prediction
 def run(config):
     #Run all tests below
     config.data = 'CellRep'
-    config.predst = '../data/lym_cnn_training_data/'
+    if config.local_test:
+        config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
+    else:
+        config.predst = '../data/lym_cnn_training_data/'
+        
     config.network = 'VGG16'
 
     #Start predictions

@@ -26,6 +26,18 @@ def main_exec(config):
     if not os.path.isdir(config.bdir):
         os.mkdir(config.bdir)
 
+    if not os.path.isdir(config.weights_path):
+        os.mkdir(config.weights_path)
+        
+    if not os.path.isdir(config.model_path):
+        os.mkdir(config.model_path)
+
+    if not os.path.isdir(config.cache):
+        os.mkdir(config.cache)
+
+    if not os.path.isdir(config.logdir):
+        os.mkdir(config.logdir)
+        
     if config.preprocess:
         if config.multiprocess:
             proc = Process(target=Preprocess.preprocess_data, args=(config,img_types))
