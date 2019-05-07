@@ -56,7 +56,7 @@ class GenericIterator(Iterator):
             "ImageDataGenerator instance")
 
         #TODO: Data length needs adjustment, total data is not necessarily the number of exam directories
-        super(GenericIterator, self).__init__(n=len(self.data), batch_size=batch_size, shuffle=shuffle, seed=seed)
+        super(GenericIterator, self).__init__(n=len(self.data[0]), batch_size=batch_size, shuffle=shuffle, seed=seed)
 
 
     def returnDataSize(self):
@@ -133,6 +133,10 @@ class SingleGenerator(GenericIterator):
         # Returns 
             a batch of transformed samples
         """
+        #For debuging
+        if self.verbose > 1:
+            print(" index_array: {0}".format(index_array))
+            
         # calculate dimensions of each data point
         #Should only create the batches of appropriate size
         if not self.shape is None:
