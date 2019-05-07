@@ -220,15 +220,16 @@ class Trainer(object):
             print("Validate set: {0} items".format(len(val_data[0])))
             
         train_prep = ImageDataGenerator(
-            samplewise_center=False,
-            samplewise_std_normalization=False,
-            rotation_range=10,
+            samplewise_center=True,
+            samplewise_std_normalization=True,
+            rotation_range=90,
             width_shift_range=.1,
             height_shift_range=.1,
             zoom_range=.08,
             shear_range=.03,
             horizontal_flip=True,
-            vertical_flip=True)
+            vertical_flip=True,
+            brightness_range=(-20.0,20.0))
 
         fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
         train_generator = SingleGenerator(dps=train_data,
