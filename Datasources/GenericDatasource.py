@@ -88,8 +88,16 @@ class GenericDS(ABC):
         files = os.listdir(self.path)
 
         X,Y = ([],[])
+        reload_data = False
         
-        if self._cache.checkFileExistence('metadata.pik'):
+        if self._cache.checkFileExistence('split_ratio.pik'):
+            split = self._cache.load('split_ratio.pik')
+            if self._config.split != split:
+                reload_data = True
+                if self._config.info:
+                    print("Previous split ratio is different from requested one. Metadata will be rebuilt.")
+                
+        if self._cache.checkFileExistence('metadata.pik') and not reload_data:
             X,Y = self._cache.load('metadata.pik')
             if self._verbose > 0:
                 print("[GenericDatasource] Loaded split data cache. Used previously defined splitting.")
