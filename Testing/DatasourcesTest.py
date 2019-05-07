@@ -29,7 +29,7 @@ def run(config):
         
 def run_all(config,cr):
     #Split dataset
-    dataset = cr.split_metadata(split=(0.8,0.1,0.1))
+    dataset = cr.split_metadata(split=config.split)
     print("Train set: {0} items, {1} labels".format(len(dataset[0][0]),len(dataset[0][1])))
     unique,count = np.unique(dataset[0][1],return_counts=True)
     l_count = dict(zip(unique,count))
@@ -100,7 +100,7 @@ def check_labels(config,ds):
         t_dct = {t_x[i]:t_y[i] for i in range(len(t_x))}
         reference.update(t_dct)
         if config.info:
-            print("Processing dirs ({0}/{1})".format(count,item_c))
+            print("Processing dirs sequentialy ({0}/{1})".format(count,item_c))
         count += 1
             
     #Now the DS metadata

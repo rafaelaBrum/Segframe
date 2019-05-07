@@ -314,7 +314,7 @@ class Trainer(object):
         cache_m = CacheManager()
         single.save_weights(model.get_weights_cache())
         single.save(model.get_model_cache())
-        cache_m.dump(self._config.split,'split_ratio.pik')
+        cache_m.dump(tuple(self._config.split),'split_ratio.pik')
         
         return Exitcodes.ALL_GOOD        
 

@@ -230,5 +230,6 @@ if __name__ == "__main__":
 
     cache_m = CacheManager(locations=files)    
 
+    config.split = tuple(config.split)
     #Run main program
     main_exec(config)
