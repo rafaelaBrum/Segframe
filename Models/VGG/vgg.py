@@ -75,6 +75,7 @@ class VGG16(GenericModel):
             
         model = Sequential()
         model.add(original_vgg16)
+        model.add(Dropout(0.5))
         model.add(Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Activation('relu'))
         model.add(Dropout(0.5))

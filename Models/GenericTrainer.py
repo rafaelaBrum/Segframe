@@ -146,12 +146,12 @@ class Trainer(object):
 
             # load weights
             try:
-                training_model.load_weights(os.path.join(self._config.weights_path,
+                single.load_weights(os.path.join(self._config.weights_path,
                     ep_weights_file))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights: {0}".format(ep_weights_file))
             except ValueError:
-                training_model.load_weights(os.path.join(self._config.weights_path,"{0}-weights.h5".format(model.name)))
+                single.load_weights(os.path.join(self._config.weights_path,"{0}-weights.h5".format(model.name)))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights from consolidated file.")
             except ValueError:
@@ -220,8 +220,8 @@ class Trainer(object):
             print("Validate set: {0} items".format(len(val_data[0])))
             
         train_prep = ImageDataGenerator(
-            samplewise_center=False,
-            samplewise_std_normalization=False,
+            samplewise_center=True,
+            samplewise_std_normalization=True,
             rotation_range=10,
             width_shift_range=.1,
             height_shift_range=.1,
@@ -240,8 +240,8 @@ class Trainer(object):
                                             verbose=self._config.verbose)
 
         val_prep = ImageDataGenerator(
-            samplewise_center=False,
-            samplewise_std_normalization=False)
+            samplewise_center=True,
+            samplewise_std_normalization=True)
         val_generator = SingleGenerator(dps=val_data,
                                             classes=self._ds.nclasses,
                                             dim=fix_dim,
@@ -270,12 +270,12 @@ class Trainer(object):
                 old_e_offset = 0
             # load weights
             try:
-                training_model.load_weights(os.path.join(self._config.weights_path,
+                single.load_weights(os.path.join(self._config.weights_path,
                     ep_weights_file))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights: {0}".format(ep_weights_file))
             except ValueError:
-                training_model.load_weights(os.path.join(self._config.weights_path,"{0}-weights.h5".format(model.name)))
+                single.load_weights(os.path.join(self._config.weights_path,"{0}-weights.h5".format(model.name)))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights from consolidated file.")
             except ValueError:
