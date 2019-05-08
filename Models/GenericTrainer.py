@@ -198,7 +198,7 @@ class Trainer(object):
         Use the fit_iterator to control the sample production
         TODO: for future use
         """
-        from Models import SingleGenerator
+        from Models import ThreadedGenerator
 
         rcomp = re.compile(self._rex)
         
@@ -232,7 +232,7 @@ class Trainer(object):
             brightness_range=(-20.0,20.0))
 
         fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
-        train_generator = SingleGenerator(dps=train_data,
+        train_generator = ThreadedGenerator(dps=train_data,
                                             classes=self._ds.nclasses,
                                             dim=fix_dim,
                                             batch_size=self._config.batch_size,
@@ -243,7 +243,7 @@ class Trainer(object):
         val_prep = ImageDataGenerator(
             samplewise_center=True,
             samplewise_std_normalization=True)
-        val_generator = SingleGenerator(dps=val_data,
+        val_generator = ThreadedGenerator(dps=val_data,
                                             classes=self._ds.nclasses,
                                             dim=fix_dim,
                                             batch_size=1,

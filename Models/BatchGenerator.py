@@ -8,7 +8,7 @@ from keras.preprocessing.image import Iterator,ImageDataGenerator
 from keras import backend as K
 
 #System modules
-import threading
+import concurrent.futures
 import numpy as np
 import timeit
 
@@ -134,7 +134,7 @@ class SingleGenerator(GenericIterator):
             a batch of transformed samples
         """
         #For debuging
-        if self.verbose > 0:
+        if self.verbose > 1:
             print(" index_array: {0}".format(index_array))
             
         # calculate dimensions of each data point
@@ -178,3 +178,101 @@ class SingleGenerator(GenericIterator):
             
         output = (batch_x, keras.utils.to_categorical(y, self.classes))
         return output         
+
+class ThreadedGenerator(GenericIterator):
+    """
+    Generates batches of images, applies augmentation, resizing, centering...the whole shebang.
+    """
+    def __init__(self, 
+                     dps,
+                     classes,
+                     dim=None,
+                     batch_size=8,
+                     image_generator=None,
+                     shuffle=True,
+                     seed=173,
+                     black_region=None,
+                     data_mean=0.0,
+                     verbose=0,
+                     variable_shape=False):
+        
+        #Set True if examples in the same dataset can have variable shapes
+        self.variable_shape = variable_shape
+        self._executor = None
+        
+        super(ThreadedGenerator, self).__init__(data=dps,
+                                                classes=classes,
+                                                dim=dim,
+                                                batch_size=batch_size,
+                                                image_generator=image_generator,
+                                                shuffle=shuffle,
+                                                seed=seed,
+                                                black_region=black_region,
+                                                data_mean=data_mean,
+                                                verbose=verbose)
+
+
+    def _get_batches_of_transformed_samples(self,index_array):
+        """
+        Only one argument will be considered. The index array has preference
+
+        #Arguments
+           index_array: array of sample indices to include in batch; or
+        # Returns 
+            a batch of transformed samples
+        """
+        #Start thread pool if not already started
+        if self._executor is None:
+            self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+
+        #For debuging
+        if self.verbose > 1:
+            print(" index_array: {0}".format(index_array))
+            
+        # calculate dimensions of each data point
+        #Should only create the batches of appropriate size
+        if not self.shape is None:
+            batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)), dtype=K.floatx())
+        else:
+            batch_x = None
+        y = np.zeros(tuple([len(index_array)]),dtype=int)
+                
+        # generate a random batch of points
+        X = self.data[0]
+        Y = self.data[1]
+        futures = []
+
+        for i,j in enumerate(index_array):
+            t_x = X[j]
+            t_y = Y[j]
+            futures.append(self._executor.submit(self._thread_run_images,t_x,t_y))
+            
+        for i in range(len(futures)):
+            # add point to x_batch and diagnoses to y
+            example,t_y = futures[i].result()
+            if batch_x is None:
+                self.shape = example.shape
+                batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)),dtype=K.floatx())            
+            batch_x[i] = example
+            y[i] = t_y
+
+        del(futures)
+        #Center data
+        #batch_x -= self.mean
+        #Normalize data pixels
+        #batch_x /= 255
+
+        if self.variable_shape:
+            self.shape = None
+            
+        output = (batch_x, keras.utils.to_categorical(y, self.classes))
+        return output
+
+    def _thread_run_images(self,t_x,t_y):
+        example = t_x.readImage(size=self.dim,verbose=self.verbose)
+            
+        if not self.image_generator is None:
+            example = self.image_generator.random_transform(example,self.seed)
+            example = self.image_generator.standardize(example)
+
+        return (example,t_y)
