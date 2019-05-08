@@ -32,9 +32,9 @@ time python3 main.py -i -v --train -predst $LOCAL/test/data/lym_cnn_training_dat
 echo '[FINAL] done training'
 date +%s
 
-if [ ! -d full-test-f5v2 ]
+if [ ! -d batchjob_result ]
 then
-    mkdir full-test-f5v2;
+    mkdir batchjob_result;
 fi
 
 #cp $LOCAL/test/weights/*.hdf5 full-test-f5v2/
