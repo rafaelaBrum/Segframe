@@ -3,4 +3,4 @@
 
 __all__ = ['vgg']
 
-from .vgg import VGG16
+from .vgg import VGG16,VGG16A2
