@@ -21,6 +21,9 @@ def run(config):
     X,Y = cr.load_metadata()
     #Check image dimensions
     print("Dataset has size(s): {0}".format(cr.get_dataset_dimensions()))
+    unique,count = np.unique(Y,return_counts=True)
+    l_count = dict(zip(unique,count))
+    print("Dataset labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
 
     run_all(config,cr)
     
@@ -33,19 +36,18 @@ def run_all(config,cr):
     print("Train set: {0} items, {1} labels".format(len(dataset[0][0]),len(dataset[0][1])))
     unique,count = np.unique(dataset[0][1],return_counts=True)
     l_count = dict(zip(unique,count))
-    print("Train labels: {0} are 0; {1} are 1;".format(l_count[0],l_count[1]))
+    print("Train labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
 
     print("Validate set: {0} items, {1} labels".format(len(dataset[1][0]),len(dataset[1][1])))
     unique,count = np.unique(dataset[1][1],return_counts=True)
     l_count = dict(zip(unique,count))
-    print("Validade labels: {0} are 0; {1} are 1;".format(l_count[0],l_count[1]))
+    print("Validade labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
     
     print("Test set: {0} items, {1} labels".format(len(dataset[2][0]),len(dataset[2][1])))
     unique,count = np.unique(dataset[2][1],return_counts=True)
     l_count = dict(zip(unique,count))
-    print("Test labels: {0} are 0; {1} are 1;".format(l_count[0],l_count[1]))    
+    print("Test labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
 
-    check_labels(config,cr)
     check_data_split(dataset)
 
 def run_local(config,cr,X,Y):
@@ -62,6 +64,11 @@ def run_local(config,cr,X,Y):
     plt.imshow(img)
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
     plt.show()
+
+    del(d_x)
+    del(d_y)
+    
+    check_labels(config,cr)
     
 def check_data_split(split_data):
     """

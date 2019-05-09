@@ -94,6 +94,13 @@ class GenericDS(ABC):
             split = self._cache.load('split_ratio.pik')
             if self._config.split != split:
                 reload_data = True
+                #Dump old data
+                if not self.X is None or not self.Y is None:
+                    del(self.X)
+                    del(self.Y)
+                    self.X = None
+                    self.Y = None
+                    
                 if self._config.info:
                     print("Previous split ratio is different from requested one. Metadata will be rebuilt.")
                 

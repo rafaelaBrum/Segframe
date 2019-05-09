@@ -8,7 +8,10 @@ from Models import Trainer
 def run(config):
     #Run all tests below
     config.data = 'CellRep'
-    config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
+    if config.local_test:
+        config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
+    else:
+        config.predst = '../data/lym_cnn_training_data/'
     config.network = 'VGG16'
     
     #Start training
