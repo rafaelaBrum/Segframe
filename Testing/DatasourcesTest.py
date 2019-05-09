@@ -23,8 +23,10 @@ def run(config):
     print("Dataset has size(s): {0}".format(cr.get_dataset_dimensions()))
     unique,count = np.unique(Y,return_counts=True)
     l_count = dict(zip(unique,count))
-    print("Dataset labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
-
+    print("Dataset labels: {0:.2f} are positives".format((l_count[1]/(l_count[0]+l_count[1]))))
+    print("\n".join(["label {0}: {1} items" .format(key,l_count[key]) for key in unique]))
+    print("***********")
+    
     run_all(config,cr)
     
     if config.local_test:
