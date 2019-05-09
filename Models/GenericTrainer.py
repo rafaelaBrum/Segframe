@@ -13,7 +13,7 @@ from Utils import Exitcodes,CacheManager
 from keras import backend as K
 from keras.preprocessing.image import ImageDataGenerator
 # Training callbacks
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau,LearningRateScheduler
 from keras.utils import to_categorical
 
 import tensorflow as tf
@@ -29,7 +29,13 @@ def run_training(config,locations=None):
         cache_m = CacheManager(locations=locations)
     trainer = Trainer(config)
     trainer.run()
-    
+
+def _reduce_lr_on_epoch(epoch,lr):
+    #Reduces LR by a factor of 10 every 6 epochs
+    if epoch > 0 and not (epoch%6):
+        lr = lr/10
+    return lr
+
 class Trainer(object):
     """
     Class that implements the training procedures applicable to all
@@ -291,9 +297,10 @@ class Trainer(object):
             self._config.weights_path, wf_header + "e{epoch:02d}.h5"), 
             save_weights_only=True, period=1,save_best_only=True,monitor='val_acc'))
         ## ReduceLROnPlateau
-        callbacks.append(ReduceLROnPlateau(monitor='val_loss',factor=0.4,\
+        callbacks.append(ReduceLROnPlateau(monitor='loss',factor=0.1,\
                                            patience=3,verbose=self._verbose,\
-                                           mode='auto',min_lr=1e-6))
+                                           mode='auto',min_lr=1e-8))
+        callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=1))
 
         if self._config.info:
             print(training_model.summary())
@@ -317,6 +324,5 @@ class Trainer(object):
         single.save(model.get_model_cache())
         cache_m.dump(tuple(self._config.split),'split_ratio.pik')
         
-        return Exitcodes.ALL_GOOD        
-
+        return Exitcodes.ALL_GOOD
         
