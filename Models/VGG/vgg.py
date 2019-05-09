@@ -95,8 +95,8 @@ class VGG16(GenericModel):
             if self._config.info:
                 print("Found previous learning rate: {0}".format(l_rate))
         
-        #sgd = optimizers.SGD(lr=lr if lr>0.0 else 0.2e-1, decay=1.5e-4, momentum=0.9, nesterov=True)
-        adam = optimizers.Adam(lr = l_rate)
+        sgd = optimizers.SGD(lr=l_rate, decay=1.5e-4, momentum=0.9, nesterov=True)
+        #adam = optimizers.Adam(lr = l_rate)
         
         #Return parallel model if multiple GPUs are available
         parallel_model = None
@@ -104,19 +104,19 @@ class VGG16(GenericModel):
         if self._config.gpu_count > 1:
             with tf.device('/cpu:0'):
                 model.compile(loss='categorical_crossentropy',
-                    optimizer=adam,
+                    optimizer=sgd,
                     metrics=['accuracy'])
 
             parallel_model = multi_gpu_model(model,gpus=self._config.gpu_count)
             parallel_model.compile(loss='categorical_crossentropy',
-                                       optimizer=adam,
+                                       optimizer=sgd,
                                        metrics=['accuracy'],
                                        #options=p_opt, 
                                        #run_metadata=p_mtd
                                        )
         else:
             model.compile(loss='categorical_crossentropy',
-                optimizer=adam,
+                optimizer=sgd,
                 metrics=['accuracy'],
                 #options=p_opt, 
                 #run_metadata=p_mtd
