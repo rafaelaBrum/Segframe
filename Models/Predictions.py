@@ -56,10 +56,8 @@ def print_previous_prediction(config):
     m_conf = PrintConfusionMatrix(y_pred,expected,nclasses,config,"TILs")
 
     #ROC AUC
-    scores = np.ndarray(expected.size,dtype=np.float32)
-    for idx in range(0,expected.size):
-        label = expected[idx]
-        scores[idx] = Y_pred[idx][label]
+    #Get positive scores
+    scores = Y_pred.transpose()[1]
         
     fpr,tpr,thresholds = metrics.roc_curve(expected,scores,pos_label=1)
     print("False positive rates: {0}".format(fpr))
@@ -178,6 +176,7 @@ class Predictor(object):
         expected = np.argmax(Y, axis=1)
 
         if self._config.verbose > 0:
+            np.set_printoptions(threshold=np.inf)
             print("Y ({1}):\n{0}".format(Y,Y.shape))
             print("expected ({1}):\n{0}".format(expected,expected.shape))
             print("Predicted probs ({1}):\n{0}".format(Y_pred,Y_pred.shape))
