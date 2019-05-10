@@ -223,7 +223,7 @@ class ThreadedGenerator(GenericIterator):
         """
         #Start thread pool if not already started
         if self._executor is None:
-            workers = round((len(index_array)/3 + (len(index_array)%3>0) +0.5))
+            workers = round((self.batch_size/3 + (self.batch_size%3>0) +0.5))
             self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
 
         #For debuging
