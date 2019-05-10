@@ -252,7 +252,7 @@ class Trainer(object):
         val_generator = ThreadedGenerator(dps=val_data,
                                             classes=self._ds.nclasses,
                                             dim=fix_dim,
-                                            batch_size=1,
+                                            batch_size=self._config.batch_size,
                                             image_generator=val_prep,
                                             shuffle=True,
                                             verbose=self._config.verbose)
