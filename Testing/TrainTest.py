@@ -12,7 +12,6 @@ def run(config):
         config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
     else:
         config.predst = '../data/lym_cnn_training_data/'
-    config.network = 'VGG16A2'
     
     #Start training
     trainer = Trainer(config)
