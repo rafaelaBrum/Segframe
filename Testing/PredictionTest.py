@@ -14,8 +14,6 @@ def run(config):
     else:
         config.predst = '../data/lym_cnn_training_data/'
         
-    config.network = 'VGG16'
-
     #Start predictions
     pred = Predictor(config)
     pred.run()
