@@ -17,6 +17,7 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from keras.utils import to_categorical
 from keras.models import load_model
+from keras_contrib.layers import GroupNormalization
 
 #Tensorflow
 import tensorflow as tf
@@ -125,9 +126,15 @@ class Predictor(object):
     
         #During test phase multi-gpu mode is not necessary, load full model (multi-gpu would need to load training weights)
         if os.path.isfile(model.get_model_cache()):
-            pred_model = load_model(model.get_model_cache())
-            if self._config.info:
-                print("Model loaded from: {0}".format(model.get_model_cache()))
+            try:
+                pred_model = load_model(model.get_model_cache())
+                if self._config.info:
+                    print("Model loaded from: {0}".format(model.get_model_cache()))
+            except ValueError:
+                pred_model,_ = model.build()
+                pred_model.load_weights(model.get_weights_cache())
+                if self._config.info:
+                    print("Model weights loaded from: {0}".format(model.get_weights_cache()))
         else:
             if self._config.info:
                 print("Model not found at: {0}".format(model.get_model_cache()))

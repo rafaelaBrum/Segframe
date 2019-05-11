@@ -297,7 +297,7 @@ class Trainer(object):
             self._config.weights_path, wf_header + "e{epoch:02d}.h5"), 
             save_weights_only=True, period=1,save_best_only=True,monitor='val_acc'))
         ## ReduceLROnPlateau
-        callbacks.append(ReduceLROnPlateau(monitor='loss',factor=0.1,\
+        callbacks.append(ReduceLROnPlateau(monitor='loss',factor=0.5,\
                                            patience=3,verbose=self._verbose,\
                                            mode='auto',min_lr=1e-8))
         callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=1))

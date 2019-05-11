@@ -251,7 +251,7 @@ class VGG16A2(VGG16):
         x = Convolution2D(512, (3, 3),strides=1,
             padding='valid',
             name='block4_conv2',
-            weights=layer_dict['block4_conv2'].get_weights()
+            weights=layer_dict['block4_conv2'].get_weights(),
             kernel_regularizer=regularizers.l2(0.0005))
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))        
@@ -263,7 +263,7 @@ class VGG16A2(VGG16):
         x = Convolution2D(512, (3, 3),strides=1,
             padding='valid',
             name='block4_conv3',
-            weights=layer_dict['block4_conv3'].get_weights()
+            weights=layer_dict['block4_conv3'].get_weights(),
             kernel_regularizer=regularizers.l2(0.0005))
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))        
