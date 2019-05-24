@@ -128,7 +128,7 @@ class VGG16(GenericModel):
         #model.add(Convolution2D(2, (1, 1)))
         model.add(Flatten())
         model.add(Dropout(0.75))
-        model.add(Dense(2))
+        model.add(Dense(self._ds.nclasses))
         model.add(Activation('softmax'))
 
         return model
@@ -324,7 +324,39 @@ class VGG16A2(VGG16):
         #model.add(Convolution2D(2, (1, 1)))
         model.add(Flatten())
         model.add(Dropout(0.75))
-        model.add(Dense(2))
+        model.add(Dense(self._ds.nclasses))
+        model.add(Activation('softmax'))
+        
+        return model
+
+class VGG16A3(VGG16):
+    """
+    VGG variation, uses GroupNormalization and more dropout
+    """
+    def __init__(self,config,ds):
+        super(VGG16A3,self).__init__(config=config,ds=ds,name = "VGG16_A3")
+
+    def _build_architecture(self,input_shape):
+        original_vgg16 = vgg16.VGG16(weights=self.cache_m.fileLocation('vgg16_weights_notop.h5'),
+                                         include_top=False,
+                                         input_shape=input_shape)
+
+        #Freeze initial layers, except for the last 3:
+        for layer in original_vgg16.layers[:-3]:
+            layer.trainable = False
+            
+        model = Sequential()
+        model.add(original_vgg16)
+        model.add(Dropout(0.75))
+        model.add(Convolution2D(4096, (5, 5),strides=1,padding='valid',kernel_initializer='he_normal'))
+        model.add(Activation('relu'))
+        model.add(Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
+        model.add(Activation('relu'))
+        #model.add(Convolution2D(2, (1, 1)))
+        model.add(Dropout(0.75))
+        model.add(Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
+        model.add(Flatten())
+        model.add(Dense(self._ds.nclasses))
         model.add(Activation('softmax'))
         
         return model
