@@ -120,14 +120,14 @@ class VGG16(GenericModel):
             
         model = Sequential()
         model.add(original_vgg16)
-        model.add(Dropout(0.5))
+        model.add(Dropout(0.75))
         model.add(Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Activation('relu'))
-        model.add(Dropout(0.5))
         model.add(Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Activation('relu'))
         #model.add(Convolution2D(2, (1, 1)))
         model.add(Flatten())
+        model.add(Dropout(0.75))
         model.add(Dense(2))
         model.add(Activation('softmax'))
 
@@ -318,11 +318,12 @@ class VGG16A2(VGG16):
         #Last FC layers are substituted by Conv layers
         model.add(Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Activation('relu'))
-        model.add(Dropout(0.5))
+        model.add(Dropout(0.75))
         model.add(Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Activation('relu'))
         #model.add(Convolution2D(2, (1, 1)))
         model.add(Flatten())
+        model.add(Dropout(0.75))
         model.add(Dense(2))
         model.add(Activation('softmax'))
         
