@@ -303,7 +303,7 @@ class Trainer(object):
         callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=1))
 
         if self._config.info:
-            print(training_model.summary())
+            print(single.summary())
 
         training_model.fit_generator(
             generator = train_generator,

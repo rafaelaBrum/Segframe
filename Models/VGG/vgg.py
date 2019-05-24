@@ -74,14 +74,14 @@ class VGG16(GenericModel):
         #Check if previous training and LR is saved, if so, use it
         lr_cache = "{0}_learning_rate.txt".format(self.name)
         self.cache_m.registerFile(os.path.join(self._config.cache,lr_cache),lr_cache)
-        l_rate = 0.000005
+        l_rate = 0.00003
         if os.path.isfile(self.cache_m.fileLocation(lr_cache)) and not self._config.new_net:
             l_rate = float(self.cache_m.read(lr_cache))
             if self._config.info:
                 print("Found previous learning rate: {0}".format(l_rate))
         
-        sgd = optimizers.SGD(lr=l_rate, decay=1.5e-4, momentum=0.9, nesterov=True)
-        #adam = optimizers.Adam(lr = l_rate)
+        #sgd = optimizers.SGD(lr=l_rate, decay=1.5e-4, momentum=0.9, nesterov=True)
+        adam = optimizers.Adam(lr = l_rate)
         
         #Return parallel model if multiple GPUs are available
         parallel_model = None
@@ -89,19 +89,19 @@ class VGG16(GenericModel):
         if self._config.gpu_count > 1:
             with tf.device('/cpu:0'):
                 model.compile(loss='categorical_crossentropy',
-                    optimizer=sgd,
+                    optimizer=adam,
                     metrics=['accuracy'])
 
             parallel_model = multi_gpu_model(model,gpus=self._config.gpu_count)
             parallel_model.compile(loss='categorical_crossentropy',
-                                       optimizer=sgd,
+                                       optimizer=adam,
                                        metrics=['accuracy'],
                                        #options=p_opt, 
                                        #run_metadata=p_mtd
                                        )
         else:
             model.compile(loss='categorical_crossentropy',
-                optimizer=sgd,
+                optimizer=adam,
                 metrics=['accuracy'],
                 #options=p_opt, 
                 #run_metadata=p_mtd
@@ -114,8 +114,8 @@ class VGG16(GenericModel):
                                          include_top=False,
                                          input_shape=input_shape)
 
-        #Freeze initial layers, except for the last 5:
-        for layer in original_vgg16.layers[:-5]:
+        #Freeze initial layers, except for the last 3:
+        for layer in original_vgg16.layers[:-3]:
             layer.trainable = False
             
         model = Sequential()
@@ -276,7 +276,8 @@ class VGG16A2(VGG16):
         x = Convolution2D(512, (3, 3),strides=1,
             padding='valid',
             name='block5_conv1',
-            kernel_initializer='he_normal',
+            #kernel_initializer='he_normal',
+            weights=layer_dict['block5_conv1'].get_weights(),
             kernel_regularizer=regularizers.l2(0.0005))
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))        
@@ -288,7 +289,8 @@ class VGG16A2(VGG16):
         x = Convolution2D(512, (3, 3),strides=1,
             padding='valid',
             name='block5_conv2',
-            kernel_initializer='he_normal',
+            #kernel_initializer='he_normal',
+            weights=layer_dict['block5_conv2'].get_weights(),
             kernel_regularizer=regularizers.l2(0.0005))
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))
@@ -300,13 +302,18 @@ class VGG16A2(VGG16):
         x = Convolution2D(512, (3, 3),strides=1,
             padding='valid',
             name='block5_conv3',
-            kernel_initializer='he_normal',
+            #kernel_initializer='he_normal',
+            weights=layer_dict['block5_conv3'].get_weights(),
             kernel_regularizer=regularizers.l2(0.0005))
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))
         model.add(Activation('relu'))
         model.add(MaxPooling2D(pool_size=(2, 2),strides=2))
         model.add(Dropout(0.3))
+
+        #Freeze initial layers, except for the last 3:
+        for layer in model.layers[:-3]:
+            layer.trainable = False
 
         #Last FC layers are substituted by Conv layers
         model.add(Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal'))
@@ -319,8 +326,4 @@ class VGG16A2(VGG16):
         model.add(Dense(2))
         model.add(Activation('softmax'))
         
-        #Freeze initial layers, except for the last 5:
-        for layer in model.layers[:-5]:
-            layer.trainable = False
-
         return model
