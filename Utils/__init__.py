@@ -3,5 +3,6 @@
 
 from .CacheManager import CacheManager
 from .CustomCallbacks import SaveLRCallback
+from .CustomCallbacks import CalculateF1Score
 from .ParallelUtils import multiprocess_run
 from .Output import PrintConfusionMatrix

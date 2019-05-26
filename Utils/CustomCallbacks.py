@@ -25,3 +25,15 @@ class SaveLRCallback(Callback):
             fd.close()
         except IOError as e:
             print("[SaveLRCallback] {0}".format(str(e)))
+
+class CalculateF1Score(Callback):
+    """
+    Calculates F1 score as a callback function. The right way to do it.
+    https://stackoverflow.com/questions/43547402/how-to-calculate-f1-macro-in-keras
+    """
+
+    def on_epoch_end(self,epoch, logs={}):
+        y_true = self.model.validation_data[1]
+
+    def on_epoch_begin(self,epoch, logs={}):
+        y_true = self.validation_data[1]

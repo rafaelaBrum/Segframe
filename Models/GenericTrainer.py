@@ -6,7 +6,7 @@ import os,sys
 import re
 
 from Datasources.CellRep import CellRep
-from Utils import SaveLRCallback
+from Utils import SaveLRCallback,CalculateF1Score
 from Utils import Exitcodes,CacheManager
 
 #Keras
@@ -301,6 +301,7 @@ class Trainer(object):
                                            patience=3,verbose=self._verbose,\
                                            mode='auto',min_lr=1e-8))
         callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=1))
+        #callbacks.append(CalculateF1Score())
 
         if self._config.info:
             print(single.summary())

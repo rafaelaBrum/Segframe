@@ -4,7 +4,6 @@
 import importlib
 import os
 
-from Models.GenericModel import GenericModel
 import numpy as np
 import tensorflow as tf
 
@@ -18,10 +17,11 @@ from keras.utils import multi_gpu_model
 from keras.applications import vgg16
 from keras import regularizers
 from keras_contrib.layers import GroupNormalization
-import keras
+from keras import backend as K
 
 #Locals
 from Utils import CacheManager
+from Models.GenericModel import GenericModel
 
 class VGG16(GenericModel):
     """
@@ -85,7 +85,7 @@ class VGG16(GenericModel):
         
         #Return parallel model if multiple GPUs are available
         parallel_model = None
-
+        
         if self._config.gpu_count > 1:
             with tf.device('/cpu:0'):
                 model.compile(loss='categorical_crossentropy',
@@ -120,16 +120,16 @@ class VGG16(GenericModel):
             
         model = Sequential()
         model.add(original_vgg16)
-        model.add(Dropout(0.75))
         model.add(Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Activation('relu'))
+        model.add(Dropout(0.75))
         model.add(Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Activation('relu'))
         #model.add(Convolution2D(2, (1, 1)))
         model.add(Flatten())
         model.add(Dropout(0.75))
         model.add(Dense(self._ds.nclasses))
-        model.add(Activation('softmax'))
+        model.add(Activation('linear'))
 
         return model
 
