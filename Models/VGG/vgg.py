@@ -74,7 +74,7 @@ class VGG16(GenericModel):
         #Check if previous training and LR is saved, if so, use it
         lr_cache = "{0}_learning_rate.txt".format(self.name)
         self.cache_m.registerFile(os.path.join(self._config.cache,lr_cache),lr_cache)
-        l_rate = 0.00003
+        l_rate = 0.00002
         if os.path.isfile(self.cache_m.fileLocation(lr_cache)) and not self._config.new_net:
             l_rate = float(self.cache_m.read(lr_cache))
             if self._config.info:
@@ -115,7 +115,7 @@ class VGG16(GenericModel):
                                          input_shape=input_shape)
 
         #Freeze initial layers, except for the last 3:
-        for layer in original_vgg16.layers[:-3]:
+        for layer in original_vgg16.layers[:-2]:
             layer.trainable = False
             
         model = Sequential()
@@ -342,18 +342,19 @@ class VGG16A3(VGG16):
                                          input_shape=input_shape)
 
         #Freeze initial layers, except for the last 3:
-        for layer in original_vgg16.layers[:-3]:
+        for layer in original_vgg16.layers[:-6]:
             layer.trainable = False
             
         model = Sequential()
         model.add(original_vgg16)
-        model.add(Dropout(0.75))
+        model.add(Dropout(0.4))
         model.add(Convolution2D(4096, (5, 5),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Activation('relu'))
+        model.add(Dropout(0.4))
         model.add(Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Activation('relu'))
         #model.add(Convolution2D(2, (1, 1)))
-        model.add(Dropout(0.75))
+        model.add(Dropout(0.4))
         model.add(Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Flatten())
         model.add(Dense(self._ds.nclasses))
