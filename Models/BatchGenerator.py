@@ -58,12 +58,6 @@ class GenericIterator(Iterator):
         super(GenericIterator, self).__init__(n=len(self.data[0]), batch_size=batch_size, shuffle=shuffle, seed=seed)
 
 
-    def __len__(self):
-        """
-        Dataset size
-        """
-        return len(self.data[0])
-    
     def returnDataSize(self):
         """
         Returns the number of examples
