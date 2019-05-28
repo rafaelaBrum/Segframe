@@ -74,7 +74,7 @@ class VGG16(GenericModel):
         #Check if previous training and LR is saved, if so, use it
         lr_cache = "{0}_learning_rate.txt".format(self.name)
         self.cache_m.registerFile(os.path.join(self._config.cache,lr_cache),lr_cache)
-        l_rate = 0.00002
+        l_rate = 0.0002
         if os.path.isfile(self.cache_m.fileLocation(lr_cache)) and not self._config.new_net:
             l_rate = float(self.cache_m.read(lr_cache))
             if self._config.info:
@@ -125,11 +125,11 @@ class VGG16(GenericModel):
         model.add(Dropout(0.75))
         model.add(Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Activation('relu'))
-        #model.add(Convolution2D(2, (1, 1)))
-        model.add(Flatten())
         model.add(Dropout(0.75))
+        model.add(Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
+        model.add(Flatten())
         model.add(Dense(self._ds.nclasses))
-        model.add(Activation('linear'))
+        model.add(Activation('softmax'))
 
         return model
 
