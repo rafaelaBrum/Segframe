@@ -157,7 +157,7 @@ class VGG16A2(VGG16):
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))
         model.add(Activation('relu'))
-        model.add(Dropout(0.1))
+        #model.add(Dropout(0.1))
     
         #Second layer
         model.add(ZeroPadding2D(padding=1))
@@ -170,7 +170,7 @@ class VGG16A2(VGG16):
         model.add(GroupNormalization(groups=4,axis=-1))        
         model.add(Activation('relu'))
         model.add(MaxPooling2D(pool_size=(2, 2),strides=2))
-        model.add(Dropout(0.1))
+        #model.add(Dropout(0.1))
         
         #Third layer
         model.add(ZeroPadding2D(padding=1))
@@ -182,7 +182,7 @@ class VGG16A2(VGG16):
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))        
         model.add(Activation('relu'))
-        model.add(Dropout(0.2))
+        #model.add(Dropout(0.2))
         
         #Fourth layer
         model.add(ZeroPadding2D(padding=1))
@@ -195,7 +195,7 @@ class VGG16A2(VGG16):
         model.add(GroupNormalization(groups=4,axis=-1))        
         model.add(Activation('relu'))
         model.add(MaxPooling2D(pool_size=(2, 2),strides=2))
-        model.add(Dropout(0.2))
+        #model.add(Dropout(0.2))
         
         #Fifth layer
         model.add(ZeroPadding2D(padding=1))
@@ -207,7 +207,7 @@ class VGG16A2(VGG16):
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))        
         model.add(Activation('relu'))
-        model.add(Dropout(0.2))
+        #model.add(Dropout(0.2))
         
         #Sith layer
         model.add(ZeroPadding2D(padding=1))
@@ -219,7 +219,7 @@ class VGG16A2(VGG16):
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))        
         model.add(Activation('relu'))
-        model.add(Dropout(0.3))
+        #model.add(Dropout(0.3))
         
         #Seventh layer
         model.add(ZeroPadding2D(padding=1))
@@ -232,7 +232,7 @@ class VGG16A2(VGG16):
         model.add(GroupNormalization(groups=4,axis=-1))        
         model.add(Activation('relu'))
         model.add(MaxPooling2D(pool_size=(2, 2),strides=2))
-        model.add(Dropout(0.3))
+        #model.add(Dropout(0.3))
         
         #Eigth layer
         model.add(ZeroPadding2D(padding=1))
@@ -244,7 +244,7 @@ class VGG16A2(VGG16):
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))        
         model.add(Activation('relu'))
-        model.add(Dropout(0.3))
+        #model.add(Dropout(0.3))
         
         #Nineth layer
         model.add(ZeroPadding2D(padding=1))
@@ -256,7 +256,7 @@ class VGG16A2(VGG16):
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))        
         model.add(Activation('relu'))
-        model.add(Dropout(0.3))
+        #model.add(Dropout(0.3))
         
         #Tenth layer
         model.add(ZeroPadding2D(padding=1))
@@ -269,7 +269,7 @@ class VGG16A2(VGG16):
         model.add(GroupNormalization(groups=4,axis=-1))        
         model.add(Activation('relu'))
         model.add(MaxPooling2D(pool_size=(2, 2),strides=2))
-        model.add(Dropout(0.3))
+        #model.add(Dropout(0.3))
         
         #Eleventh layer
         model.add(ZeroPadding2D(padding=1))
@@ -282,7 +282,7 @@ class VGG16A2(VGG16):
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))        
         model.add(Activation('relu'))
-        model.add(Dropout(0.3))
+        #model.add(Dropout(0.3))
         
         #Twelth layer
         model.add(ZeroPadding2D(padding=1))
@@ -295,7 +295,7 @@ class VGG16A2(VGG16):
         model.add(x)
         model.add(GroupNormalization(groups=4,axis=-1))
         model.add(Activation('relu'))
-        model.add(Dropout(0.3))
+        #model.add(Dropout(0.3))
         
         #Thirtenth layer
         model.add(ZeroPadding2D(padding=1))
@@ -309,7 +309,7 @@ class VGG16A2(VGG16):
         model.add(GroupNormalization(groups=4,axis=-1))
         model.add(Activation('relu'))
         model.add(MaxPooling2D(pool_size=(2, 2),strides=2))
-        model.add(Dropout(0.3))
+        #model.add(Dropout(0.3))
 
         #Freeze initial layers, except for the last 3:
         for layer in model.layers[:-3]:

@@ -184,7 +184,7 @@ class Predictor(object):
 
         if self._config.verbose > 0:
             np.set_printoptions(threshold=np.inf)
-            print("Y ({1}):\n{0}".format(Y,Y.shape))
+            #print("Y ({1}):\n{0}".format(Y,Y.shape))
             print("expected ({1}):\n{0}".format(expected,expected.shape))
             print("Predicted probs ({1}):\n{0}".format(Y_pred,Y_pred.shape))
             print("Predicted ({1}):\n{0}".format(y_pred,y_pred.shape))
