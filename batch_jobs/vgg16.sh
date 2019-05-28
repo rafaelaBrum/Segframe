@@ -28,7 +28,7 @@ cd /pylon5/ac3uump/alsm/active-learning/Segframe
 echo '[START] training'
 date +%s
 
-time python3 main.py -i -v --train -predst $LOCAL/test/lym_cnn_training_data/ -split 0.9 0.05 0.05 -net VGG16 -data CellRep -e 25 -b 128 -out logs/ -cpu 6 -gpu 2 --pred -tn
+time python3 main.py -i -v --train -predst $LOCAL/test/lym_cnn_training_data/ -split 0.9 0.05 0.05 -net VGG16 -data CellRep -e 40 -b 64 -out logs/ -cpu 6 -gpu 2 --pred -tn
 echo '[FINAL] done training'
 date +%s
 
