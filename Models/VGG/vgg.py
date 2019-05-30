@@ -312,8 +312,8 @@ class VGG16A2(VGG16):
         #model.add(Dropout(0.3))
 
         #Freeze initial layers, except for the last 3:
-        for layer in model.layers[:-3]:
-            layer.trainable = False
+        #for layer in model.layers[:-3]:
+        #    layer.trainable = False
 
         #Last FC layers are substituted by Conv layers
         model.add(Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal'))
@@ -325,7 +325,7 @@ class VGG16A2(VGG16):
         model.add(Flatten())
         model.add(Dropout(0.75))
         model.add(Dense(self._ds.nclasses))
-        model.add(Activation('softmax'))
+        model.add(Activation('sigmoid'))
         
         return model
 

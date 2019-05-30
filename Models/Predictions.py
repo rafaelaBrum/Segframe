@@ -35,12 +35,12 @@ def run_prediction(config,locations=None):
     if not locations is None:
         cache_m = CacheManager(locations=locations)
     if config.print_pred:
-        print_previous_prediction(config)
+        print_prediction(config)
     else:
         predictor = Predictor(config)
         predictor.run()
 
-def print_previous_prediction(config):
+def print_prediction(config):
     cache_m = CacheManager()
 
     if not os.path.isfile(cache_m.fileLocation('test_pred.pik')):
@@ -193,4 +193,4 @@ class Predictor(object):
         cache_m.dump((expected,Y_pred,self._ds.nclasses),'test_pred.pik')
 
         #Output metrics
-        print_previous_prediction(self._config)
+        print_prediction(self._config)
