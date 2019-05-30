@@ -4,6 +4,7 @@
 import importlib
 import os,sys
 import re
+import numpy as np
 
 from Datasources.CellRep import CellRep
 from Utils import SaveLRCallback,CalculateF1Score
@@ -97,6 +98,7 @@ class Trainer(object):
         rcomp = re.compile(self._rex)
         
         train,val,_ = self._ds.load_data(split=self._config.split,keepImg=False)
+                    
         x_train,y_train = train
         x_val,y_val = val
 
@@ -221,6 +223,16 @@ class Trainer(object):
 
         #Setup of generators, augmentation, preprocessing
         train_data,val_data,_ = self._ds.split_metadata(self._config.split)
+        
+        if self._verbose > 0:
+            unique,count = np.unique(train_data[1],return_counts=True)
+            l_count = dict(zip(unique,count))
+            print("Train labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
+            
+            unique,count = np.unique(val_data[1],return_counts=True)
+            l_count = dict(zip(unique,count))
+            print("Train labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
+            
         if self._config.info:
             print("Train set: {0} items".format(len(train_data[0])))
             print("Validate set: {0} items".format(len(val_data[0])))
