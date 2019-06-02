@@ -5,6 +5,7 @@ import numpy as np
 import os
 import random
 import re
+import concurrent.futures
 
 #Local modules
 from Datasources import GenericDatasource as gd
@@ -30,7 +31,7 @@ class LDir(gd.GenericDS):
         super().__init__(data_path,keepImg,config,name='LDir')
         self.nclasses = 2
         self.rcomp = re.compile(self._rex)
-
+        self._executor = None
 
     def _load_metadata_from_dir(self,d):
         """
@@ -42,26 +43,51 @@ class LDir(gd.GenericDS):
         t_x,t_y = ([],[])
         wsi_list = os.listdir(os.path.join(self.path,d))
 
+        #Start thread pool if not already started
+        if self._executor is None:
+            workers = round((self._config.cpu_count/3 + (self._config.cpu_count%3>0) +0.5))
+            self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
+
+        futures = []
         for w in wsi_list:
             t_path = os.path.join(d,w)
             if not os.path.isdir(t_path):
                 continue
-            patches = os.listdir(t_path)
-            for f in patches:
-                m = self.rcomp.match(f)
-                if m is None:
-                    if self._verbose > 1:
-                        print('[LDir] File does not match pattern: {0}'.format(f))
-                    continue
-                coord = (m.group('xcoord'),m.group('ycoord'))
-                seg = PImage(os.path.join(t_path,f),keepImg=self._keep,origin=w,coord=coord,verbose=self._verbose)
-                label = int(m.group('label'))
-                if label < 1:
-                    label = 0
-                t_x.append(seg)
-                t_y.append(label)
-                class_set.add(label)
+            
+            futures.append(self._executor.submit(self._run_threaded,t_path,w))
+
+        for i in range(len(futures)):
+            # add point to x_batch and diagnoses to y
+            r_tx,r_ty,r_class = futures[i].result()
+            t_x.extend(r_tx)
+            t_y.extend(r_ty)
+            class_set.update(r_class)
+
+        del(futures)
+            
         if self._verbose > 1:
             print("On directory {2}:\n - Number of classes: {0};\n - Classes: {1}".format(len(class_set),class_set,os.path.basename(d)))
         
         return t_x,t_y
+
+    def _run_threaded(self,t_path,w):
+        patches = os.listdir(t_path)
+        class_set = set()
+        t_x,t_y = ([],[])
+        
+        for f in patches:
+            m = self.rcomp.match(f)
+            if m is None:
+                if self._verbose > 1:
+                    print('[LDir] File does not match pattern: {0}'.format(f))
+                continue
+            coord = (m.group('xcoord'),m.group('ycoord'))
+            seg = PImage(os.path.join(t_path,f),keepImg=self._keep,origin=w,coord=coord,verbose=self._verbose)
+            label = int(m.group('label'))
+            if label < 1:
+                label = 0
+            t_x.append(seg)
+            t_y.append(label)
+            class_set.add(label)
+            
+        return(t_x,t_y,class_set)
