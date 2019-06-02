@@ -74,14 +74,14 @@ class VGG16(GenericModel):
         #Check if previous training and LR is saved, if so, use it
         lr_cache = "{0}_learning_rate.txt".format(self.name)
         self.cache_m.registerFile(os.path.join(self._config.cache,lr_cache),lr_cache)
-        l_rate = 0.0002
+        l_rate = 0.0001
         if os.path.isfile(self.cache_m.fileLocation(lr_cache)) and not self._config.new_net:
             l_rate = float(self.cache_m.read(lr_cache))
             if self._config.info:
                 print("Found previous learning rate: {0}".format(l_rate))
         
-        #sgd = optimizers.SGD(lr=l_rate, decay=1.5e-4, momentum=0.9, nesterov=True)
-        adam = optimizers.Adam(lr = l_rate)
+        sgd = optimizers.SGD(lr=l_rate, decay=1.5e-4, momentum=0.9, nesterov=True)
+        #adam = optimizers.Adam(lr = l_rate)
         
         #Return parallel model if multiple GPUs are available
         parallel_model = None
@@ -89,19 +89,19 @@ class VGG16(GenericModel):
         if self._config.gpu_count > 1:
             with tf.device('/cpu:0'):
                 model.compile(loss='categorical_crossentropy',
-                    optimizer=adam,
+                    optimizer=sgd,
                     metrics=['accuracy'])
 
             parallel_model = multi_gpu_model(model,gpus=self._config.gpu_count)
             parallel_model.compile(loss='categorical_crossentropy',
-                                       optimizer=adam,
+                                       optimizer=sgd,
                                        metrics=['accuracy'],
                                        #options=p_opt, 
                                        #run_metadata=p_mtd
                                        )
         else:
             model.compile(loss='categorical_crossentropy',
-                optimizer=adam,
+                optimizer=sgd,
                 metrics=['accuracy'],
                 #options=p_opt, 
                 #run_metadata=p_mtd
@@ -115,8 +115,8 @@ class VGG16(GenericModel):
                                          input_shape=input_shape)
 
         #Freeze initial layers, except for the last 3:
-        for layer in original_vgg16.layers[:-2]:
-            layer.trainable = False
+        #for layer in original_vgg16.layers[:-2]:
+        #    layer.trainable = False
             
         model = Sequential()
         model.add(original_vgg16)
@@ -129,7 +129,7 @@ class VGG16(GenericModel):
         model.add(Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Flatten())
         model.add(Dense(self._ds.nclasses))
-        model.add(Activation('softmax'))
+        model.add(Activation('sigmoid'))
 
         return model
 
