@@ -4,20 +4,33 @@
 import random
 import os
 import numpy as np
+import importlib
 from matplotlib import pyplot as plt
 from Datasources.CellRep import CellRep
 
 def run(config):
-    #Run all tests below
-    config.data = 'CellRep'
+    #Run all tests below        
     if config.local_test:
-        config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
+        if config.data == 'CellRep':
+            config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
+        else:
+            config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/LHou/'
     else:
-        config.predst = '../data/lym_cnn_training_data/'
+        if config.data == 'CellRep':
+            config.predst = '../data/lym_cnn_training_data/'
+        else:
+            config.predst = '/pylon5/ac3uump/lhou/patches_train/'
 
+    print('Dataset: {0}'.format(config.data))
+    
+    if config.data:
+        dsm = importlib.import_module('Datasources',config.data)
+        cr = getattr(dsm,config.data)(config.predst,config.keepimg,config)
+    else:
+        cr = CellRep(config.predst,config.keepimg,config)
+        
     print("Verbosity: {0}".format(config.verbose))
 
-    cr = CellRep(config.predst,keepImg=True,config=config)
     X,Y = cr.load_metadata()
     #Check image dimensions
     print("Dataset has size(s): {0}".format(cr.get_dataset_dimensions()))

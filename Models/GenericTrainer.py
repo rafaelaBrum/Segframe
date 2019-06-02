@@ -70,7 +70,7 @@ class Trainer(object):
         if net_name is None or net_name == '':
             print("A network should be specified")
             return Exitcodes.RUNTIME_ERROR
-                
+
         if self._config.data:
             dsm = importlib.import_module('Datasources',self._config.data)
             self._ds = getattr(dsm,self._config.data)(self._config.predst,self._config.keepimg,self._config)
@@ -241,8 +241,8 @@ class Trainer(object):
             samplewise_center=True,
             samplewise_std_normalization=True,
             rotation_range=90,
-            width_shift_range=.1,
-            height_shift_range=.1,
+            width_shift_range=20,
+            height_shift_range=20,
             zoom_range=.08,
             shear_range=.03,
             horizontal_flip=True,
