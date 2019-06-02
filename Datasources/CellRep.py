@@ -21,7 +21,7 @@ class CellRep(gd.GenericDS):
         @param config <argparse>: configuration object
         @param keepImg <boolean>: keep image data in memory
         """
-        super().__init__(data_path,keepImg,config)
+        super().__init__(data_path,keepImg,config,name='CellRep')
         self.nclasses = 2
 
 
@@ -60,33 +60,6 @@ class CellRep(gd.GenericDS):
             print("On directory {2}:\n - Number of classes: {0};\n - Classes: {1}".format(len(class_set),class_set,os.path.basename(d)))
 
         return t_x,t_y
-
-    def get_dataset_dimensions(self):
-        """
-        Returns the dimensions of the images in the dataset. It's possible to have different image dimensions.
-        WARNING: big datasets will take forever to run. For now, checks a sample of the images.
-        TODO: Reimplement this function to be fully parallel (threads in case).
-
-        Return: SORTED list of tuples (# samples,width,height,channels)
-        """
-
-        dims = set()
-        samples = len(self.X)
-
-        cache_m = CacheManager()
-        if cache_m.checkFileExistence('data_dims.pik'):
-            dims = cache_m.load('data_dims.pik')
-        else:
-            if self._config.info:
-                print("Checking a sample of dataset images for different dimensions...")
-
-            for seg in random.sample(self.X,int(0.02*samples)):
-                dims.add((samples,) + seg.getImgDim())
-            cache_m.dump(dims,'data_dims.pik')
-
-        l = list(dims)
-        l.sort()
-        return l
 
     def _release_data(self):
         del self. X

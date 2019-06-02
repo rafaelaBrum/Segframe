@@ -15,7 +15,7 @@ class GenericDS(ABC):
     """
     Generic class for data feeders used to provide training points to Neural Nets.
     """
-    def __init__(self,data_path,keepImg=False,config=None):
+    def __init__(self,data_path,keepImg=False,config=None,name='Generic'):
         self.path = None
         if isinstance(data_path,str) and os.path.isdir(data_path):
             self.path = data_path
@@ -24,6 +24,7 @@ class GenericDS(ABC):
 
         self.X = None
         self.Y = None
+        self.name = name
         self._cache = CacheManager()
         self._keep = keepImg
         self._cpu_count = config.cpu_count if not config is None else 1
@@ -36,9 +37,44 @@ class GenericDS(ABC):
     def _load_metadata_from_dir(self,d):
         pass
 
-    @abstractmethod
     def get_dataset_dimensions(self):
-        pass
+        """
+        Returns the dimensions of the images in the dataset. It's possible to have different image dimensions.
+        WARNING: big datasets will take forever to run. For now, checks a sample of the images.
+        TODO: Reimplement this function to be fully parallel (threads in case).
+
+        Return: SORTED list of tuples (# samples,width,height,channels)
+        """
+
+        if self.X is None:
+            return None
+        
+        samples = len(self.X)
+
+        cache_m = CacheManager()
+        reload_data = False
+        if cache_m.checkFileExistence('data_dims.pik'):
+            try:
+                dims,name = cache_m.load('data_dims.pik')
+            except ValueError:
+                reload_data = True
+            if name != self.name:
+                reload_data = True
+        else:
+            reload_data = True
+                
+        if reload_data:
+            dims = set()
+            if self._config.info:
+                print("Checking a sample of dataset images for different dimensions...")
+
+            for seg in random.sample(self.X,int(0.02*samples)):
+                dims.add((samples,) + seg.getImgDim())
+            cache_m.dump((dims,self.name),'data_dims.pik')
+
+        l = list(dims)
+        l.sort()
+        return l
 
     def _run_multiprocess(self,data):
         """
@@ -85,7 +121,6 @@ class GenericDS(ABC):
 
         OBS: Dataset metadata is shuffled once here. Random sample generation is done during training.
         """
-        files = os.listdir(self.path)
 
         X,Y = ([],[])
         reload_data = False
@@ -105,11 +140,25 @@ class GenericDS(ABC):
                     print("Previous split ratio is different from requested one. Metadata will be rebuilt.")
                 
         if self._cache.checkFileExistence('metadata.pik') and not reload_data:
-            X,Y = self._cache.load('metadata.pik')
-            if self._verbose > 0:
+            try:
+                X,Y,name = self._cache.load('metadata.pik')
+            except ValueError:
+                name = ''
+                reload_data = True
+            if name != self.name:
+                reload_data = True
+
+            if not reload_data and self._verbose > 0:
                 print("[GenericDatasource] Loaded split data cache. Used previously defined splitting.")
         else:
+            reload_data = True
+            
+        if reload_data:
             dlist = []
+            files = os.listdir(self.path)
+            del X
+            del Y
+            X,Y = ([],[])
             for f in files:
                 item = os.path.join(self.path,f)
                 if os.path.isdir(item):
@@ -119,7 +168,6 @@ class GenericDS(ABC):
                                          self._cpu_count,self._pbar,
                                          step_size=1,output_dim=2,txt_label='directories',verbose=self._verbose)
 
-            
             X.extend(mdata[0]) #samples
             Y.extend(mdata[1]) #labels
                     
@@ -128,7 +176,7 @@ class GenericDS(ABC):
             random.shuffle(combined)
             X[:],Y[:] = zip(*combined)
             
-            self._cache.dump((X,Y),'metadata.pik')
+            self._cache.dump((X,Y,self.name),'metadata.pik')
             
         self.X = X
         self.Y = Y
