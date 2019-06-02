@@ -68,7 +68,9 @@ class GenericDS(ABC):
             if self._config.info:
                 print("Checking a sample of dataset images for different dimensions...")
 
-            for seg in random.sample(self.X,int(0.02*samples)):
+            s_number = int(0.02*samples)
+            upper_limit = 5000 if s_number > 5000 else s_number
+            for seg in random.sample(self.X,upper_limit):
                 dims.add((samples,) + seg.getImgDim())
             cache_m.dump((dims,self.name),'data_dims.pik')
 
