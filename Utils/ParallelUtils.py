@@ -56,7 +56,7 @@ def multiprocess_run(exec_function,exec_params,data,cpu_count,pbar,step_size,out
         datapoints = np.delete(datapoints,np.s_[:end_idx],axis=0)
 
         if pbar:
-            if process_counter == cpu_count:
+            if process_counter == cpu_count+1:
                 semaphores[process_counter].wait()
                 process_counter = 0
             else:
