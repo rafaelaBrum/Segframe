@@ -213,9 +213,12 @@ class GenericDS(ABC):
             Y = self.Y
         else:
             X,Y = data
-            
-        samples = len(X)
-        y = np.array(Y, dtype=np.int32)
+        
+        if self._config.pred_size > 0:
+            samples = self._config.pred_size
+        else:    
+            samples = len(X)
+        y = np.array(Y[:samples], dtype=np.int32)
         dataset_dim = self.get_dataset_dimensions()[0]
         img_dim = dataset_dim[1:]
         X_data = np.zeros(shape=(samples,)+img_dim, dtype=np.float32)

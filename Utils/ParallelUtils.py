@@ -70,7 +70,7 @@ def multiprocess_run(exec_function,exec_params,data,cpu_count,pbar,step_size,out
         for k in range(output_dim):
             datapoints_db[k].extend(res[k])
         if not pbar and verbose > 0:
-            print("[{2}] Done transformations (step {0}/{1})".format(i,len(semaphores)-1,label))
+            print("[{2}] Done transformations (step {0}/{1})".format(i,len(semaphores)-1,txt_label))
 
     if pbar:
         l.close()

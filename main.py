@@ -209,7 +209,9 @@ if __name__ == "__main__":
     parser.add_argument('--pred', action='store_true', dest='pred', default=False, 
         help='Runs prediction with a given model (use -net parameter).')
     parser.add_argument('-print', action='store_true', dest='print_pred', default=False, 
-        help='Prints stored prediction results.')    
+        help='Prints stored prediction results.')
+    parser.add_argument('-pred_size', dest='pred_size', type=int,
+        help='Limite test set size to this number os images.', default=0)
     
     ##System tests
     test_args = parser.add_argument_group('Tests')
