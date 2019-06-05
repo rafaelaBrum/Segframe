@@ -179,6 +179,7 @@ class GenericDS(ABC):
             X[:],Y[:] = zip(*combined)
             
             self._cache.dump((X,Y,self.name),'metadata.pik')
+            self._cache.dump(tuple(self._config.split),'split_ratio.pik')
             
         self.X = X
         self.Y = Y
