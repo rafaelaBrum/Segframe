@@ -135,9 +135,15 @@ class Predictor(object):
                 pred_model.load_weights(model.get_weights_cache())
                 if self._config.info:
                     print("Model weights loaded from: {0}".format(model.get_weights_cache()))
+        elif os.path.isfile(model.get_weights_cache()):
+                pred_model,_ = model.build()
+                pred_model.load_weights(model.get_weights_cache())
+                if self._config.info:
+                    print("Model weights loaded from: {0}".format(model.get_weights_cache()))
+                    
         else:
             if self._config.info:
-                print("Model not found at: {0}".format(model.get_model_cache()))
+                print("No trained model or weights file found")
             return None
 
         # session setup
