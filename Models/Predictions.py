@@ -152,7 +152,7 @@ class Predictor(object):
         K.set_session(sess)
         stp = len(X)
 
-        image_generator = ImageDataGenerator(samplewise_center=False, samplewise_std_normalization=False)
+        image_generator = ImageDataGenerator(samplewise_center=True, samplewise_std_normalization=True)
         test_generator = image_generator.flow(x=X,
                                             y=Y,
                                             batch_size=1,
