@@ -127,7 +127,7 @@ if __name__ == "__main__":
     pre_args.add_argument('-mag', dest='magnification', type=int, 
         help='For SVS images only, use specific magnification level.',
         choices=[2,4,8,10,20,40],default=40)
-    pre_args.add_argument('-tdim', dest='tile', nargs=2, type=int, 
+    pre_args.add_argument('-tdim', dest='tdim', nargs=2, type=int, 
         help='Tile width and heigth (Use: 200 200 for SVS 50 um).', 
         default=None, metavar=('Width', 'Height'))
     pre_args.add_argument('-norm', dest='normalize', type=str,default='Preprocessing/target_40X.png', 
@@ -188,9 +188,9 @@ if __name__ == "__main__":
         help='Number of CPU cores available (Default: 1).', default=1)
 
     ##Runtime options
-    pre_args.add_argument('-out', dest='bdir', type=str,default='', 
+    parser.add_argument('-out', dest='bdir', type=str,default='', 
         help='Base dir to store all temporary data and general output',required=True)
-    pre_args.add_argument('-cache', dest='cache', type=str,default='cache', 
+    parser.add_argument('-cache', dest='cache', type=str,default='cache', 
         help='Keeps caches in this directory',required=False)
     parser.add_argument('-v', action='count', default=0, dest='verbose',
         help='Amount of verbosity (more \'v\'s means more verbose).')
@@ -214,6 +214,8 @@ if __name__ == "__main__":
         help='Prints stored prediction results.')
     parser.add_argument('-pred_size', dest='pred_size', type=int,
         help='Limite test set size to this number os images.', default=0)
+    parser.add_argument('-test_dir', dest='testdir', type=str,default=None, 
+        help='Runs prediction on a different set of images stored in dir.')
     
     ##System tests
     test_args = parser.add_argument_group('Tests')

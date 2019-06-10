@@ -233,7 +233,6 @@ class Trainer(object):
             l_count = dict(zip(unique,count))
             print("Validation labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
             
-        if self._config.info:
             print("Train set: {0} items".format(len(train_data[0])))
             print("Validate set: {0} items".format(len(val_data[0])))
             
@@ -249,8 +248,8 @@ class Trainer(object):
             vertical_flip=True,
             brightness_range=(-20.0,20.0))
 
-        if not self._config.tile is None:
-            fix_dim = self._config.tile
+        if not self._config.tdim is None:
+            fix_dim = self._config.tdim
         else:
             fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
         train_generator = ThreadedGenerator(dps=train_data,

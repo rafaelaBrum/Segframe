@@ -37,7 +37,7 @@ class GenericDS(ABC):
     def _load_metadata_from_dir(self,d):
         pass
 
-    def get_dataset_dimensions(self):
+    def get_dataset_dimensions(self,X = None):
         """
         Returns the dimensions of the images in the dataset. It's possible to have different image dimensions.
         WARNING: big datasets will take forever to run. For now, checks a sample of the images.
@@ -46,10 +46,12 @@ class GenericDS(ABC):
         Return: SORTED list of tuples (# samples,width,height,channels)
         """
 
-        if self.X is None:
+        if X is None and self.X is None:
             return None
+        elif X is None:
+            X = self.X
         
-        samples = len(self.X)
+        samples = len(X)
 
         cache_m = CacheManager()
         reload_data = False
@@ -70,7 +72,7 @@ class GenericDS(ABC):
 
             s_number = int(0.02*samples)
             upper_limit = 5000 if s_number > 5000 else s_number
-            for seg in random.sample(self.X,upper_limit):
+            for seg in random.sample(X,upper_limit):
                 dims.add((samples,) + seg.getImgDim())
             cache_m.dump((dims,self.name),'data_dims.pik')
 
@@ -110,6 +112,30 @@ class GenericDS(ABC):
         else:
             raise ValueError("[GenericDatasource] Spliting values have to equal 1.0")
 
+    def _run_dir(self,path):
+
+        dlist = []
+        files = os.listdir(path)
+        X,Y = ([],[])
+        for f in files:
+            item = os.path.join(path,f)
+            if os.path.isdir(item):
+                dlist.append(item)
+
+        mdata = multiprocess_run(self._run_multiprocess,tuple(),dlist,
+                                     self._cpu_count,self._pbar,
+                                     step_size=1,output_dim=2,txt_label='directories',verbose=self._verbose)
+
+        X.extend(mdata[0]) #samples
+        Y.extend(mdata[1]) #labels
+                    
+        #Shuffle samples and labels maintaining relative order
+        combined = list(zip(X,Y))
+        random.shuffle(combined)
+        X[:],Y[:] = zip(*combined)
+            
+        return X,Y
+            
     def split_metadata(self,split):
         """
         Returns all metadata split into N sets, defined by the spliting tuples
@@ -124,7 +150,7 @@ class GenericDS(ABC):
         OBS: Dataset metadata is shuffled once here. Random sample generation is done during training.
         """
 
-        X,Y = ([],[])
+        X,Y = (None,None)
         reload_data = False
         
         if self._cache.checkFileExistence('split_ratio.pik'):
@@ -156,28 +182,8 @@ class GenericDS(ABC):
             reload_data = True
             
         if reload_data:
-            dlist = []
-            files = os.listdir(self.path)
-            del X
-            del Y
-            X,Y = ([],[])
-            for f in files:
-                item = os.path.join(self.path,f)
-                if os.path.isdir(item):
-                    dlist.append(item)
+            X,Y = self._run_dir(self.path)
 
-            mdata = multiprocess_run(self._run_multiprocess,tuple(),dlist,
-                                         self._cpu_count,self._pbar,
-                                         step_size=1,output_dim=2,txt_label='directories',verbose=self._verbose)
-
-            X.extend(mdata[0]) #samples
-            Y.extend(mdata[1]) #labels
-                    
-            #Shuffle samples and labels maintaining relative order
-            combined = list(zip(X,Y))
-            random.shuffle(combined)
-            X[:],Y[:] = zip(*combined)
-            
             self._cache.dump((X,Y,self.name),'metadata.pik')
             self._cache.dump(tuple(self._config.split),'split_ratio.pik')
             
@@ -219,10 +225,10 @@ class GenericDS(ABC):
         else:    
             samples = len(X)
         y = np.array(Y[:samples], dtype=np.int32)
-        if not self._config.tile is None:
-            img_dim = tuple(self._config.tile) + (3,)
+        if not self._config.tdim is None:
+            img_dim = tuple(self._config.tdim) + (3,)
         else:
-            dataset_dim = self.get_dataset_dimensions()[0]
+            dataset_dim = self.get_dataset_dimensions(X)[0]
             img_dim = dataset_dim[1:]
         X_data = np.zeros(shape=(samples,)+img_dim, dtype=np.float32)
         

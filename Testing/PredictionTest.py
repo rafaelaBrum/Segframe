@@ -17,4 +17,9 @@ def run(config):
     #Start predictions
     pred = Predictor(config)
     pred.run()
+    if config.local_test:
+        config.testdir = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/LHou/'
+        config.data = 'LDir'
+        pred = Predictor(config)
+        pred.run()
     print_prediction(config)

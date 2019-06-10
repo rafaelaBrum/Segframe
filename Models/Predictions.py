@@ -101,7 +101,8 @@ class Predictor(object):
         net_module = importlib.import_module('Models',net_name)
         net_model = getattr(net_module,net_name)(self._config,self._ds)
 
-        self._ds.load_metadata()
+        if self._config.testdir is None:
+            self._ds.load_metadata()
 
         self.run_test(net_model)
         
@@ -117,8 +118,17 @@ class Predictor(object):
         else:
             print("[Predictor] A previously trained model and dataset should exist. No previously defined spliting found.")
             return Exitcodes.RUNTIME_ERROR
-        
-        _,_,(x_test,y_test) = self._ds.split_metadata(split)
+
+        if self._config.testdir is None:
+            _,_,(x_test,y_test) = self._ds.split_metadata(split)
+        else:
+            x_test,y_test = self._ds._run_dir(self._config.testdir)
+
+        if self._config.verbose > 0:
+            unique,count = np.unique(y_test,return_counts=True)
+            l_count = dict(zip(unique,count))
+            print("Test labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
+            
         X,Y = self._ds.load_data(data=(x_test,y_test))
         if self._config.verbose > 1:
             print("Y original ({1}):\n{0}".format(Y,Y.shape))        
