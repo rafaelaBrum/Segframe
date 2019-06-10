@@ -94,7 +94,10 @@ class Predictor(object):
                 
         if self._config.data:
             dsm = importlib.import_module('Datasources',self._config.data)
-            self._ds = getattr(dsm,self._config.data)(self._config.predst,self._config.keepimg,self._config)
+            if self._config.testdir:
+                self._ds = getattr(dsm,self._config.data)(self._config.testdir,self._config.keepimg,self._config)
+            else:
+                self._ds = getattr(dsm,self._config.data)(self._config.predst,self._config.keepimg,self._config)
         else:
             self._ds = CellRep(self._config.predst,self._config.keepimg,self._config)
 
