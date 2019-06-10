@@ -128,8 +128,8 @@ if __name__ == "__main__":
         help='For SVS images only, use specific magnification level.',
         choices=[2,4,8,10,20,40],default=40)
     pre_args.add_argument('-tdim', dest='tile', nargs=2, type=int, 
-        help='Tile width and heigth (Default: 200 200 for SVS 50 um).', 
-        default=(200, 200), metavar=('Width', 'Height'))
+        help='Tile width and heigth (Use: 200 200 for SVS 50 um).', 
+        default=None, metavar=('Width', 'Height'))
     pre_args.add_argument('-norm', dest='normalize', type=str,default='Preprocessing/target_40X.png', 
         help='Normalize tiles based on reference image (given)')
     
@@ -149,7 +149,9 @@ if __name__ == "__main__":
     train_args.add_argument('-e', dest='epochs', type=int, 
         help='Number of epochs (Default: 1).', default=1)
     train_args.add_argument('-tn', action='store_true', dest='new_net',
-        help='Do not use older weights file.')
+        help='Do not use older weights file.',default=False)
+    train_args.add_argument('-tnorm', action='store_true', dest='batch_norm',
+        help='Applies batch normalization during training.',default=False)
     train_args.add_argument('-wpath', dest='weights_path',
         help='Use weights file contained in path - usefull for sequential training (Default: None).',
         default='ModelWeights')

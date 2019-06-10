@@ -156,28 +156,31 @@ class Predictor(object):
             )
         sess.config = ses_config
         K.set_session(sess)
-        stp = len(X)
+        bsize = self._config.batch_size
+        stp = round((len(X) / bsize) + 0.5)
 
-        image_generator = ImageDataGenerator(samplewise_center=True, samplewise_std_normalization=True)
+        image_generator = ImageDataGenerator(samplewise_center=self._config.batch_norm, 
+                                             samplewise_std_normalization=self._config.batch_norm)
         test_generator = image_generator.flow(x=X,
                                             y=Y,
-                                            batch_size=1,
+                                            batch_size=bsize,
                                             shuffle=False)
         
         if self._config.progressbar:
             l = tqdm(desc="Making predictions...",total=stp)
 
-        Y_pred = np.zeros((stp,self._ds.nclasses),dtype=np.float32)
+        Y_pred = np.zeros((len(X),self._ds.nclasses),dtype=np.float32)
         for i in range(stp):
+            start_idx = i*bsize
             example = test_generator.next()
-            Y_pred[i] = pred_model.predict_on_batch(example[0])
+            Y_pred[start_idx:start_idx+bsize] = pred_model.predict_on_batch(example[0])
             if self._config.progressbar:
                 l.update(1)
             elif self._config.info:
                 print("Batch prediction ({0}/{1})".format(i,stp))
             if self._config.verbose > 0:
-                if not np.array_equal(Y[i],example[1][0]):
-                    print("Datasource label ({0}) and batch label ({1}) differ".format(Y[i],example[1][0]))
+                if not np.array_equal(Y[start_idx:start_idx+bsize],example[1]):
+                    print("Datasource label ({0}) and batch label ({1}) differ".format(Y[start_idx:start_idx+bsize],example[1]))
 
         del(X)
         del(test_generator)
