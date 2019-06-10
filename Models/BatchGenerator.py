@@ -161,12 +161,12 @@ class SingleGenerator(GenericIterator):
             #involved
             if not self.image_generator is None:
                 example = self.image_generator.random_transform(example,self.seed)
-                example = self.image_generator.standardize(example)
+                #example = self.image_generator.standardize(example)
 
             # add point to x_batch and diagnoses to y
             batch_x[i] = example
             y[i] = t_y
-
+        batch_x = self.image_generator.standardize(batch_x)
         #Center data
         #batch_x -= self.mean
         #Normalize data pixels
@@ -256,6 +256,7 @@ class ThreadedGenerator(GenericIterator):
             batch_x[i] = example
             y[i] = t_y
 
+        batch_x = self.image_generator.standardize(batch_x)
         del(futures)
         #Center data
         #batch_x -= self.mean
@@ -273,6 +274,6 @@ class ThreadedGenerator(GenericIterator):
             
         if not self.image_generator is None:
             example = self.image_generator.random_transform(example,self.seed)
-            example = self.image_generator.standardize(example)
+            #example = self.image_generator.standardize(example)
 
         return (example,t_y)

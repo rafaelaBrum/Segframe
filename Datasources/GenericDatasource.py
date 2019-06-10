@@ -219,8 +219,11 @@ class GenericDS(ABC):
         else:    
             samples = len(X)
         y = np.array(Y[:samples], dtype=np.int32)
-        dataset_dim = self.get_dataset_dimensions()[0]
-        img_dim = dataset_dim[1:]
+        if not self._config.tile is None:
+            img_dim = tuple(self._config.tile) + (3,)
+        else:
+            dataset_dim = self.get_dataset_dimensions()[0]
+            img_dim = dataset_dim[1:]
         X_data = np.zeros(shape=(samples,)+img_dim, dtype=np.float32)
         
         counter = 0
