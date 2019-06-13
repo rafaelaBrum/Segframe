@@ -20,7 +20,7 @@ then
    cp cache/metadata.pik $newdir
    cp cache/split_ratio.pik $newdir
    cp cache/data_dims.pik $newdir
-   cp logs/confusion_matrix-TILS-* $newdir
+   cp logs/confusion_matrix_TILS-* $newdir
    cp logs/test_pred.pik $newdir
    mv slurm-* $newdir
 else
