@@ -62,7 +62,7 @@ class GenericIterator(Iterator):
         """
         Returns the number of examples
         """
-        return len(self.data)
+        return self.n
     
 
     def next(self):

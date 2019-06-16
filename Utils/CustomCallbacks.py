@@ -45,7 +45,7 @@ class CalculateF1Score(Callback):
         """
         self.val_data = val_data
         self.bsize = batch_size
-        self.period = 20
+        self.period = period
         self.info = info
         
     def on_epoch_end(self,epoch, logs={}):
