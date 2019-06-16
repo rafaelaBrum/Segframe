@@ -33,7 +33,7 @@ def run_training(config,locations=None):
 
 def _reduce_lr_on_epoch(epoch,lr):
     #Reduces LR by a factor of 10 every 12 epochs
-    if epoch > 0 and not (epoch%12):
+    if epoch > 0 and not (epoch%30):
         lr /= 10
     return lr
 
@@ -118,19 +118,20 @@ class Trainer(object):
         K.set_session(sess)
 
         train_generator = ImageDataGenerator(
-            samplewise_center=False,
-            samplewise_std_normalization=False,
-            rotation_range=10,
-            width_shift_range=.1,
-            height_shift_range=.1,
-            zoom_range=.08,
-            shear_range=.03,
+            samplewise_center=self._config.batch_norm,
+            samplewise_std_normalization=self._config.batch_norm,
+            rotation_range=180,
+            width_shift_range=20,
+            height_shift_range=20,
+            zoom_range=.2,
+            #shear_range=.05,
             horizontal_flip=True,
-            vertical_flip=True)
+            vertical_flip=True,
+            brightness_range=(-20.0,20.0))
 
         val_generator = ImageDataGenerator(
-            samplewise_center=False,
-            samplewise_std_normalization=False)
+            samplewise_center=self._config.batch_norm,
+            samplewise_std_normalization=self._config.batch_norm)
 
 
         single,parallel = model.build()
@@ -315,7 +316,8 @@ class Trainer(object):
                                            patience=3,verbose=self._verbose,\
                                            mode='auto',min_lr=1e-8))
         callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=1))
-        #callbacks.append(CalculateF1Score())
+        ## CalculateF1Score
+        callbacks.append(CalculateF1Score(val_generator,self._config.f1period,self._config.batch_size,self._config.info))
 
         if self._config.info:
             print(single.summary())
