@@ -313,8 +313,8 @@ class Trainer(object):
             save_weights_only=True, period=1,save_best_only=True,monitor='val_acc'))
         ## ReduceLROnPlateau
         callbacks.append(ReduceLROnPlateau(monitor='loss',factor=0.5,\
-                                           patience=3,verbose=self._verbose,\
-                                           mode='auto',min_lr=1e-8))
+                                           patience=5,verbose=self._verbose,\
+                                           mode='auto',min_lr=1e-7))
         callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=1))
         ## CalculateF1Score
         callbacks.append(CalculateF1Score(val_generator,self._config.f1period,self._config.batch_size,self._config.info))

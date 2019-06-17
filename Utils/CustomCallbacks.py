@@ -52,9 +52,9 @@ class CalculateF1Score(Callback):
         """
         Calculate F1 each X epochs
         """
-        if epoch % self.period != 0:
+        if (epoch+1) % self.period != 0:
             return None
-
+        
         from sklearn import metrics
 
         data_size = self.val_data.returnDataSize()
