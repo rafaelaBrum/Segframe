@@ -10,7 +10,8 @@ from keras import backend as K
 #System modules
 import concurrent.futures
 import numpy as np
-import timeit
+import imgaug as ia
+from ia import augmenters as iaa
 
 class GenericIterator(Iterator):
     """
@@ -198,6 +199,7 @@ class ThreadedGenerator(GenericIterator):
         #Set True if examples in the same dataset can have variable shapes
         self.variable_shape = variable_shape
         self._executor = None
+        self._aug = None
         
         super(ThreadedGenerator, self).__init__(data=dps,
                                                 classes=classes,
@@ -224,6 +226,12 @@ class ThreadedGenerator(GenericIterator):
         if self._executor is None:
             workers = round((self.batch_size/3 + (self.batch_size%3>0) +0.5))
             self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
+
+        #Additional data augmentation
+        if self._aug is None:
+            self._aug = iaa.Sometimes(0.5,
+                iaa.ContrastNormalization(0.75,1.5)
+                )
 
         #For debuging
         if self.verbose > 1:
@@ -257,6 +265,9 @@ class ThreadedGenerator(GenericIterator):
             y[i] = t_y
 
         batch_x = self.image_generator.standardize(batch_x)
+        #Apply extra augmentation
+        batch_x = self._aug(images=batch_x)
+        
         del(futures)
         #Center data
         #batch_x -= self.mean
