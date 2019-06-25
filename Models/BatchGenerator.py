@@ -11,7 +11,7 @@ from keras import backend as K
 import concurrent.futures
 import numpy as np
 import imgaug as ia
-from ia import augmenters as iaa
+from imgaug import augmenters as iaa
 
 class GenericIterator(Iterator):
     """
@@ -229,8 +229,8 @@ class ThreadedGenerator(GenericIterator):
 
         #Additional data augmentation
         if self._aug is None:
-            self._aug = iaa.Sometimes(0.5,
-                iaa.ContrastNormalization(0.75,1.5)
+            self._aug = iaa.Sometimes(0.8,
+                iaa.ContrastNormalization((0.75,1.5))
                 )
 
         #For debuging
