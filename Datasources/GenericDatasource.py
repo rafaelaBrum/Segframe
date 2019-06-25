@@ -136,11 +136,18 @@ class GenericDS(ABC):
             
         return X,Y
             
-    def split_metadata(self,split):
+    def split_metadata(self,split,data=None):
         """
         Returns all metadata split into N sets, defined by the spliting tuples
+        
+        @param data <tuple>: (X,Y) if provided, split this sequence. Else, split full metadata
         """
-        return self._split_data(split,self.X,self.Y)
+        if data is None:
+            return self._split_data(split,self.X,self.Y)
+        elif len(data) == 2:
+            return self._split_data(split,data[0],data[1])
+        else:
+            return None
     
     def load_metadata(self):
         """
@@ -257,3 +264,24 @@ class GenericDS(ABC):
             return (X_data,y)
         else:
             return self._split_data(split,X_data,y)
+
+    def sample_metadata(self,k):
+        """
+        Produces a sample of the full metadata with k items
+
+        Return:
+        - tuple (X,Y): X an Y have k elements
+        """
+        if self.X is None or self.Y is None:
+            if self._config.verbose > 1:
+                print("[GenericDatasource] Run load_metadata first!")
+            return None
+        
+        samples = np.random.random_integers(0,len(self.X),k)
+        s_x, s_y = ([],[])
+        for s in samples:
+            s_x.append(self.X[s])
+            s_y.append(self.Y[s])
+
+        return (s_x,s_y)
+        
