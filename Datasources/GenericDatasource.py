@@ -269,6 +269,9 @@ class GenericDS(ABC):
         """
         Produces a sample of the full metadata with k items
 
+        @param k <int>: total of samples
+        @param k <float>: percentile of the whole dataset
+
         Return:
         - tuple (X,Y): X an Y have k elements
         """
@@ -277,7 +280,10 @@ class GenericDS(ABC):
                 print("[GenericDatasource] Run load_metadata first!")
             return None
         
-        samples = np.random.random_integers(0,len(self.X),k)
+        if isinstance(k,float):
+            k = int(k*len(self.X))
+            
+        samples = np.random.choice(range(len(self.X)),k,replace=False)
         s_x, s_y = ([],[])
         for s in samples:
             s_x.append(self.X[s])

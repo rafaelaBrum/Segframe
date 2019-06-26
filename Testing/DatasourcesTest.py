@@ -27,6 +27,7 @@ def run(config):
         dsm = importlib.import_module('Datasources',config.data)
         cr = getattr(dsm,config.data)(config.predst,config.keepimg,config)
     else:
+        config.predst = '/Volumes/Trabalho/Doutorado/Dataset/Lymphocyte/TIL/test_patches/'
         cr = CellRep(config.predst,config.keepimg,config)
         
     print("Verbosity: {0}".format(config.verbose))

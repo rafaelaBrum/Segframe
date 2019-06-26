@@ -229,7 +229,7 @@ class ThreadedGenerator(GenericIterator):
 
         #Additional data augmentation
         if self._aug is None:
-            self._aug = iaa.Sometimes(0.8,
+            self._aug = iaa.Sometimes(0.5,
                 iaa.ContrastNormalization((0.75,1.5))
                 )
 

@@ -12,7 +12,8 @@ from multiprocessing import Process
 from Preprocessing import Preprocess
 from Utils import Exitcodes,CacheManager
 from Testing import TrainTest,DatasourcesTest,PredictionTest
-from Models import GenericTrainer,Predictions
+from Models import Predictions
+from Trainers import GenericTrainer
 
 #Supported image types
 img_types = ['svs', 'dicom', 'nii','tif','tiff', 'png']
@@ -160,6 +161,9 @@ if __name__ == "__main__":
         default=(0.8, 0.1,0.1), metavar=('Train', 'Validation','Test'))
     train_args.add_argument('-f1', dest='f1period', type=int, 
         help='Execute F1 and ROC AUC calculations every X epochs (Default: 20).', default=20)
+    train_args.add_argument('-sample', dest='sample', nargs=1, type=float, 
+        help='Use a sample of the whole data for training (Default: 100.0%% - use floats [0.0-1.0]).',
+        default=1.0)
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')
@@ -206,7 +210,7 @@ if __name__ == "__main__":
         help='Print progress bars of processing execution.')
     parser.add_argument('-k', action='store_true', dest='keepimg', default=False, 
         help='Keep loaded images in memory.')
-    parser.add_argument('-d', action='store_true', dest='delay_load', default=True, 
+    parser.add_argument('-d', action='store_true', dest='delay_load', default=False, 
         help='Delay the loading of images to the latest moment possible (memory efficiency).')
 
     ##Run prediction options

@@ -146,7 +146,7 @@ class Trainer(object):
 
         return (train_generator,val_generator)
     
-    def train_model(self,model):
+    def train_model(self,model,train_data=None,val_data=None):
         """
         Generic trainer. Receives a GenericModel and trains it
         """
@@ -164,7 +164,13 @@ class Trainer(object):
         K.set_session(sess)
         
         #Setup of generators, augmentation, preprocessing
-        train_data,val_data,_ = self._ds.split_metadata(self._config.split)                    
+        if train_data is None or val_data is None:
+            if self._config.sample < 1.0:
+                data_sample = self._ds.sample_metadata(self._config.sample)
+                train_data,val_data,_ = self._ds.split_metadata(split=self._config.split,data=data_sample)
+            else:
+                train_data,val_data,_ = self._ds.split_metadata(self._config.split)
+            
         if self._verbose > 0:
             unique,count = np.unique(train_data[1],return_counts=True)
             l_count = dict(zip(unique,count))
