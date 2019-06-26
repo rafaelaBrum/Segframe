@@ -4,7 +4,7 @@
 import os,sys
 import numpy as np
 
-from GenericTrainer import Trainer
+from .GenericTrainer import Trainer
 
 def run_training(config,locations=None):
     """

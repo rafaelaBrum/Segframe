@@ -3,7 +3,7 @@
 
 import random
 from Datasources.CellRep import CellRep
-from Models import Trainer
+from Trainers import Trainer
 
 def run(config):
     #Run all tests below

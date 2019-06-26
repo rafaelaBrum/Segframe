@@ -5,4 +5,4 @@ __all__ = ['CellRep','LDir','SDir']
 
 from .CellRep import CellRep
 from .LDir import LDir
-from .SDir import SDir
+#from .SDir import SDir
