@@ -12,8 +12,7 @@ from multiprocessing import Process
 from Preprocessing import Preprocess
 from Utils import Exitcodes,CacheManager
 from Testing import TrainTest,DatasourcesTest,PredictionTest
-from Models import Predictions
-from Trainers import GenericTrainer
+from Trainers import GenericTrainer,Predictions
 
 #Supported image types
 img_types = ['svs', 'dicom', 'nii','tif','tiff', 'png']
@@ -245,6 +244,7 @@ if __name__ == "__main__":
     files = {
         'tcga.pik':os.path.join(config.presrc,'piks','tcga.pik'),
         'metadata.pik':os.path.join(config.cache,'metadata.pik'),
+        'sampled_metadata.pik':os.path.join(config.cache,'sampled_metadata.pik'),
         'split_ratio.pik':os.path.join(config.cache,'split_ratio.pik'),
         'data_dims.pik':os.path.join(config.cache,'data_dims.pik'),
         'tiles.pik':os.path.join(config.predst,'tiles.pik'),

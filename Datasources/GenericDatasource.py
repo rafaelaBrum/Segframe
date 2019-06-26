@@ -267,7 +267,7 @@ class GenericDS(ABC):
 
     def sample_metadata(self,k):
         """
-        Produces a sample of the full metadata with k items
+        Produces a sample of the full metadata with k items. Returns a cached sample if one exists
 
         @param k <int>: total of samples
         @param k <float>: percentile of the whole dataset
@@ -275,19 +275,36 @@ class GenericDS(ABC):
         Return:
         - tuple (X,Y): X an Y have k elements
         """
-        if self.X is None or self.Y is None:
+
+        reload_data = False
+        if self._cache.checkFileExistence('sampled_metadata.pik'):
+            try:
+                X,Y,name = self._cache.load('sampled_metadata.pik')
+            except ValueError:
+                name = ''
+                reload_data = True
+            if name != self.name:
+                reload_data = True
+
+            if not reload_data and self._verbose > 0:
+                print("[GenericDatasource] Loaded split sampled data cache. Used previously defined splitting.")
+        
+        if reload_data and (self.X is None or self.Y is None):
             if self._config.verbose > 1:
                 print("[GenericDatasource] Run load_metadata first!")
             return None
         
-        if isinstance(k,float):
-            k = int(k*len(self.X))
+        if reload_data:
+            if isinstance(k,float):
+                k = int(k*len(self.X))
             
-        samples = np.random.choice(range(len(self.X)),k,replace=False)
-        s_x, s_y = ([],[])
-        for s in samples:
-            s_x.append(self.X[s])
-            s_y.append(self.Y[s])
+            samples = np.random.choice(range(len(self.X)),k,replace=False)
+            s_x, s_y = ([],[])
+            for s in samples:
+                s_x.append(self.X[s])
+                s_y.append(self.Y[s])
 
+        #Save last generated sample
+        self._cache.dump((s_x,s_y,self.name),'sampled_metadata.pik')
         return (s_x,s_y)
         

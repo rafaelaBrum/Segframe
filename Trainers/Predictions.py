@@ -123,7 +123,11 @@ class Predictor(object):
             return Exitcodes.RUNTIME_ERROR
 
         if self._config.testdir is None:
-            _,_,(x_test,y_test) = self._ds.split_metadata(split)
+            #Load sampled data if required by command line
+            if self._config.sample < 1.0:
+                _,_,(x_test,y_test) = self._ds.split_metadata(split=split,data=self._ds.sample_metadata(self._config.sample))
+            else:
+                _,_,(x_test,y_test) = self._ds.split_metadata(split)
         else:
             x_test,y_test = self._ds._run_dir(self._config.testdir)
 

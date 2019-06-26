@@ -41,7 +41,7 @@ class LDir(gd.GenericDS):
         class_set = set()
 
         t_x,t_y = ([],[])
-        wsi_list = os.listdir(os.path.join(self.path,d))
+        wsi_list = os.listdir(d)
 
         #Start thread pool if not already started
         if self._executor is None:

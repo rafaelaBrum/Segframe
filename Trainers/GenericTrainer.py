@@ -115,7 +115,7 @@ class Trainer(object):
             fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
 
         if self._config.delay_load:
-            from Models import ThreadedGenerator
+            from Trainers import ThreadedGenerator
             
             train_generator = ThreadedGenerator(dps=train_data,
                                                 classes=self._ds.nclasses,

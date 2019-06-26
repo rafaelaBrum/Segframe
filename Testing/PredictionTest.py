@@ -2,8 +2,8 @@
 #-*- coding: utf-8
 
 from Datasources.CellRep import CellRep
-from Models import Predictor
-from Models.Predictions import print_prediction
+from Trainers import Predictor
+from Trainers.Predictions import print_prediction
 
 from . import F1CallbackTest
 
