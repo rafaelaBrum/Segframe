@@ -6,7 +6,7 @@ import os,sys
 
 import numpy as np
 from Utils import CalculateF1Score
-from Models import ThreadedGenerator
+from Trainers import ThreadedGenerator
 
 from keras.models import load_model
 from keras.preprocessing.image import ImageDataGenerator

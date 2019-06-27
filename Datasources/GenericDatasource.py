@@ -277,9 +277,10 @@ class GenericDS(ABC):
         """
 
         reload_data = False
+        s_x,s_y = (None,None)
         if self._cache.checkFileExistence('sampled_metadata.pik'):
             try:
-                X,Y,name = self._cache.load('sampled_metadata.pik')
+                s_x,s_y,name = self._cache.load('sampled_metadata.pik')
             except ValueError:
                 name = ''
                 reload_data = True
@@ -288,6 +289,8 @@ class GenericDS(ABC):
 
             if not reload_data and self._verbose > 0:
                 print("[GenericDatasource] Loaded split sampled data cache. Used previously defined splitting.")
+        else:
+            reload_data = True
         
         if reload_data and (self.X is None or self.Y is None):
             if self._config.verbose > 1:
@@ -298,8 +301,8 @@ class GenericDS(ABC):
             if isinstance(k,float):
                 k = int(k*len(self.X))
             
+            s_x,s_y = ([],[])
             samples = np.random.choice(range(len(self.X)),k,replace=False)
-            s_x, s_y = ([],[])
             for s in samples:
                 s_x.append(self.X[s])
                 s_y.append(self.Y[s])
