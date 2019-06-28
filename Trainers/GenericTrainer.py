@@ -56,16 +56,9 @@ class Trainer(object):
         self._config = config
         self._verbose = config.verbose
         self._ds = None
-        self._rex = None
+        self._rex = r'{0}-t(?P<try>[0-9]+)e(?P<epoch>[0-9]+).h5'
 
-    def run(self):
-        """
-        Checks configurations, loads correct module, loads data
-        Trains!
-
-        New networks should be inserted as individual modules. Networks should be imported
-        by the Models module.
-        """
+    def load_modules(self):
         net_name = self._config.network
         if net_name is None or net_name == '':
             print("A network should be specified")
@@ -80,9 +73,22 @@ class Trainer(object):
         net_module = importlib.import_module('Models',net_name)
         net_model = getattr(net_module,net_name)(self._config,self._ds)
 
+        return net_model
+    
+    def run(self):
+        """
+        Checks configurations, loads correct module, loads data
+        Trains!
+
+        New networks should be inserted as individual modules. Networks should be imported
+        by the Models module.
+        """
+
+        net_model = self.load_modules()
+        
         self._ds.load_metadata()
 
-        self._rex = r'{0}-t(?P<try>[0-9]+)e(?P<epoch>[0-9]+).h5'.format(net_model.name)
+        self._rex = self._rex.format(net_model.name)
         
         return self.train_model(net_model)
 
@@ -149,6 +155,9 @@ class Trainer(object):
     def train_model(self,model,train_data=None,val_data=None):
         """
         Generic trainer. Receives a GenericModel and trains it
+
+        @param train_data <list>: Should be a collection of image metadata
+        @param val_data <list>: Should be a collection of image metadata
         """
         rcomp = re.compile(self._rex)
         

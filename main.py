@@ -12,7 +12,7 @@ from multiprocessing import Process
 from Preprocessing import Preprocess
 from Utils import Exitcodes,CacheManager
 from Testing import TrainTest,DatasourcesTest,PredictionTest
-from Trainers import GenericTrainer,Predictions
+from Trainers import GenericTrainer,Predictions,ALTrainer
 
 #Supported image types
 img_types = ['svs', 'dicom', 'nii','tif','tiff', 'png']
@@ -68,6 +68,25 @@ def main_exec(config):
                 sys.exit(proc.exitcode)
         else:
             GenericTrainer.run_training(config,None)
+
+    if config.al:
+        if not os.path.isdir(config.weights_path):
+            os.mkdir(config.weights_path)
+        if not os.path.isdir(config.model_path):
+            os.mkdir(config.model_path)
+            
+        if config.multiprocess:
+            ctx = mp.get_context('spawn')
+            cache_m = CacheManager()
+            proc = ctx.Process(target=ALTrainer.run_training, args=(config,cache_m.getLocations()))
+            proc.start()
+            proc.join()
+
+            if proc.exitcode != Exitcodes.ALL_GOOD:
+                print("System did not end well. Check logs or enhace verbosity level.")
+                sys.exit(proc.exitcode)
+        else:
+            ALTrainer.run_training(config,None)
             
     if config.pred:
         if config.multiprocess:
@@ -163,6 +182,23 @@ if __name__ == "__main__":
     train_args.add_argument('-sample', dest='sample', type=float, 
         help='Use a sample of the whole data for training (Default: 100.0%% - use floats [0.0-1.0]).',
         default=1.0)
+    
+    ##Active Learning options
+    al_args = parser.add_argument_group('AL','Active Learning options')
+    arg_groups.append(al_args)
+
+    al_args.add_argument('--al', action='store_true', dest='al', default=False, 
+        help='Train model')
+    al_args.add_argument('-init_train', dest='init_train', type=int, 
+        help='Initial training set size (Default: 1000).', default=1000)
+    al_args.add_argument('-ac_function',dest='ac_function',type=str,help='Acquisition function.\n \
+    Check documentation for available functions.',default=None)
+    al_args.add_argument('-acquisition_steps', dest='acquisition_steps', type=int, 
+        help='Initial training set size (Default: 10).', default=10)
+    al_args.add_argument('-acquire', dest='acquire', type=int, 
+        help='Acquire this many samples at each acquisition step (Default: 1000).', default=1000)
+    al_args.add_argument('-dropout_steps', dest='dropout_steps', type=int, 
+        help='For Bayesian CNNs, sample the network this many times (Default: 100).', default=100)
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')

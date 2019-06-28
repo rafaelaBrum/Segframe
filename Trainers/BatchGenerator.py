@@ -56,7 +56,10 @@ class GenericIterator(Iterator):
             raise TypeError("Image generator should be an " \
             "ImageDataGenerator instance")
 
-        super(GenericIterator, self).__init__(n=len(self.data[0]), batch_size=batch_size, shuffle=shuffle, seed=seed)
+        if isinstance(self.data[0],np.ndarray):
+            super(GenericIterator, self).__init__(n=self.data[0].shape[0], batch_size=batch_size, shuffle=shuffle, seed=seed)
+        else:
+            super(GenericIterator, self).__init__(n=len(self.data[0]), batch_size=batch_size, shuffle=shuffle, seed=seed)
 
 
     def returnDataSize(self):

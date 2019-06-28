@@ -109,7 +109,7 @@ class Predictor(object):
 
         self.run_test(net_model)
         
-    def run_test(self,model):
+    def run_test(self,model,x_test=None,y_test=None):
         """
         This should be executed after a model has been trained
         """
@@ -122,14 +122,16 @@ class Predictor(object):
             print("[Predictor] A previously trained model and dataset should exist. No previously defined spliting found.")
             return Exitcodes.RUNTIME_ERROR
 
-        if self._config.testdir is None:
-            #Load sampled data if required by command line
-            if self._config.sample < 1.0:
-                _,_,(x_test,y_test) = self._ds.split_metadata(split=split,data=self._ds.sample_metadata(self._config.sample))
+        #Priority is for given data as parameters. If None is given, try to load metadata as configured
+        if x_test is None or y_test is None:
+            if self._config.testdir is None:
+                #Load sampled data if required by command line
+                if self._config.sample < 1.0:
+                    _,_,(x_test,y_test) = self._ds.split_metadata(split=split,data=self._ds.sample_metadata(self._config.sample))
+                else:
+                    _,_,(x_test,y_test) = self._ds.split_metadata(split)
             else:
-                _,_,(x_test,y_test) = self._ds.split_metadata(split)
-        else:
-            x_test,y_test = self._ds._run_dir(self._config.testdir)
+                x_test,y_test = self._ds._run_dir(self._config.testdir)
 
         if self._config.verbose > 0:
             unique,count = np.unique(y_test,return_counts=True)

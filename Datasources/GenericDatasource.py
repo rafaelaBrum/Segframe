@@ -149,10 +149,10 @@ class GenericDS(ABC):
         else:
             return None
     
-    def load_metadata(self):
+    def load_metadata(self,metadata_file='metadata.pik'):
         """
         Iterates over data patches and creates an instance of a GenericImage subclass for each one
-        Returns two tuples of lists (X,Y): X instances of GenericImage subclasses, Y labels;
+        Returns a tuples of lists (X,Y): X instances of GenericImage subclasses, Y labels;
 
         OBS: Dataset metadata is shuffled once here. Random sample generation is done during training.
         """
@@ -174,9 +174,9 @@ class GenericDS(ABC):
                 if self._config.info:
                     print("Previous split ratio is different from requested one. Metadata will be rebuilt.")
                 
-        if self._cache.checkFileExistence('metadata.pik') and not reload_data:
+        if self._cache.checkFileExistence(metadata_file) and not reload_data:
             try:
-                X,Y,name = self._cache.load('metadata.pik')
+                X,Y,name = self._cache.load(metadata_file)
             except ValueError:
                 name = ''
                 reload_data = True
@@ -191,7 +191,7 @@ class GenericDS(ABC):
         if reload_data:
             X,Y = self._run_dir(self.path)
 
-            self._cache.dump((X,Y,self.name),'metadata.pik')
+            self._cache.dump((X,Y,self.name),metadata_file)
             self._cache.dump(tuple(self._config.split),'split_ratio.pik')
             
         self.X = X
@@ -303,6 +303,7 @@ class GenericDS(ABC):
             
             s_x,s_y = ([],[])
             samples = np.random.choice(range(len(self.X)),k,replace=False)
+            #TODO: This for loop can be replaced
             for s in samples:
                 s_x.append(self.X[s])
                 s_y.append(self.Y[s])
