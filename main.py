@@ -11,7 +11,7 @@ from multiprocessing import Process
 #Project imports
 from Preprocessing import Preprocess
 from Utils import Exitcodes,CacheManager
-from Testing import TrainTest,DatasourcesTest,PredictionTest
+from Testing import TrainTest,DatasourcesTest,PredictionTest,ActiveLearningTest
 from Trainers import GenericTrainer,Predictions,ALTrainer
 
 #Supported image types
@@ -115,6 +115,8 @@ def main_exec(config):
             DatasourcesTest.run(config)
         elif config.tmode == 3:
             PredictionTest.run(config)
+        elif config.tmode == 4:
+            ActiveLearningTest.run(config)
 
     if not (config.preprocess or config.train or config.postproc or config.pred or config.runtest):
         print("The problem begins with choice: preprocess, train, postprocess or predict")
@@ -269,8 +271,9 @@ if __name__ == "__main__":
         0 - Run all tests; \n \
         1 - Run training test; \n \
         2 - Run Datasources test; \n \
-        3 - Run Prediction test.',
-       choices=[0,1,2,3],default=0)
+        3 - Run Prediction test; \n \
+        4 - Run AL test.',
+       choices=[0,1,2,3,4],default=0)
     parser.add_argument('-tlocal', action='store_true', dest='local_test', default=False, 
         help='Test is local (assumes a small dataset).')
     

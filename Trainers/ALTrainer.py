@@ -9,7 +9,7 @@ import importlib
 from .GenericTrainer import Trainer
 from .Predictions import Predictor
 #Module
-from Utils import Exitcodes
+from Utils import Exitcodes,CacheManager
 
 def run_training(config,locations=None):
     """
