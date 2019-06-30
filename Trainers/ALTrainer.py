@@ -7,7 +7,7 @@ import importlib
 
 #Local
 from .GenericTrainer import Trainer
-
+from .Predictions import Predictor
 #Module
 from Utils import Exitcodes
 
@@ -97,7 +97,7 @@ class ALTrainer(Trainer):
         #Define initial sets
         self.configure_sets()
         cache_m = CacheManager()
-        
+        predictor = Predictor(self._config)
         function = None
         if not self._config.ac_function is None:
             acq = importlib.import_module('AL','AcquisitionFunctions')
@@ -113,14 +113,19 @@ class ALTrainer(Trainer):
             self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))
             
             #Save current dataset and report partial result (requires multi load for reading)
-            #TODO
+            fid = 'al-metadata-r{0}.pik'.format(r)
+            cache_m.registerFile(os.path.join(self._config.cache,fid))
+            cache_m.dump(((self.train_x,self.train_y),(self.val_x,self.val_y),(self.test_x,self.test_y)),fid)
+
+            predictor.run(self.test_x,self.test_y)
+            
             if not self.acquire(function,model=model,config=self._config):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are possible")
                 break
             
 
-    def acquire(self,function,**kwargs=None):
+    def acquire(self,function,**kwargs):
         """
         Adds items to training and validation sets, according to split ratio defined in configuration. 
         Test set is fixed in the begining.

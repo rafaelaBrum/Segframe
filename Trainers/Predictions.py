@@ -79,13 +79,15 @@ class Predictor(object):
         self._verbose = config.verbose
         self._ds = None
 
-    def run(self):
+    def run(self,x_test=None,y_test=None):
         """
         Checks configurations, loads correct module, loads data
         Trains!
 
         New networks should be inserted as individual modules. Networks should be imported
         by the Models module.
+
+        If provided x_test and y_test data, runs prediction with them.
         """
         net_name = self._config.network
         if net_name is None or net_name == '':
@@ -107,7 +109,7 @@ class Predictor(object):
         if self._config.testdir is None:
             self._ds.load_metadata()
 
-        self.run_test(net_model)
+        self.run_test(net_model,x_test,y_test)
         
     def run_test(self,model,x_test=None,y_test=None):
         """
