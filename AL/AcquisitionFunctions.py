@@ -16,7 +16,6 @@ Returns: numpy array of element indexes
 
 def _predict_classes(model,generator,batch_size,verbose=1):
         proba = model.predict_generator(generator,
-                                        batch_size=batch_size,
                                         max_queue_size=20,
                                         verbose=verbose)
         return proba.argmax(axis=-1)
@@ -37,15 +36,15 @@ def bayesian_varratios(generator,query,kwargs):
         mc_dp = 30
 
     batch_size = kwargs['config'].batch_size
-    All_Dropout_Classes = np.zeros(shape=(pool_x.shape[0],1))
+    All_Dropout_Classes = np.zeros(shape=(generator.dim[0],1))
     for d in range(mc_dp):
         dropout_classes = _predict_classes(model.single,generator,batch_size=batch_size, verbose=1)
         dropout_classes = np.array([dropout_classes]).T
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
 
-    Variation = np.zeros(shape=(pool_x.shape[0]))
+    Variation = np.zeros(shape=(generator.dim[0]))
 
-    for t in range(pool_x.shape[0]):
+    for t in range(generator.dim[0]):
         L = np.array([0])
         for d_iter in range(mc_dp):
             L = np.append(L, All_Dropout_Classes[t, d_iter+1])
