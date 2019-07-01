@@ -4,6 +4,6 @@
 __all__ = ['GenericTrainer','ALTrainer','Predictor']
 
 from .GenericTrainer import Trainer
-from .ALTrainer import ALTrainer
+from .ALTrainer import ActiveLearningTrainer
 from .BatchGenerator import SingleGenerator,ThreadedGenerator
 from .Predictions import Predictor

@@ -3,7 +3,7 @@
 
 import random
 from Datasources.CellRep import CellRep
-from Trainers import ALTrainer
+from Trainers import ActiveLearningTrainer
 
 def run(config):
     #Run all tests below
@@ -14,5 +14,5 @@ def run(config):
         config.predst = '../data/lym_cnn_training_data/'
     
     #Start training
-    trainer = ALTrainer(config)
+    trainer = ActiveLearningTrainer(config)
     trainer.run()

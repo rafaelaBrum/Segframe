@@ -16,14 +16,14 @@ def run_training(config,locations=None):
     Main training function, to work as a new process
     """
     if config.info:
-        print("Starting training process....")
+        print("Starting active learning process....")
 
     if not locations is None:
         cache_m = CacheManager(locations=locations)
-    trainer = ALTrainer(config)
+    trainer = ActiveLearningTrainer(config)
     trainer.run()
     
-class ALTrainer(Trainer):
+class ActiveLearningTrainer(Trainer):
     """
     Implements the structure of active learning:
     - Uses a selection function to acquire new training points;
