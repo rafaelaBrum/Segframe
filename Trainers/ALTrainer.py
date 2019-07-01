@@ -4,10 +4,13 @@
 import os,sys
 import numpy as np
 import importlib
+from keras.preprocessing.image import ImageDataGenerator
 
 #Local
 from .GenericTrainer import Trainer
 from .Predictions import Predictor
+from .BatchGenerator import ThreadedGenerator
+
 #Module
 from Utils import Exitcodes,CacheManager
 
@@ -138,8 +141,25 @@ class ActiveLearningTrainer(Trainer):
 
         if self.pool_x.shape[0] < self._config.acquire:
             return False
+
+        #Pools are big, use a data generator
+        if not self._config.tdim is None:
+            fix_dim = self._config.tdim
+        else:
+            fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
+        pool_prep = ImageDataGenerator(
+            samplewise_center=self._config.batch_norm,
+            samplewise_std_normalization=self._config.batch_norm)
         
-        pooled_idx = function(self.pool_x,self.pool_y,self._config.acquire,kwargs)
+        pool_generator = ThreadedGenerator(dps=(self.pool_x,self.pool_y),
+                                                classes=self._ds.nclasses,
+                                                dim=fix_dim,
+                                                batch_size=self._config.batch_size,
+                                                image_generator=pool_prep,
+                                                shuffle=True,
+                                                verbose=self._config.verbose)
+            
+        pooled_idx = function(pool_generator,self._config.acquire,kwargs)
         self.train_x = np.concatenate((self.train_x,self.pool_x[pooled_idx]),axis=0)
         self.train_y = np.concatenate((self.train_y,self.pool_y[pooled_idx]),axis=0)
         self.pool_x = np.delete(self.pool_x,pooled_idx)

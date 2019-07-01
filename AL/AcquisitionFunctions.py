@@ -14,11 +14,14 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-def _predict_classes(model,pool_x,batch_size, verbose=1)
-        proba = model.predict(pool_x, batch_size=batch_size, verbose=verbose)
+def _predict_classes(model,generator,batch_size,verbose=1):
+        proba = model.predict_generator(generator,
+                                        batch_size=batch_size,
+                                        max_queue_size=20,
+                                        verbose=verbose)
         return proba.argmax(axis=-1)
 
-def bayesian_varratios(pool_x,pool_y,query,kwargs):
+def bayesian_varratios(generator,query,kwargs):
     """
     Calculation as defined in paper:
     Bayesian convolutional neural networks with Bernoulli approximate variational inference
@@ -36,7 +39,7 @@ def bayesian_varratios(pool_x,pool_y,query,kwargs):
     batch_size = kwargs['config'].batch_size
     All_Dropout_Classes = np.zeros(shape=(pool_x.shape[0],1))
     for d in range(mc_dp):
-        dropout_classes = _predict_classes(model.single,pool_x,batch_size=batch_size, verbose=1)
+        dropout_classes = _predict_classes(model.single,generator,batch_size=batch_size, verbose=1)
         dropout_classes = np.array([dropout_classes]).T
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
 

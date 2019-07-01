@@ -187,6 +187,8 @@ class Trainer(object):
             
             unique,count = np.unique(val_data[1],return_counts=True)
             l_count = dict(zip(unique,count))
+            if not 1 in l_count:
+                l_count[1] = 0
             print("Validation labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
             
             print("Train set: {0} items".format(len(train_data[0])))

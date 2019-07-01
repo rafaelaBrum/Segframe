@@ -139,6 +139,8 @@ class Predictor(object):
         if self._config.verbose > 0:
             unique,count = np.unique(y_test,return_counts=True)
             l_count = dict(zip(unique,count))
+            if not 1 in l_count:
+                l_count[1] = 0
             print("Test labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
             
         X,Y = self._ds.load_data(data=(x_test,y_test),keepImg=self._keep)
