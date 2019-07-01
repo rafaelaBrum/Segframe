@@ -25,6 +25,11 @@ tar -xf lym_cnn_training_data.tar -C $LOCAL/test
 
 cd /pylon5/ac3uump/alsm/active-learning/Segframe
 
+if [ -f cache/sampled_metadata.pik ]
+then
+    rm cache/sampled_metadata.pik
+fi
+
 echo '[START] training'
 date +%s
 
