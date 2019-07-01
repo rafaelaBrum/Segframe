@@ -97,7 +97,7 @@ class ActiveLearningTrainer(Trainer):
         #Define initial sets
         self.configure_sets()
         cache_m = CacheManager()
-        predictor = Predictor(self._config)
+        predictor = Predictor(self._config,keepImg=True)
         function = None
         if not self._config.ac_function is None:
             acq = importlib.import_module('AL','AcquisitionFunctions')

@@ -32,7 +32,7 @@ def bayesian_varratios(pool_x,pool_y,query,kwargs):
     batch_size = kwargs['config'].batch_size
     All_Dropout_Classes = np.zeros(shape=(pool_x.shape[0],1))
     for d in range(mc_dp):
-        dropout_classes = model.predict_classes(pool_x,batch_size=batch_size, verbose=1)
+        dropout_classes = model.single.predict_classes(pool_x,batch_size=batch_size, verbose=1)
         dropout_classes = np.array([dropout_classes]).T
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
 
