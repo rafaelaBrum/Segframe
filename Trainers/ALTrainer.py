@@ -114,7 +114,7 @@ class ActiveLearningTrainer(Trainer):
             
             #Save current dataset and report partial result (requires multi load for reading)
             fid = 'al-metadata-r{0}.pik'.format(r)
-            cache_m.registerFile(os.path.join(self._config.cache,fid))
+            cache_m.registerFile(os.path.join(self._config.cache,fid),fid)
             cache_m.dump(((self.train_x,self.train_y),(self.val_x,self.val_y),(self.test_x,self.test_y)),fid)
 
             predictor.run(self.test_x,self.test_y)
