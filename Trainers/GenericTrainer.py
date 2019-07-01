@@ -222,7 +222,7 @@ class Trainer(object):
                 single.load_weights(os.path.join(self._config.weights_path,"{0}-weights.h5".format(model.name)))
                 if self._verbose > 0:
                     print("Sucessfully loaded previous weights from consolidated file.")
-            except ValueError:
+            except ValueError,OSError:
                 print("[ALERT] Could not load previous weights, training from scratch")
                 
         wf_header = "{0}-t{1}".format(model.name,old_e_offset+1)

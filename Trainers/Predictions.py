@@ -71,13 +71,14 @@ class Predictor(object):
     Class responsible for running the predictions and outputing results
     """
 
-    def __init__(self,config):
+    def __init__(self,config,keepImg=False):
         """
         @param config <parsed configurations>: configurations
         """
         self._config = config
         self._verbose = config.verbose
         self._ds = None
+        self._keep = keepImg
 
     def run(self,x_test=None,y_test=None):
         """
@@ -140,7 +141,7 @@ class Predictor(object):
             l_count = dict(zip(unique,count))
             print("Test labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
             
-        X,Y = self._ds.load_data(data=(x_test,y_test))
+        X,Y = self._ds.load_data(data=(x_test,y_test),keepImg=self._keep)
         if self._config.verbose > 1:
             print("Y original ({1}):\n{0}".format(Y,Y.shape))        
         Y = to_categorical(Y,self._ds.nclasses)
