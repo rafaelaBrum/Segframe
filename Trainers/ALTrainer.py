@@ -98,9 +98,11 @@ class ActiveLearningTrainer(Trainer):
         self._rex = self._rex.format(model.name)
         #Define initial sets
         self.configure_sets()
+        #AL components
         cache_m = CacheManager()
         predictor = Predictor(self._config,keepImg=True)
         function = None
+        
         if not self._config.ac_function is None:
             acq = importlib.import_module('AL','AcquisitionFunctions')
             function = getattr(acq,self._config.ac_function)
