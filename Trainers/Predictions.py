@@ -209,8 +209,6 @@ class Predictor(object):
 
         del(X)
         del(test_generator)
-        sess.close()
-        del(sess)
         
         if self._config.progressbar:
             l.close()

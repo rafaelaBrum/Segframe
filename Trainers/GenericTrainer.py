@@ -57,7 +57,6 @@ class Trainer(object):
         self._verbose = config.verbose
         self._ds = None
         self._rex = r'{0}-t(?P<try>[0-9]+)e(?P<epoch>[0-9]+).h5'
-        self._session = None
 
     def load_modules(self):
         net_name = self._config.network
@@ -163,15 +162,15 @@ class Trainer(object):
         rcomp = re.compile(self._rex)
         
         # session setup
-        self._session = K.get_session()
+        session = K.get_session()
         ses_config = tf.ConfigProto(
             device_count={"CPU":self._config.cpu_count,"GPU":self._config.gpu_count},
             intra_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count, 
             inter_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count,
             log_device_placement=True if self._verbose > 1 else False
             )
-        self._session.config = ses_config
-        K.set_session(self._session)
+        session.config = ses_config
+        K.set_session(session)
         
         #Setup of generators, augmentation, preprocessing
         if train_data is None or val_data is None:
@@ -268,8 +267,8 @@ class Trainer(object):
         single.save(model.get_model_cache())
         cache_m.dump(tuple(self._config.split),'split_ratio.pik')
 
-        self._session.close()
-        self._session = None
+        #session.close()
+        #session = None
         
         return Exitcodes.ALL_GOOD
         

@@ -100,7 +100,7 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
     @param step_size <int>: size of the iterable that exec_function will receive
     @param output_dim <int>: exec_function produces how many sets of results?
     """
-    from keras import backend
+    from keras import backend as K
     
     def _initializer(q,processes):
         import tensorflow as tf
@@ -113,14 +113,16 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
             gpu_options.Experimental.use_unified_memory = False
             gpu_options.visible_device_list = "{0}".format(q.get())
 
-        sess = tf.Session(config=tf.ConfigProto(
+        #sess = tf.Session(config=tf.ConfigProto(
+        sess = K.get_session()
+        s_config = tf.ConfigProto(
             device_count={"CPU":processes,"GPU":0 if q is None else 1},
             intra_op_parallelism_threads=3, 
             inter_op_parallelism_threads=3,
             log_device_placement=False,
             gpu_options=gpu_options
-            ))
-        #sess.config = config
+            )
+        sess.config = s_config
         backend.set_session(sess)
         print("[multigpu_run] DONE INITIALIER")
     
