@@ -147,7 +147,18 @@ class Predictor(object):
         if self._config.verbose > 1:
             print("Y original ({1}):\n{0}".format(Y,Y.shape))        
         Y = to_categorical(Y,self._ds.nclasses)
-    
+
+        # session setup
+        sess = K.get_session()
+        ses_config = tf.ConfigProto(
+            device_count={"CPU":self._config.cpu_count,"GPU":self._config.gpu_count},
+            intra_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count, 
+            inter_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count,
+            log_device_placement=True if self._verbose > 1 else False
+            )
+        sess.config = ses_config
+        K.set_session(sess)
+        
         #During test phase multi-gpu mode is not necessary, load full model (multi-gpu would need to load training weights)
         if os.path.isfile(model.get_model_cache()):
             try:
@@ -170,16 +181,6 @@ class Predictor(object):
                 print("No trained model or weights file found")
             return None
 
-        # session setup
-        sess = K.get_session()
-        ses_config = tf.ConfigProto(
-            device_count={"CPU":self._config.cpu_count,"GPU":self._config.gpu_count},
-            intra_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count, 
-            inter_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count,
-            log_device_placement=True if self._verbose > 1 else False
-            )
-        sess.config = ses_config
-        K.set_session(sess)
         bsize = self._config.batch_size
         stp = round((len(X) / bsize) + 0.5)
 
@@ -208,6 +209,8 @@ class Predictor(object):
 
         del(X)
         del(test_generator)
+        sess.close()
+        del(sess)
         
         if self._config.progressbar:
             l.close()
