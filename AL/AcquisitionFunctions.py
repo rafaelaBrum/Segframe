@@ -4,6 +4,8 @@
 import numpy as np
 from scipy.stats import mode
 
+from Utils import multigpu_run
+
 __doc__ = """
 All acquisition functions should receive:
 1 - numpy array of items
@@ -31,7 +33,8 @@ def bayesian_varratios(data,query,kwargs):
     @param data <tuple>: X,Y as numpy arrays
     """
     from Trainers import ThreadedGenerator
-    
+    from keras.preprocessing.image import ImageDataGenerator
+ 
     if 'model' in kwargs:
         model = kwargs['model']
     else:
@@ -76,7 +79,7 @@ def bayesian_varratios(data,query,kwargs):
             dropout_classes = _predict_classes(data,model.single,generator_params, verbose=1)
         else:
             dropout_classes = multigpu_run(_predict_classes,
-                                               (model.single,generator_params,verbose),
+                                               (model.single,generator_params,verbose),data,
                                                gpu_count,pbar,txt_label='Running MC Dropout..',
                                                verbose=verbose)
         dropout_classes = np.array([dropout_classes]).T

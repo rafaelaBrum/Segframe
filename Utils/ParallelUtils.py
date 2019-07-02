@@ -104,7 +104,7 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
     
     def _initializer(q,processes):
         import tensorflow as tf
-        
+
         #initialize tensorflow session
         gpu_options = None
         if not q is None:
@@ -125,7 +125,7 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
         print("[multigpu_run] DONE INITIALIER")
     
     data_size = data[0].shape[0]
-    if gpu_count > 0:
+    if gpu_count > 1:
         step_size = int(data_size / gpu_count)
         step = gpu_count + (data_size%gpu_count>0)
     else:
