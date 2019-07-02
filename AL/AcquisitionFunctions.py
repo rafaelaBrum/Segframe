@@ -14,17 +14,24 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-def _predict_classes(model,generator,batch_size,verbose=1):
-        proba = model.predict_generator(generator,
-                                        max_queue_size=20,
-                                        verbose=verbose)
-        return proba.argmax(axis=-1)
+def _predict_classes(data,model,generator_params,verbose=1):
+    generator_params['dps']=data
+    generator = ThreadedGenerator(**generator_params)
 
-def bayesian_varratios(generator,query,kwargs):
+    proba = model.predict_generator(generator,
+                                        max_queue_size=40,
+                                        verbose=verbose)
+    return proba.argmax(axis=-1)
+
+def bayesian_varratios(data,query,kwargs):
     """
     Calculation as defined in paper:
     Bayesian convolutional neural networks with Bernoulli approximate variational inference
+
+    @param data <tuple>: X,Y as numpy arrays
     """
+    from Trainers import ThreadedGenerator
+    
     if 'model' in kwargs:
         model = kwargs['model']
     else:
@@ -32,19 +39,52 @@ def bayesian_varratios(generator,query,kwargs):
 
     if 'config' in kwargs:
         mc_dp = kwargs['config'].dropout_steps
+        gpu_count = kwargs['config'].gpu_count
+        batch_norm = kwargs['config'].batch_norm
+        batch_size = kwargs['config'].batch_size
+        fix_dim = kwargs['config'].tdim
+        verbose = kwargs['config'].verbose
+        pbar = kwargs['config'].progressbar
     else:
-        mc_dp = 30
+        return None
 
-    batch_size = kwargs['config'].batch_size
-    All_Dropout_Classes = np.zeros(shape=(generator.dim[0],1))
+    if 'ds' in kwargs:
+        ds = kwargs['ds']
+    else:
+        return None
+        
+    if fix_dim is None:
+        fix_dim = ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
+
+    #Pools are big, use a data generator
+    pool_prep = ImageDataGenerator(
+        samplewise_center=batch_norm,
+        samplewise_std_normalization=batch_norm)
+
+    #Acquisition functions that require a generator to load data
+    generator_params = {'classes':ds.nclasses,
+                            'dim':fix_dim,
+                            'batch_size':batch_size,
+                            'image_generator':pool_prep,
+                            'shuffle':True,
+                            'verbose':verbose}
+
+    X,Y = data
+    All_Dropout_Classes = np.zeros(shape=(X.shape[0],1))
     for d in range(mc_dp):
-        dropout_classes = _predict_classes(model.single,generator,batch_size=batch_size, verbose=1)
+        if gpu_count <= 1:
+            dropout_classes = _predict_classes(data,model.single,generator_params, verbose=1)
+        else:
+            dropout_classes = multigpu_run(_predict_classes,
+                                               (model.single,generator_params,verbose),
+                                               gpu_count,pbar,txt_label='Running MC Dropout..',
+                                               verbose=verbose)
         dropout_classes = np.array([dropout_classes]).T
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
 
-    Variation = np.zeros(shape=(generator.dim[0]))
+    Variation = np.zeros(shape=(X.shape[0]))
 
-    for t in range(generator.dim[0]):
+    for t in range(X.shape[0]):
         L = np.array([0])
         for d_iter in range(mc_dp):
             L = np.append(L, All_Dropout_Classes[t, d_iter+1])
