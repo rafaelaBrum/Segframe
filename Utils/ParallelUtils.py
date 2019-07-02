@@ -100,11 +100,11 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
     @param step_size <int>: size of the iterable that exec_function will receive
     @param output_dim <int>: exec_function produces how many sets of results?
     """
-    import tensorflow as tf
     from keras import backend
     
     def _initializer(q,processes):
-
+        import tensorflow as tf
+        
         #initialize tensorflow session
         gpu_options = None
         if not q is None:
