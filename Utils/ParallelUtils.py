@@ -116,8 +116,8 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
         #s_config = tf.ConfigProto(        
         sess = tf.Session(config=tf.ConfigProto(        
             device_count={"CPU":processes,"GPU":0 if q is None else 1},
-            intra_op_parallelism_threads=3, 
-            inter_op_parallelism_threads=3,
+            intra_op_parallelism_threads=processes, 
+            inter_op_parallelism_threads=processes,
             log_device_placement=False,
             gpu_options=gpu_options
             ))
@@ -141,10 +141,10 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
             device_queue.put(dev%gpu_count)
 
     #CLear tf Session
-    sess = K.get_session()
-    sess.close()
+    #sess = K.get_session()
+    #sess.close()
     #K.clear_session()
-    pool = multiprocessing.Pool(processes=gpu_count,maxtasksperchild=50,
+    pool = multiprocessing.Pool(processes=step,maxtasksperchild=50,
                                     initializer=_initializer, initargs=(device_queue,gpu_count))
 
     datapoints_db = []
@@ -153,7 +153,7 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
     
     if pbar:
         l = tqdm(desc=txt_label,total=step,position=0)
-            
+    
     for i in range(step):
         # get a subset of datapoints
         end_idx = (i+1)*step_size        
@@ -180,7 +180,7 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
             else:
                 process_counter += 1
 
-    sess = K.get_session()
+    #sess = K.get_session()
     for i in range(len(semaphores)):
         datapoints_db.extend(semaphores[i].get())
         if not pbar and verbose > 0:
