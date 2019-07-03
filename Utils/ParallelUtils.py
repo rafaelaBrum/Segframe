@@ -100,30 +100,28 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
     @param step_size <int>: size of the iterable that exec_function will receive
     @param output_dim <int>: exec_function produces how many sets of results?
     """
-    from keras import backend as K
-    import tensorflow as tf
     
-    def _initializer(q,processes):
+    #def _initializer(q,processes):
 
         #initialize tensorflow session
-        gpu_options = None
-        if not q is None:
-            gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1.0)
-            gpu_options.allow_growth = True
-            gpu_options.Experimental.use_unified_memory = False
-            gpu_options.visible_device_list = "{0}".format(q.get())
+    #    gpu_options = None
+    #    if not q is None:
+    #        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1.0)
+    #        gpu_options.allow_growth = True
+    #        gpu_options.Experimental.use_unified_memory = False
+    #        gpu_options.visible_device_list = "{0}".format(q.get())
 
         #s_config = tf.ConfigProto(        
-        sess = tf.Session(config=tf.ConfigProto(        
-            device_count={"CPU":processes,"GPU":1},
-            intra_op_parallelism_threads=processes, 
-            inter_op_parallelism_threads=processes,
-            log_device_placement=False,
-            gpu_options=gpu_options
-            ))
+    #    sess = tf.Session(config=tf.ConfigProto(        
+    #        device_count={"CPU":processes,"GPU":1},
+    #        intra_op_parallelism_threads=processes, 
+    #        inter_op_parallelism_threads=processes,
+    #        log_device_placement=False,
+    #        gpu_options=gpu_options
+    #        ))
         #sess.config = s_config
-        K.set_session(sess)
-        print("[multigpu_run] DONE INITIALIER")
+    #    K.set_session(sess)
+    #    print("[multigpu_run] DONE INITIALIER")
     
     data_size = data[0].shape[0]
     if gpu_count > 1:
@@ -140,12 +138,7 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
         for dev in range(0,step):
             device_queue.put(dev%gpu_count)
 
-    #CLear tf Session
-    sess = K.get_session()
-    sess.close()
-    #K.clear_session()
-    pool = multiprocessing.Pool(processes=step,maxtasksperchild=50,
-                                    initializer=_initializer, initargs=(device_queue,gpu_count))
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=gpu_count)
 
     datapoints_db = []
     semaphores = []
@@ -164,14 +157,8 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
         cur_datapoints = (data[0][i*step_size : end_idx],data[1][i*step_size : end_idx])
         #cur_datapoints = datapoints[:end_idx]
 
-                
-        if pbar:
-            semaphores.append(pool.apply_async(exec_function,
-                                        args=(cur_datapoints,) + exec_params,
-                                        callback=lambda x: l.update(1)))
-        else:
-            semaphores.append(pool.apply_async(exec_function,
-                                        args=(cur_datapoints,) + exec_params))
+        args = (cur_datapoints,device_queue) + exec_params
+        semaphores.append(executor.submit(exec_function,*args))
             
         if pbar:
             if process_counter == gpu_count:
@@ -180,20 +167,10 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
             else:
                 process_counter += 1
 
-    K.clear_session()
-    sess = tf.Session(config=tf.ConfigProto(        
-            device_count={"CPU":2*gpu_count,"GPU":gpu_count},
-            intra_op_parallelism_threads=gpu_count+1, 
-            inter_op_parallelism_threads=gpu_count+1,
-            log_device_placement=False
-            ))
-
-    K.set_session(sess)
     for i in range(len(semaphores)):
-        semaphores[i].wait()
-        datapoints_db.extend(semaphores[i].get())
+        datapoints_db.extend(semaphores[i].result())
         if not pbar and verbose > 0:
-            print("Done conversion (group {0}/{1})".format(i,len(semaphores)-1))
+            print("Done predicting (group {0}/{1})".format(i,len(semaphores)-1))
             
     pool.terminate()
     pool.close()

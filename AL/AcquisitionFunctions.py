@@ -17,14 +17,18 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-def _predict_classes(data,model,generator_params,verbose=1):
+def _predict_classes(data,q,model,generator_params,verbose=1):
+    import tensorflow as tf
     
     generator_params['dps']=data
     generator = ThreadedGenerator(**generator_params)
+    gpu = q.get()
+    tfdevice = '/device:GPU:{0}'.format(gpu)
 
-    proba = model.predict_generator(generator,
-                                        max_queue_size=40,
-                                        verbose=verbose)
+    with td.device(tfdevice):
+        proba = model.predict_generator(generator,
+                                            max_queue_size=40,
+                                            verbose=verbose)
     return proba.argmax(axis=-1)
 
 def bayesian_varratios(data,query,kwargs):
