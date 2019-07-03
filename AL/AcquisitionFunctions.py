@@ -5,7 +5,7 @@ import numpy as np
 import os
 
 from scipy.stats import mode
-
+from keras.models import load_model
 from Utils import multigpu_run
 
 __doc__ = """
@@ -19,7 +19,6 @@ Returns: numpy array of element indexes
 """
 
 def _predict_classes(data,model,generator_params,verbose=1):
-    from keras.models import load_model
     t_model = None
     
     if os.path.isfile(model.get_model_cache()):
