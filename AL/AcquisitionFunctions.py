@@ -79,16 +79,10 @@ def bayesian_varratios(data,query,kwargs):
         if gpu_count <= 1:
             dropout_classes = _predict_classes(data,model.single,generator_params, verbose=1)
         else:
-            #Closes parent tf.Session for multiprocess run
-            #sess = K.get_session()
-            #sess.close()
             dropout_classes = multigpu_run(_predict_classes,
                                                (model.single,generator_params,verbose),data,
                                                gpu_count,pbar,txt_label='Running MC Dropout..',
                                                verbose=verbose)
-            #Restores session after child process terminates
-            #sess = tf.Session()
-            #K.set_session(sess)
             
         dropout_classes = np.array([dropout_classes]).T
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
