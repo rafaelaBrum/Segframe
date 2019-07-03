@@ -113,17 +113,15 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
             gpu_options.Experimental.use_unified_memory = False
             gpu_options.visible_device_list = "{0}".format(q.get())
 
-        K.clear_session()
-        sess = K.get_session()
-        s_config = tf.ConfigProto(        
-        #sess = tf.Session(config=tf.ConfigProto(        
+        #s_config = tf.ConfigProto(        
+        sess = tf.Session(config=tf.ConfigProto(        
             device_count={"CPU":processes,"GPU":0 if q is None else 1},
             intra_op_parallelism_threads=3, 
             inter_op_parallelism_threads=3,
             log_device_placement=False,
             gpu_options=gpu_options
-            )
-        sess.config = s_config
+            ))
+        #sess.config = s_config
         K.set_session(sess)
         print("[multigpu_run] DONE INITIALIER")
     
@@ -142,6 +140,10 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
         for dev in range(0,step):
             device_queue.put(dev%gpu_count)
 
+    #CLear tf Session
+    sess = K.get_session()
+    sess.close()
+    #K.clear_session()
     pool = multiprocessing.Pool(processes=gpu_count,maxtasksperchild=50,
                                     initializer=_initializer, initargs=(device_queue,gpu_count))
 
@@ -178,6 +180,7 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
             else:
                 process_counter += 1
 
+    sess = K.get_session()
     for i in range(len(semaphores)):
         datapoints_db.extend(semaphores[i].get())
         if not pbar and verbose > 0:
