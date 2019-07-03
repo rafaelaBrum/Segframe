@@ -101,9 +101,9 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
     @param output_dim <int>: exec_function produces how many sets of results?
     """
     from keras import backend as K
+    import tensorflow as tf
     
     def _initializer(q,processes):
-        import tensorflow as tf
 
         #initialize tensorflow session
         gpu_options = None
@@ -115,7 +115,7 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
 
         #s_config = tf.ConfigProto(        
         sess = tf.Session(config=tf.ConfigProto(        
-            device_count={"CPU":processes,"GPU":0 if q is None else 1},
+            device_count={"CPU":processes,"GPU":1},
             intra_op_parallelism_threads=processes, 
             inter_op_parallelism_threads=processes,
             log_device_placement=False,
@@ -141,8 +141,8 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
             device_queue.put(dev%gpu_count)
 
     #CLear tf Session
-    #sess = K.get_session()
-    #sess.close()
+    sess = K.get_session()
+    sess.close()
     #K.clear_session()
     pool = multiprocessing.Pool(processes=step,maxtasksperchild=50,
                                     initializer=_initializer, initargs=(device_queue,gpu_count))
@@ -180,12 +180,21 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
             else:
                 process_counter += 1
 
-    #sess = K.get_session()
+    K.clear_session()
+    sess = tf.Session(config=tf.ConfigProto(        
+            device_count={"CPU":2*gpu_count,"GPU":gpu_count},
+            intra_op_parallelism_threads=gpu_count+1, 
+            inter_op_parallelism_threads=gpu_count+1,
+            log_device_placement=False
+            ))
+
+    K.set_session(sess)
     for i in range(len(semaphores)):
+        semaphores[i].wait()
         datapoints_db.extend(semaphores[i].get())
         if not pbar and verbose > 0:
             print("Done conversion (group {0}/{1})".format(i,len(semaphores)-1))
-                
+            
     pool.terminate()
     pool.close()
 

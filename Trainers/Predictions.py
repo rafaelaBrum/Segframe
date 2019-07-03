@@ -61,9 +61,10 @@ def print_prediction(config):
     scores = Y_pred.transpose()[1]
         
     fpr,tpr,thresholds = metrics.roc_curve(expected,scores,pos_label=1)
-    print("False positive rates: {0}".format(fpr))
-    print("True positive rates: {0}".format(tpr))
-    print("Thresholds: {0}".format(thresholds))
+    if config.verbose > 1:
+        print("False positive rates: {0}".format(fpr))
+        print("True positive rates: {0}".format(tpr))
+        print("Thresholds: {0}".format(thresholds))
     print("AUC: {0:f}".format(metrics.roc_auc_score(expected,scores)))
     
 class Predictor(object):
