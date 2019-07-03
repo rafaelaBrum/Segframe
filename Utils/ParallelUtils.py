@@ -128,7 +128,7 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
     data_size = data[0].shape[0]
     if gpu_count > 1:
         step_size = int(data_size / gpu_count)
-        step = gpu_count + (data_size%gpu_count>0)
+        step = gpu_count
     else:
         step_size = data_size
         step = 1
@@ -158,7 +158,7 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
         # get a subset of datapoints
         end_idx = (i+1)*step_size        
         
-        if end_idx > data_size:
+        if (end_idx < data_size) and i == step-1:
             end_idx = data_size
         
         cur_datapoints = (data[0][i*step_size : end_idx],data[1][i*step_size : end_idx])
