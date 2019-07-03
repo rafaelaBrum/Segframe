@@ -20,9 +20,11 @@ Returns: numpy array of element indexes
 
 def _predict_classes(data,model,generator_params,verbose=1):
     from keras.models import load_model
+    t_model = None
+    
     if os.path.isfile(model.get_model_cache()):
         try:
-            pred_model = load_model(model.get_model_cache())
+            t_model = load_model(model.get_model_cache())
             if verbose:
                 print("[MC Dropout] Model loaded from: {0}".format(model.get_model_cache()))
         except ValueError:
@@ -37,7 +39,7 @@ def _predict_classes(data,model,generator_params,verbose=1):
     generator_params['dps']=data
     generator = ThreadedGenerator(**generator_params)
 
-    proba = model.predict_generator(generator,
+    proba = t_model.predict_generator(generator,
                                         max_queue_size=40,
                                         verbose=verbose)
     return proba.argmax(axis=-1)
