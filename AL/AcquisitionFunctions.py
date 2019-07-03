@@ -2,6 +2,8 @@
 #-*- coding: utf-8
 
 import numpy as np
+import os
+
 from scipy.stats import mode
 
 from Utils import multigpu_run
@@ -17,6 +19,21 @@ Returns: numpy array of element indexes
 """
 
 def _predict_classes(data,model,generator_params,verbose=1):
+    from keras.models import load_model
+    if os.path.isfile(model.get_model_cache()):
+        try:
+            pred_model = load_model(model.get_model_cache())
+            if verbose:
+                print("[MC Dropout] Model loaded from: {0}".format(model.get_model_cache()))
+        except ValueError:
+            t_model,_ = model.build()
+            pred_model.load_weights(model.get_weights_cache())
+            if verbose:
+                print("Model weights loaded from: {0}".format(model.get_weights_cache()))
+    else:
+        print("[MC Dropout] No model to load from")
+        return None
+    
     generator_params['dps']=data
     generator = ThreadedGenerator(**generator_params)
 
@@ -77,10 +94,10 @@ def bayesian_varratios(data,query,kwargs):
     All_Dropout_Classes = np.zeros(shape=(X.shape[0],1))
     for d in range(mc_dp):
         if gpu_count <= 1:
-            dropout_classes = _predict_classes(data,model.single,generator_params, verbose=1)
+            dropout_classes = _predict_classes(data,model,generator_params, verbose=1)
         else:
             dropout_classes = multigpu_run(_predict_classes,
-                                               (model.single,generator_params,verbose),data,
+                                               (model,generator_params,verbose),data,
                                                gpu_count,pbar,txt_label='Running MC Dropout..',
                                                verbose=verbose)
             
