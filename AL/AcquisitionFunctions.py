@@ -19,14 +19,43 @@ Returns: numpy array of element indexes
 
 def _predict_classes(data,q,model,generator_params,verbose=1):
     import tensorflow as tf
-    
+    from Trainers import ThreadedGenerator
+    from keras.models import load_model
+    from keras import backend as K
+
+    pmodel = None
     generator_params['dps']=data
     generator = ThreadedGenerator(**generator_params)
     gpu = q.get()
     tfdevice = '/device:GPU:{0}'.format(gpu)
 
-    with td.device(tfdevice):
-        proba = model.predict_generator(generator,
+    sess = tf.Session()
+    ses_config = tf.ConfigProto(
+            device_count={"CPU":3,"GPU":2},
+            intra_op_parallelism_threads=3,
+            inter_op_parallelism_threads=3,
+            log_device_placement=False
+            )
+    sess.config = ses_config
+    K.set_session(sess)
+
+    if os.path.isfile(model.get_model_cache()):
+        try:
+            with tf.device(tfdevice):
+                pmodel = load_model(model.get_model_cache())
+            if verbose:
+                print("[MC Dropout] Model loaded from: {0}".format(model.get_model_cache()))
+        except ValueError:
+            with tf.device(tfdevice):
+                pmodel,_ = model.build()
+                pmodel.load_weights(model.get_weights_cache())
+    else:
+        return None
+ 
+    with tf.device(tfdevice):
+        if verbose:
+            print("Runing on GPU {0}".format(gpu))
+        proba = pmodel.predict_generator(generator,
                                             max_queue_size=40,
                                             verbose=verbose)
     return proba.argmax(axis=-1)
@@ -38,9 +67,7 @@ def bayesian_varratios(data,query,kwargs):
 
     @param data <tuple>: X,Y as numpy arrays
     """
-    from Trainers import ThreadedGenerator
     from keras.preprocessing.image import ImageDataGenerator
-    from keras import backend as K
     
     if 'model' in kwargs:
         model = kwargs['model']
@@ -83,10 +110,10 @@ def bayesian_varratios(data,query,kwargs):
     All_Dropout_Classes = np.zeros(shape=(X.shape[0],1))
     for d in range(mc_dp):
         if gpu_count <= 1:
-            dropout_classes = _predict_classes(data,model.single,generator_params, verbose=1)
+            dropout_classes = _predict_classes(data,model,generator_params, verbose=1)
         else:
             dropout_classes = multigpu_run(_predict_classes,
-                                               (model.single,generator_params,verbose),data,
+                                               (model,generator_params,verbose),data,
                                                gpu_count,pbar,txt_label='Running MC Dropout..',
                                                verbose=verbose)
             

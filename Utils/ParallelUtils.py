@@ -123,6 +123,8 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
     #    K.set_session(sess)
     #    print("[multigpu_run] DONE INITIALIER")
     
+    from keras import backend as K
+
     data_size = data[0].shape[0]
     if gpu_count > 1:
         step_size = int(data_size / gpu_count)
@@ -139,10 +141,12 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
             device_queue.put(dev%gpu_count)
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=gpu_count)
+    
+    #Clears session for the threads
+    K.clear_session()
 
     datapoints_db = []
     semaphores = []
-    process_counter = 1
     
     if pbar:
         l = tqdm(desc=txt_label,total=step,position=0)
@@ -160,19 +164,10 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
         args = (cur_datapoints,device_queue) + exec_params
         semaphores.append(executor.submit(exec_function,*args))
             
-        if pbar:
-            if process_counter == gpu_count:
-                semaphores[process_counter-1].wait()
-                process_counter = 0
-            else:
-                process_counter += 1
-
     for i in range(len(semaphores)):
         datapoints_db.extend(semaphores[i].result())
         if not pbar and verbose > 0:
             print("Done predicting (group {0}/{1})".format(i,len(semaphores)-1))
             
-    pool.terminate()
-    pool.close()
-
+    
     return datapoints_db
