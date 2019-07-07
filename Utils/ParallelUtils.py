@@ -106,7 +106,7 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
     import tensorflow as tf
     from keras.models import load_model
 
-    def thread_worker(q,exec_function,*args):
+    def thread_worker(q,graph,exec_function,*args):
 
         gpu = q.get()
         tfdevice = '/device:GPU:{0}'.format(gpu)
@@ -120,12 +120,14 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
                 intra_op_parallelism_threads=3,
                 inter_op_parallelism_threads=3,
                 log_device_placement=True,
-                gpu_options = gpu_options
+                gpu_options = gpu_options,
+                allow_soft_placement=True
                 )
+        K.clear_session()
         sess = tf.Session(graph=graph)
         sess.config = ses_config
         with sess:
-            tf.global_variables_initializer()
+            sess.run(tf.global_variables_initializer())
             with tf.device(tfdevice):
                 if verbose:
                     print("Runing on GPU {0}".format(gpu))
@@ -149,10 +151,6 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
 
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=gpu_count)
     
-    #Clears session for the threads
-    #K.clear_session()
-
-    global graph
     pmodel = None
     if os.path.isfile(model.get_model_cache()):
         try:
@@ -183,7 +181,7 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
         #cur_datapoints = datapoints[:end_idx]
 
         args = (pmodel,cur_datapoints) + exec_params
-        semaphores.append(executor.submit(thread_worker,device_queue,exec_function,*args))
+        semaphores.append(executor.submit(thread_worker,device_queue,graph,exec_function,*args))
             
     for i in range(len(semaphores)):
         datapoints_db.extend(semaphores[i].result())
