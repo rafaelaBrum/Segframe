@@ -128,6 +128,27 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
     import tensorflow as tf
     from keras.models import load_model
 
+    def thread_worker(q,graph,*args):
+
+        gpu = q.get()
+        tfdevice = '/device:GPU:{0}'.format(gpu)
+
+        sess = tf.Session(graph=graph)
+        ses_config = tf.ConfigProto(
+                device_count={"CPU":3,"GPU":1},
+                intra_op_parallelism_threads=3,
+                inter_op_parallelism_threads=3,
+                log_device_placement=False
+                )
+        sess.config = ses_config
+
+        with sess:
+            with tf.device(tfdevice):
+                if verbose:
+                    print("Runing on GPU {0}".format(gpu))
+                r_val = exec_function(*args)
+        return r_val
+
     data_size = data[0].shape[0]
     if gpu_count > 1:
         step_size = int(data_size / gpu_count)
@@ -147,10 +168,6 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
     
     #Clears session for the threads
     #K.clear_session()
-
-    datapoints_db = []
-    semaphores = []
-    
     pmodel = None
     if os.path.isfile(model.get_model_cache()):
         try:
@@ -163,6 +180,10 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
     else:
         return None
 
+    graph = tf.get_default_graph()
+    
+    datapoints_db = []
+    semaphores = []
     
     if pbar:
         l = tqdm(desc=txt_label,total=step,position=0)
@@ -177,8 +198,8 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
         cur_datapoints = (data[0][i*step_size : end_idx],data[1][i*step_size : end_idx])
         #cur_datapoints = datapoints[:end_idx]
 
-        args = (cur_datapoints,device_queue,gpu_count) + (pmodel,) + exec_params
-        semaphores.append(executor.submit(exec_function,*args))
+        args = (cur_datapoints,pmodel) + exec_params
+        semaphores.append(executor.submit(thread_worker,device_queue,graph,*args))
             
     for i in range(len(semaphores)):
         datapoints_db.extend(semaphores[i].result())
