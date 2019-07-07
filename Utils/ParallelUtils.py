@@ -166,8 +166,6 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
     #Clears session for the threads
     #K.clear_session()
 
-    graph = K.get_session().graph
-    
     datapoints_db = []
     semaphores = []
     
