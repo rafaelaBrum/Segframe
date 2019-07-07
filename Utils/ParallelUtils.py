@@ -89,7 +89,7 @@ def multiprocess_run(exec_function,exec_params,data,cpu_count,pbar,step_size,out
 def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=None,output_dim=1,txt_label='',verbose=False):
     """
     Runs exec_function in a process pool. This function should receive parameters as follows:
-    (iterable_data,param2,param3,...), where paramN is inside exec_params
+    (model (graph), data, local_param1, local_paramN), where local_paramN is inside exec_params
     Function should be something that deals with a CNN in Keras: train, predict, etc.
 
     @param exec_function <function>
@@ -102,33 +102,11 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
     @param output_dim <int>: exec_function produces how many sets of results?
     """
     
-    #def _initializer(q,processes):
-
-        #initialize tensorflow session
-    #    gpu_options = None
-    #    if not q is None:
-    #        gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1.0)
-    #        gpu_options.allow_growth = True
-    #        gpu_options.Experimental.use_unified_memory = False
-    #        gpu_options.visible_device_list = "{0}".format(q.get())
-
-        #s_config = tf.ConfigProto(        
-    #    sess = tf.Session(config=tf.ConfigProto(        
-    #        device_count={"CPU":processes,"GPU":1},
-    #        intra_op_parallelism_threads=processes, 
-    #        inter_op_parallelism_threads=processes,
-    #        log_device_placement=False,
-    #        gpu_options=gpu_options
-    #        ))
-        #sess.config = s_config
-    #    K.set_session(sess)
-    #    print("[multigpu_run] DONE INITIALIER")
-    
     from keras import backend as K
     import tensorflow as tf
     from keras.models import load_model
 
-    def thread_worker(q,graph,exec_function,*args):
+    def thread_worker(q,model,exec_function,*args):
 
         gpu = q.get()
         tfdevice = '/device:GPU:{0}'.format(gpu)
@@ -144,10 +122,24 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
                 log_device_placement=True,
                 gpu_options = gpu_options
                 )
-        sess = tf.Session(graph=graph)
-        sess.config = ses_config
+        pmodel = None
+        with th.device(tfdevice):
+            if os.path.isfile(model.get_model_cache()):
+                try:
+                    pmodel = load_model(model.get_model_cache())
+                    if verbose:
+                        print("[MC Dropout] Model loaded from: {0}".format(model.get_model_cache()))
+                except ValueError:
+                    pmodel,_ = model.build()
+                    pmodel.load_weights(model.get_weights_cache())
+            else:
+                return None            
 
+        sess = tf.Session()
+        sess.config = ses_config
+        args = (pmodel,) + args
         with sess:
+            tf.global_variables_initializer()
             with tf.device(tfdevice):
                 if verbose:
                     print("Runing on GPU {0}".format(gpu))
@@ -173,17 +165,6 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
     
     #Clears session for the threads
     #K.clear_session()
-    pmodel = None
-    if os.path.isfile(model.get_model_cache()):
-        try:
-            pmodel = load_model(model.get_model_cache())
-            if verbose:
-                print("[MC Dropout] Model loaded from: {0}".format(model.get_model_cache()))
-        except ValueError:
-            pmodel,_ = model.build()
-            pmodel.load_weights(model.get_weights_cache())
-    else:
-        return None
 
     graph = K.get_session().graph
     
@@ -203,8 +184,8 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
         cur_datapoints = (data[0][i*step_size : end_idx],data[1][i*step_size : end_idx])
         #cur_datapoints = datapoints[:end_idx]
 
-        args = (cur_datapoints,pmodel) + exec_params
-        semaphores.append(executor.submit(thread_worker,device_queue,graph,exec_function,*args))
+        args = (cur_datapoints,) + exec_params
+        semaphores.append(executor.submit(thread_worker,device_queue,model,exec_function,*args))
             
     for i in range(len(semaphores)):
         datapoints_db.extend(semaphores[i].result())

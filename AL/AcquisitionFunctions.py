@@ -17,7 +17,7 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-def _predict_classes(data,model,generator_params,verbose=1):
+def _predict_classes(model,data,generator_params,verbose=1):
     from Trainers import ThreadedGenerator
 
     generator_params['dps']=data
