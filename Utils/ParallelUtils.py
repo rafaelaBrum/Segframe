@@ -86,7 +86,7 @@ def multiprocess_run(exec_function,exec_params,data,cpu_count,pbar,step_size,out
     return tuple(filter(lambda x: not x is None, datapoints_db))
     
 
-def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,output_dim=1,txt_label='',verbose=False):
+def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=None,output_dim=1,txt_label='',verbose=False):
     """
     Runs exec_function in a process pool. This function should receive parameters as follows:
     (iterable_data,param2,param3,...), where paramN is inside exec_params
@@ -94,6 +94,7 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
 
     @param exec_function <function>
     @param exec_params <tuple>
+    @param model <GenericModel>: generic model to be loaded
     @param data <tuple>: (X,Y) as numpy arrays each
     @param gpu_count <int>: use this number of cores
     @param pbar <boolean>: user progress bars
@@ -124,6 +125,8 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
     #    print("[multigpu_run] DONE INITIALIER")
     
     from keras import backend as K
+    import tensorflow as tf
+    from keras.models import load_model
 
     data_size = data[0].shape[0]
     if gpu_count > 1:
@@ -143,10 +146,23 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
     executor = concurrent.futures.ThreadPoolExecutor(max_workers=gpu_count)
     
     #Clears session for the threads
-    K.clear_session()
+    #K.clear_session()
 
     datapoints_db = []
     semaphores = []
+    
+    pmodel = None
+    if os.path.isfile(model.get_model_cache()):
+        try:
+            pmodel = load_model(model.get_model_cache())
+            if verbose:
+                print("[MC Dropout] Model loaded from: {0}".format(model.get_model_cache()))
+        except ValueError:
+            pmodel,_ = model.build()
+            pmodel.load_weights(model.get_weights_cache())
+    else:
+        return None
+
     
     if pbar:
         l = tqdm(desc=txt_label,total=step,position=0)
@@ -161,7 +177,7 @@ def multigpu_run(exec_function,exec_params,data,gpu_count,pbar,step_size=None,ou
         cur_datapoints = (data[0][i*step_size : end_idx],data[1][i*step_size : end_idx])
         #cur_datapoints = datapoints[:end_idx]
 
-        args = (cur_datapoints,device_queue) + exec_params
+        args = (cur_datapoints,device_queue,gpu_count) + (pmodel,) + exec_params
         semaphores.append(executor.submit(exec_function,*args))
             
     for i in range(len(semaphores)):
