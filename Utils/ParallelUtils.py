@@ -148,6 +148,7 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
         sess.config = ses_config
 
         with sess:
+            tf.global_variables_initializer()
             with tf.device(tfdevice):
                 if verbose:
                     print("Runing on GPU {0}".format(gpu))
