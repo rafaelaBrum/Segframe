@@ -265,6 +265,8 @@ class Trainer(object):
         cache_m = CacheManager()
         single.save_weights(model.get_weights_cache())
         single.save(model.get_model_cache())
+        if not model.get_mgpu_weights_cache() is None:
+            parallel.save_weights(model.get_mgpu_weights_cache())
         cache_m.dump(tuple(self._config.split),'split_ratio.pik')
 
         #session.close()

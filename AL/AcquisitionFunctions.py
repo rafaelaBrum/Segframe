@@ -5,7 +5,6 @@ import numpy as np
 import os
 
 from scipy.stats import mode
-from Utils import multigpu_run
 
 __doc__ = """
 All acquisition functions should receive:
@@ -18,15 +17,8 @@ Returns: numpy array of element indexes
 """
 
 def _predict_classes(model,data,generator_params,verbose=1):
-    from Trainers import ThreadedGenerator
 
-    generator_params['dps']=data
-    generator = ThreadedGenerator(**generator_params)
-    
-    proba = model.predict_generator(generator,
-                                        max_queue_size=40,
-                                        verbose=verbose)
-    return proba.argmax(axis=-1)
+
 
 def bayesian_varratios(data,query,kwargs):
     """
@@ -36,6 +28,7 @@ def bayesian_varratios(data,query,kwargs):
     @param data <tuple>: X,Y as numpy arrays
     """
     from keras.preprocessing.image import ImageDataGenerator
+    from Trainers import ThreadedGenerator
     
     if 'model' in kwargs:
         model = kwargs['model']
@@ -67,24 +60,39 @@ def bayesian_varratios(data,query,kwargs):
         samplewise_std_normalization=batch_norm)
 
     #Acquisition functions that require a generator to load data
-    generator_params = {'classes':ds.nclasses,
-                            'dim':fix_dim,
-                            'batch_size':batch_size,
-                            'image_generator':pool_prep,
-                            'shuffle':True,
-                            'verbose':verbose}
+    generator_params = {
+        'dps'=data,
+        'classes':ds.nclasses,
+        'dim':fix_dim,
+        'batch_size':batch_size,
+        'image_generator':pool_prep,
+        'shuffle':True,
+        'verbose':verbose}
 
     X,Y = data
     All_Dropout_Classes = np.zeros(shape=(X.shape[0],1))
+
+    generator = ThreadedGenerator(**generator_params)
+
+    pred_model = None
+    smodel,pmodel = None,None
+    if os.path.isfile(model.get_mgpu_model_cache()):
+        try:
+            smodel,pmodel = model.build()
+            pmodel.load_weights(model.get_mgpu_weights_cache())
+            if self._config.info:
+                print("Model weights loaded from: {0}".format(model.get_mgpu_weights_cache()))                
+        except ValueError:
+            pred_model = load_model(model.get_model_cache())
+            if self._config.info:
+                print("Model loaded from: {0}".format(model.get_model_cache()))
+                
     for d in range(mc_dp):
-        if gpu_count <= 1:
-            dropout_classes = _predict_classes(data,model,generator_params, verbose=1)
-        else:
-            dropout_classes = multigpu_run(_predict_classes,
-                                               (generator_params,verbose),model,data,
-                                               gpu_count,pbar,txt_label='Running MC Dropout..',
-                                               verbose=verbose)
-            
+        proba = pred_model.predict_generator(generator,
+                                            max_queue_size=40,
+                                            verbose=verbose)
+
+        dropout_classes = proba.argmax(axis=-1)    
         dropout_classes = np.array([dropout_classes]).T
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
 

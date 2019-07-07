@@ -36,10 +36,11 @@ class BayesVGG16(GenericModel):
             self.name = "BVGG16_A1"
         self._modelCache = "{0}-model.h5".format(self.name)
         self._weightsCache = "{0}-weights.h5".format(self.name)
-        
+        self._mgpu_weightsCache = "{0}-mgpu-weights.h5".format(self.name)
         self.cache_m = CacheManager()
         self.cache_m.registerFile(os.path.join(config.model_path,self._modelCache),self._modelCache)
         self.cache_m.registerFile(os.path.join(config.weights_path,self._weightsCache),self._weightsCache)
+        self.cache_m.registerFile(os.path.join(config.weights_path,self._mgpu_weightsCache),self._mgpu_weightsCache)
         self.single = None
         self.parallel = None
 
@@ -54,6 +55,12 @@ class BayesVGG16(GenericModel):
         Returns path to model cache
         """
         return self.cache_m.fileLocation(self._weightsCache)
+
+    def get_mgpu_weights_cache(self):
+        """
+        Returns path to model cache
+        """
+        return self.cache_m.fileLocation(self._mgpu_weightsCache)
     
     def build(self,pre_trained=False):
         """
