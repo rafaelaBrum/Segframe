@@ -127,15 +127,16 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
             if os.path.isfile(model.get_model_cache()):
                 try:
                     pmodel = load_model(model.get_model_cache())
+                    pmodel._make_predict_function()
                     if verbose:
                         print("[MC Dropout] Model loaded from: {0}".format(model.get_model_cache()))
                 except ValueError:
                     pmodel,_ = model.build()
                     pmodel.load_weights(model.get_weights_cache())
+                    pmodel._make_predict_function()
             else:
                 return None            
-
-        sess = tf.Session(graph=tf.Graph().as_default())
+        sess = tf.Session()
         sess.config = ses_config
         args = (pmodel,) + args
         with sess:
