@@ -123,7 +123,7 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
                 gpu_options = gpu_options
                 )
         pmodel = None
-        with th.device(tfdevice):
+        with tf.device(tfdevice):
             if os.path.isfile(model.get_model_cache()):
                 try:
                     pmodel = load_model(model.get_model_cache())
@@ -135,7 +135,7 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
             else:
                 return None            
 
-        sess = tf.Session()
+        sess = tf.Session(graph=tf.Graph().as_default())
         sess.config = ses_config
         args = (pmodel,) + args
         with sess:
