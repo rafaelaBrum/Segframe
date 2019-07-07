@@ -106,7 +106,7 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
     import tensorflow as tf
     from keras.models import load_model
 
-    def thread_worker(q,model,exec_function,*args):
+    def thread_worker(q,exec_function,*args):
 
         gpu = q.get()
         tfdevice = '/device:GPU:{0}'.format(gpu)
@@ -122,23 +122,8 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
                 log_device_placement=True,
                 gpu_options = gpu_options
                 )
-        pmodel = None
-        with tf.device(tfdevice):
-            if os.path.isfile(model.get_model_cache()):
-                try:
-                    pmodel = load_model(model.get_model_cache())
-                    pmodel._make_predict_function()
-                    if verbose:
-                        print("[MC Dropout] Model loaded from: {0}".format(model.get_model_cache()))
-                except ValueError:
-                    pmodel,_ = model.build()
-                    pmodel.load_weights(model.get_weights_cache())
-                    pmodel._make_predict_function()
-            else:
-                return None            
-        sess = tf.Session()
+        sess = tf.Session(graph=graph)
         sess.config = ses_config
-        args = (pmodel,) + args
         with sess:
             tf.global_variables_initializer()
             with tf.device(tfdevice):
@@ -167,6 +152,20 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
     #Clears session for the threads
     #K.clear_session()
 
+    global graph
+    pmodel = None
+    if os.path.isfile(model.get_model_cache()):
+        try:
+            pmodel = load_model(model.get_model_cache())
+            if verbose:
+                print("[MC Dropout] Model loaded from: {0}".format(model.get_model_cache()))
+        except ValueError:
+            pmodel,_ = model.build()
+            pmodel.load_weights(model.get_weights_cache())
+    else:
+        return None            
+    graph = tf.get_default_graph()
+    
     datapoints_db = []
     semaphores = []
     
@@ -183,8 +182,8 @@ def multigpu_run(exec_function,exec_params,model,data,gpu_count,pbar,step_size=N
         cur_datapoints = (data[0][i*step_size : end_idx],data[1][i*step_size : end_idx])
         #cur_datapoints = datapoints[:end_idx]
 
-        args = (cur_datapoints,) + exec_params
-        semaphores.append(executor.submit(thread_worker,device_queue,model,exec_function,*args))
+        args = (pmodel,cur_datapoints) + exec_params
+        semaphores.append(executor.submit(thread_worker,device_queue,exec_function,*args))
             
     for i in range(len(semaphores)):
         datapoints_db.extend(semaphores[i].result())
