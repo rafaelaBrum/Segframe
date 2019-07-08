@@ -16,9 +16,6 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-def _predict_classes(model,data,generator_params,verbose=1):
-
-
 
 def bayesian_varratios(data,query,kwargs):
     """
@@ -61,7 +58,7 @@ def bayesian_varratios(data,query,kwargs):
 
     #Acquisition functions that require a generator to load data
     generator_params = {
-        'dps'=data,
+        'dps':data,
         'classes':ds.nclasses,
         'dim':fix_dim,
         'batch_size':batch_size,
@@ -76,15 +73,16 @@ def bayesian_varratios(data,query,kwargs):
 
     pred_model = None
     smodel,pmodel = None,None
-    if os.path.isfile(model.get_mgpu_model_cache()):
+    if os.path.isfile(model.get_mgpu_weights_cache()):
         try:
             smodel,pmodel = model.build()
             pmodel.load_weights(model.get_mgpu_weights_cache())
-            if self._config.info:
+            pred_model = pmodel
+            if kwargs['config'].info:
                 print("Model weights loaded from: {0}".format(model.get_mgpu_weights_cache()))                
         except ValueError:
             pred_model = load_model(model.get_model_cache())
-            if self._config.info:
+            if kwargs['config'].info:
                 print("Model loaded from: {0}".format(model.get_model_cache()))
                 
     for d in range(mc_dp):
