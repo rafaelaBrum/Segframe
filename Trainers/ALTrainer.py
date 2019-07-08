@@ -109,8 +109,16 @@ class ActiveLearningTrainer(Trainer):
         else:
             print("You should specify an acquisition function")
             sys.exit(Exitcodes.RUNTIME_ERROR)
+
+        if self._config.info:
+            print("Starting bayesian dropout sampling...")
             
-        for r in range(self._config.acquisition_steps):
+        if self._config.progress_bar:
+            l = tqdm(range(self._config.acquisition_steps), desc="MC Dropout",position=0)
+        else:
+            l = range(self._config.acquisition_steps)
+            
+        for r in l:
             if self._config.info:
                 print("[ALTrainer] Starting acquisition step {0}".format(r))
         
