@@ -218,12 +218,12 @@ class Predictor(object):
         expected = np.argmax(Y, axis=1)
 
         if self._config.verbose > 0:
-            np.set_printoptions(threshold=np.inf)
+            if self._config.verbose > 1:
+                np.set_printoptions(threshold=np.inf)
+                print("Predicted probs ({1}):\n{0}".format(Y_pred,Y_pred.shape))
             #print("Y ({1}):\n{0}".format(Y,Y.shape))
             print("expected ({1}):\n{0}".format(expected,expected.shape))
             print("Predicted ({1}):\n{0}".format(y_pred,y_pred.shape))
-            if self._config.verbose > 1:
-                print("Predicted probs ({1}):\n{0}".format(Y_pred,Y_pred.shape))
             
         #Save predictions
         cache_m.dump((expected,Y_pred,self._ds.nclasses),'test_pred.pik')

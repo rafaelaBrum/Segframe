@@ -3,6 +3,7 @@
 
 import numpy as np
 import os
+from tqdm import tqdm
 
 from scipy.stats import mode
 
@@ -84,11 +85,20 @@ def bayesian_varratios(data,query,kwargs):
             pred_model = load_model(model.get_model_cache())
             if kwargs['config'].info:
                 print("Model loaded from: {0}".format(model.get_model_cache()))
+
+    if pbar:
+        l = tqdm(range(mc_dp), desc="MC Dropout",position=0)
+    else:
+        if kwargs['config'].info:
+            print("Starting MC dropout sampling...")
+        l = range(mc_dp)
                 
-    for d in range(mc_dp):
+    for d in l:
+        if pbar:
+            print("\n")
         proba = pred_model.predict_generator(generator,
-                                                workers=2*kwargs['config'].cpu_count,
-                                                max_queue_size=20*gpu_count,
+                                                workers=3*kwargs['config'].cpu_count,
+                                                max_queue_size=25*gpu_count,
                                                 verbose=verbose)
 
         dropout_classes = proba.argmax(axis=-1)    
