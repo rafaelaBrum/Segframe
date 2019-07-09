@@ -113,43 +113,72 @@ class ActiveLearningTrainer(Trainer):
         for r in range(self._config.acquisition_steps):
             if self._config.info:
                 print("[ALTrainer] Starting acquisition step {0}".format(r))
-        
-            self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))
-            
+
             #Save current dataset and report partial result (requires multi load for reading)
             fid = 'al-metadata-{1}-r{0}.pik'.format(r,model.name)
             cache_m.registerFile(os.path.join(self._config.cache,fid),fid)
             cache_m.dump(((self.train_x,self.train_y),(self.val_x,self.val_y),(self.test_x,self.test_y)),fid)
 
-            predictor.run(self.test_x,self.test_y)
+            #TODO: put these 3 actions in a subprocess
+            self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))            
+
+            predictor.run_test(model,self.test_x,self.test_y)
             
-            if not self.acquire(function,model=model,config=self._config):
+            if not self.acquire(function,model):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are possible")
                 break
             
 
-    def acquire(self,function,**kwargs):
+    def acquire(self,function,model,**kwargs):
         """
         Adds items to training and validation sets, according to split ratio defined in configuration. 
         Test set is fixed in the begining.
 
         Returns True if acquisition was sucessful
         """
-
+        from Trainers import ThreadedGenerator
         #An acquisition function should return a NP array with the indexes of all items from the pool that 
         #should be inserted into training and validation sets
-
         if self.pool_x.shape[0] < self._config.acquire:
             return False
 
-        #Let acquisition functions access datasource if needed
         if kwargs is None:
-            kwargs = {'ds':self._ds}
+            kwargs = {}
+
+        kwargs['config'] = self._config
+        
+        if not self._config.tdim is None:
+            fix_dim = self._config.tdim
         else:
-            kwargs['ds'] = self._ds
-            
-        pooled_idx = function((self.pool_x,self.pool_y),self._config.acquire,kwargs)
+            fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
+
+        #Pools are big, use a data generator
+        pool_prep = ImageDataGenerator(
+            samplewise_center=self._config.batch_norm,
+            samplewise_std_normalization=self._config.batch_norm)
+
+        #Acquisition functions that require a generator to load data
+        generator_params = {
+            'dps':(self.pool_x,self.pool_y),
+            'classes':self._ds.nclasses,
+            'dim':fix_dim,
+            'batch_size':self._config.batch_size,
+            'image_generator':pool_prep,
+            'shuffle':True,
+            'verbose':self._config.verbose}
+
+        generator = ThreadedGenerator(**generator_params)
+
+        if self._config.gpu_count > 1:
+            pred_model = model.parallel
+        else:
+            pred_model = model.single
+
+        if self._config.verbose > 0:
+            print("Starting acquisition using model: {0}".format(hex(id(pred_model))))
+        
+        pooled_idx = function(pred_model,generator,data_size=self.pool_x.shape[0],kwargs)
         self.train_x = np.concatenate((self.train_x,self.pool_x[pooled_idx]),axis=0)
         self.train_y = np.concatenate((self.train_y,self.pool_y[pooled_idx]),axis=0)
         self.pool_x = np.delete(self.pool_x,pooled_idx)

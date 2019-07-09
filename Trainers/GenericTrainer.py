@@ -261,7 +261,10 @@ class Trainer(object):
             callbacks=callbacks,
             )
 
-        #Weights should be saved only through the plain model
+        if self._config.verbose > 0:
+            print("Done training model: {0}".format(hex(id(training_model))))
+            
+        #Save weights for single tower model and for multigpu model (if defined)
         cache_m = CacheManager()
         single.save_weights(model.get_weights_cache())
         single.save(model.get_model_cache())

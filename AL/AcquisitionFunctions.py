@@ -18,73 +18,32 @@ Returns: numpy array of element indexes
 """
 
 
-def bayesian_varratios(data,query,kwargs):
+def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     """
     Calculation as defined in paper:
     Bayesian convolutional neural networks with Bernoulli approximate variational inference
 
-    @param data <tuple>: X,Y as numpy arrays
+    Function needs to extract the following configuration parameters:
+    model <keras.Model>: model to use for predictions
+    generator <keras.Sequence>: data generator for predictions
+    data_size <int>: number of data samples
+    mc_dp <int>: number of dropout iterations
+    cpu_count <int>: number of cpu cores (used to define number of generator workers)
+    gpu_count <int>: number of gpus available
+    verbose <int>: verbosity level
+    pbar <boolean>: user progress bars
     """
-    from keras.preprocessing.image import ImageDataGenerator
-    from Trainers import ThreadedGenerator
-    
-    if 'model' in kwargs:
-        model = kwargs['model']
-    else:
-        return None
 
     if 'config' in kwargs:
         mc_dp = kwargs['config'].dropout_steps
         gpu_count = kwargs['config'].gpu_count
-        batch_norm = kwargs['config'].batch_norm
-        batch_size = kwargs['config'].batch_size
-        fix_dim = kwargs['config'].tdim
+        cpu_count = kwargs['config'].cpu_count
         verbose = kwargs['config'].verbose
         pbar = kwargs['config'].progressbar
     else:
-        return None
+        return None        
 
-    if 'ds' in kwargs:
-        ds = kwargs['ds']
-    else:
-        return None
-        
-    if fix_dim is None:
-        fix_dim = ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
-
-    #Pools are big, use a data generator
-    pool_prep = ImageDataGenerator(
-        samplewise_center=batch_norm,
-        samplewise_std_normalization=batch_norm)
-
-    #Acquisition functions that require a generator to load data
-    generator_params = {
-        'dps':data,
-        'classes':ds.nclasses,
-        'dim':fix_dim,
-        'batch_size':batch_size,
-        'image_generator':pool_prep,
-        'shuffle':True,
-        'verbose':verbose}
-
-    X,Y = data
-    All_Dropout_Classes = np.zeros(shape=(X.shape[0],1))
-
-    generator = ThreadedGenerator(**generator_params)
-
-    pred_model = None
-    smodel,pmodel = None,None
-    if os.path.isfile(model.get_mgpu_weights_cache()):
-        try:
-            smodel,pmodel = model.build()
-            pmodel.load_weights(model.get_mgpu_weights_cache())
-            pred_model = pmodel
-            if kwargs['config'].info:
-                print("Model weights loaded from: {0}".format(model.get_mgpu_weights_cache()))                
-        except ValueError:
-            pred_model = load_model(model.get_model_cache())
-            if kwargs['config'].info:
-                print("Model loaded from: {0}".format(model.get_model_cache()))
+    All_Dropout_Classes = np.zeros(shape=(data_size,1))
 
     if pbar:
         l = tqdm(range(mc_dp), desc="MC Dropout",position=0)
@@ -97,7 +56,7 @@ def bayesian_varratios(data,query,kwargs):
         if pbar:
             print("\n")
         proba = pred_model.predict_generator(generator,
-                                                workers=3*kwargs['config'].cpu_count,
+                                                workers=3*cpu_count,
                                                 max_queue_size=25*gpu_count,
                                                 verbose=verbose)
 
@@ -105,9 +64,9 @@ def bayesian_varratios(data,query,kwargs):
         dropout_classes = np.array([dropout_classes]).T
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
 
-    Variation = np.zeros(shape=(X.shape[0]))
+    Variation = np.zeros(shape=(data_size))
 
-    for t in range(X.shape[0]):
+    for t in range(data_size):
         L = np.array([0])
         for d_iter in range(mc_dp):
             L = np.append(L, All_Dropout_Classes[t, d_iter+1])
