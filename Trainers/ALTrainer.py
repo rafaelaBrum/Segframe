@@ -63,7 +63,7 @@ class ActiveLearningTrainer(Trainer):
         #Test set is extracted from the last items and is not changed for the whole run
         t_idx = int(self._config.split[-1:][0] * len(self.X))
         self.test_x = self.X[- t_idx:]
-        self.text_y = self.Y[- t_idx:]
+        self.test_y = self.Y[- t_idx:]
 
         self.pool_x = self.X[:-t_idx]
         self.pool_y = self.Y[:-t_idx]
@@ -122,7 +122,7 @@ class ActiveLearningTrainer(Trainer):
             #TODO: put these 3 actions in a subprocess
             self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))            
 
-            predictor.run_test(model,self.test_x,self.test_y)
+            predictor.run(self.test_x,self.test_y)
             
             if not self.acquire(function,model):
                 if self._config.info:
@@ -178,7 +178,7 @@ class ActiveLearningTrainer(Trainer):
         if self._config.verbose > 0:
             print("Starting acquisition using model: {0}".format(hex(id(pred_model))))
         
-        pooled_idx = function(pred_model,generator,data_size=self.pool_x.shape[0],kwargs)
+        pooled_idx = function(pred_model,generator,self.pool_x.shape[0],**kwargs)
         self.train_x = np.concatenate((self.train_x,self.pool_x[pooled_idx]),axis=0)
         self.train_y = np.concatenate((self.train_y,self.pool_y[pooled_idx]),axis=0)
         self.pool_x = np.delete(self.pool_x,pooled_idx)

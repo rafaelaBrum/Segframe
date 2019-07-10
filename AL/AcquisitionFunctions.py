@@ -40,6 +40,7 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
         cpu_count = kwargs['config'].cpu_count
         verbose = kwargs['config'].verbose
         pbar = kwargs['config'].progressbar
+        query = kwargs['config'].acquire
     else:
         return None        
 
