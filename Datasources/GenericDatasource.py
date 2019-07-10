@@ -248,6 +248,8 @@ class GenericDS(ABC):
 
         if self._pbar:
             l = tqdm(desc="Reading images...",total=samples,position=0)
+        elif self._config.info:
+            print("Reading images...")
         
         #for future in concurrent.futures.as_completed(futures):
         for i in range(samples):
@@ -255,7 +257,7 @@ class GenericDS(ABC):
             if self._pbar:
                 l.update(1)
             elif self._verbose > 0:
-                print("[load_data] Read image: {0}".format(i))
+                print("{0}".format(i),end='')
             
         if self._pbar:
             l.close()

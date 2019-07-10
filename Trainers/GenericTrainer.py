@@ -261,7 +261,7 @@ class Trainer(object):
             callbacks=callbacks,
             )
 
-        if self._config.verbose > 0:
+        if self._config.verbose > 1:
             print("Done training model: {0}".format(hex(id(training_model))))
             
         #Save weights for single tower model and for multigpu model (if defined)
