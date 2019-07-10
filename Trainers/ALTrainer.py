@@ -88,11 +88,13 @@ class ActiveLearningTrainer(Trainer):
         self.val_y = self.pool_y[val_idx]
         self.pool_x = np.delete(self.pool_x,val_idx)
         self.pool_y = np.delete(self.pool_y,val_idx)
-        
+
     def run(self):
         """
         Coordenates the AL process
         """
+        from keras import backend as K
+        
         #Loaded CNN model and Datasource
         model = self.load_modules()
         self._rex = self._rex.format(model.name)
@@ -128,7 +130,8 @@ class ActiveLearningTrainer(Trainer):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are possible")
                 break
-            
+            #Attempt to free GPU memory
+            K.clear_session()
 
     def acquire(self,function,model,**kwargs):
         """
