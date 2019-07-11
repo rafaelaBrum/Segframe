@@ -58,7 +58,7 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
             print("\n")
         proba = pred_model.predict_generator(generator,
                                                 workers=3*cpu_count,
-                                                max_queue_size=25*gpu_count,
+                                                max_queue_size=30*gpu_count,
                                                 verbose=verbose)
 
         dropout_classes = proba.argmax(axis=-1)    
