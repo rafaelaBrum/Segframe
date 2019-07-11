@@ -56,6 +56,9 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     for d in l:
         if pbar:
             print("\n")
+        elif kwargs['config'].info:
+            print("Step {0}/{1}".format(d,mc_dp))
+            
         proba = pred_model.predict_generator(generator,
                                                 workers=3*cpu_count,
                                                 max_queue_size=25*gpu_count,
