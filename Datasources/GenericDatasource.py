@@ -257,10 +257,12 @@ class GenericDS(ABC):
             if self._pbar:
                 l.update(1)
             elif self._verbose > 0:
-                print("{0}".format(i),end='')
+                print(".",end='')
             
         if self._pbar:
             l.close()
+        elif self._verbose > 0:
+            print('\n')
 
         if split is None:
             return (X_data,y)
