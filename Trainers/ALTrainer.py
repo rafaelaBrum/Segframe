@@ -94,6 +94,8 @@ class ActiveLearningTrainer(Trainer):
         Coordenates the AL process
         """
         from keras import backend as K
+        import time
+        from datetime import timedelta
         
         #Loaded CNN model and Datasource
         model = self.load_modules()
@@ -112,9 +114,12 @@ class ActiveLearningTrainer(Trainer):
             print("You should specify an acquisition function")
             sys.exit(Exitcodes.RUNTIME_ERROR)
 
+        stime = None
+        etime = None
         for r in range(self._config.acquisition_steps):
             if self._config.info:
                 print("[ALTrainer] Starting acquisition step {0}".format(r))
+                stime = time.time()
 
             #Save current dataset and report partial result (requires multi load for reading)
             fid = 'al-metadata-{1}-r{0}.pik'.format(r,model.name)
@@ -130,8 +135,14 @@ class ActiveLearningTrainer(Trainer):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are possible")
                 break
+            
             #Attempt to free GPU memory
             K.clear_session()
+            
+            if self._config.info:
+                etime = time.time()
+                td = timedelta(seconds=(etime-stime))
+                print("Acquisition step took: {0}".format(td))
 
     def acquire(self,function,model,**kwargs):
         """

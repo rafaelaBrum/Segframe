@@ -305,12 +305,10 @@ class GenericDS(ABC):
             if isinstance(k,float):
                 k = int(k*len(self.X))
             
-            s_x,s_y = ([],[])
             samples = np.random.choice(range(len(self.X)),k,replace=False)
-            #TODO: This for loop can be replaced
-            for s in samples:
-                s_x.append(self.X[s])
-                s_y.append(self.Y[s])
+            
+            s_x = [self.X[s] for s in samples]
+            s_y = [self.Y[s] for s in samples]
 
         #Save last generated sample
         self._cache.dump((s_x,s_y,self.name),'sampled_metadata.pik')

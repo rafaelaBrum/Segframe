@@ -83,7 +83,7 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
 
     return x_pool_index
 
-def bayesian_bald(pool_x,pool_y,query,kwargs):
+def bayesian_bald(pred_model,generator,data_size,**kwargs):
     """
     Calculation as defined in paper:
     Bayesian convolutional neural networks with Bernoulli approximate variational inference
@@ -100,3 +100,15 @@ def bayesian_bald(pool_x,pool_y,query,kwargs):
 
     batch_size = kwargs['config'].batch_size
     
+
+
+def random_sample(pred_model,generator,data_size,**kwargs):
+    """
+    Returns a random list of indexes from the given dataset
+    """
+    if 'config' in kwargs:
+        k = kwargs['config'].acquire
+    else:
+        return None
+    
+    return np.random.choice(range(data_size),k,replace=False)
