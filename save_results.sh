@@ -17,6 +17,10 @@ then
    cp ModelWeights/$1-t?e??.h5 $newdir
    cp ModelWeights/$1-weights.h5 $newdir
    cp TrainedModels/$1-model.h5 $newdir
+   if [ -f ModelWeights/$1-mgpu-weights.h5 ]
+   then
+      cp ModelWeights/$1-mgpu-weights.h5 $newdir
+   fi
    cp cache/metadata.pik $newdir
    cp cache/split_ratio.pik $newdir
    cp cache/data_dims.pik $newdir

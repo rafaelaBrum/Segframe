@@ -289,7 +289,7 @@ if __name__ == "__main__":
         'tiles.pik':os.path.join(config.predst,'tiles.pik'),
         'test_pred.pik':os.path.join(config.logdir,'test_pred.pik'),
         'cae_model.h5':os.path.join(config.model_path,'cae_model.h5'),
-        'vgg16_weights_notop.h5':os.path.join(config.model_path,'vgg16_weights_notop.h5')}
+        'vgg16_weights_notop.h5':os.path.join('PretrainedModels','vgg16_weights_notop.h5')}
 
     cache_m = CacheManager(locations=files)    
 
