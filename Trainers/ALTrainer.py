@@ -131,9 +131,9 @@ class ActiveLearningTrainer(Trainer):
 
             predictor.run(self.test_x,self.test_y)
             
-            if not self.acquire(function,model):
+            if r == self._config.acquisition_steps or not self.acquire(function,model):
                 if self._config.info:
-                    print("[ALTrainer] No more acquisitions are possible")
+                    print("[ALTrainer] No more acquisitions are in order")
                 break
             
             #Attempt to free GPU memory
