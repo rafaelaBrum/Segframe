@@ -195,7 +195,7 @@ if __name__ == "__main__":
         help='Initial training set size (Default: 1000).', default=1000)
     al_args.add_argument('-ac_function',dest='ac_function',type=str,help='Acquisition function.\n \
     Check documentation for available functions.',default=None)
-    al_args.add_argument('-acquisition_steps', dest='acquisition_steps', type=int, 
+    al_args.add_argument('-ac_steps', dest='acquisition_steps', type=int, 
         help='Initial training set size (Default: 10).', default=10)
     al_args.add_argument('-acquire', dest='acquire', type=int, 
         help='Acquire this many samples at each acquisition step (Default: 1000).', default=1000)

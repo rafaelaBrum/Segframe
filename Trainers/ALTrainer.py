@@ -123,7 +123,7 @@ class ActiveLearningTrainer(Trainer):
 
             #Save current dataset and report partial result (requires multi load for reading)
             fid = 'al-metadata-{1}-r{0}.pik'.format(r,model.name)
-            cache_m.registerFile(os.path.join(self._config.cache,fid),fid)
+            cache_m.registerFile(os.path.join(self._config.logdir,fid),fid)
             cache_m.dump(((self.train_x,self.train_y),(self.val_x,self.val_y),(self.test_x,self.test_y)),fid)
 
             self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))            

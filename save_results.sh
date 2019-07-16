@@ -27,6 +27,7 @@ then
    cp cache/sampled_metadata.pik $newdir
    cp logs/confusion_matrix_TILs-* $newdir
    cp logs/test_pred.pik $newdir
+   cp logs/al-metadata-$1-r*.pik $newdir
    mv slurm-* $newdir
 else
    echo 'Define the directory name to store data'
