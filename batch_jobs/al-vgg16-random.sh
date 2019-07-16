@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p GPU-AI
-#SBATCH -t 30:00:00
+#SBATCH -t 25:00:00
 #SBATCH --gres=gpu:volta16:3
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=alsmeirelles@gmail.com
@@ -32,7 +32,7 @@ module load cuda/9.0
 echo '[START] training'
 date +"%D %T"
 
-time python3 main.py -i -v --al -predst $LOCAL/test/lym_cnn_training_data/ -split 0.9 0.05 0.05 -net BayesVGG16 -data CellRep -init_train 2000 -dropout_steps 10 -ac_function bayesian_varratios -acquire 1000 -d -e 30 -b 96 -tdim 250 250 -out logs/ -cpu 9 -gpu 3 -tnorm -tn -wpath results/AL-6 -model_dir results/AL-6
+time python3 main.py -i -v --al -predst $LOCAL/test/lym_cnn_training_data/ -split 0.9 0.05 0.05 -net BayesVGG16 -data CellRep -init_train 2000 -dropout_steps 10 -ac_function random_sample -acquire 2000 -wpath random_weights -model_dir random_model -d -e 30 -b 96 -tdim 250 250 -out logs/ -cpu 9 -gpu 3 -tnorm -tn
 
 echo '[FINAL] done training'
 

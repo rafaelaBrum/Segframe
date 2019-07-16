@@ -138,8 +138,8 @@ class BayesVGG16(GenericModel):
                     kernel_regularizer=regularizers.l2(0.0005))(inp)
         #x = GroupNormalization(groups=4,axis=-1))(x)
         x = Activation('relu')(x)
-        #model.add(Dropout(0.1))
-    
+        x = Dropout(0.1)(x,training=True)
+ 
         #Second layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(64, (3, 3),strides=1,
@@ -150,8 +150,8 @@ class BayesVGG16(GenericModel):
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        #model.add(Dropout(0.1))
-        
+        x = Dropout(0.1)(x,training=True)
+ 
         #Third layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(128, (3, 3),strides=1,
@@ -161,8 +161,8 @@ class BayesVGG16(GenericModel):
                     kernel_regularizer=regularizers.l2(0.0005))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
-        #model.add(Dropout(0.2))
-        
+        x = Dropout(0.1)(x,training=True)
+ 
         #Fourth layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(128, (3, 3),strides=1,
@@ -173,8 +173,8 @@ class BayesVGG16(GenericModel):
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        #model.add(Dropout(0.2))
-        
+        x = Dropout(0.1)(x,training=True)
+ 
         #Fifth layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(256, (3, 3),strides=1,
@@ -184,8 +184,8 @@ class BayesVGG16(GenericModel):
                 kernel_regularizer=regularizers.l2(0.0005))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
-        #model.add(Dropout(0.2))
-        
+        x = Dropout(0.2)(x,training=True)
+ 
         #Sith layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(256, (3, 3),strides=1,
@@ -195,8 +195,8 @@ class BayesVGG16(GenericModel):
                 kernel_regularizer=regularizers.l2(0.0005))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
-        #model.add(Dropout(0.3))
-        
+        x = Dropout(0.2)(x,training=True)
+ 
         #Seventh layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(256, (3, 3),strides=1,
@@ -207,8 +207,8 @@ class BayesVGG16(GenericModel):
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        #model.add(Dropout(0.3))
-        
+        x = Dropout(0.2)(x,training=True)
+ 
         #Eigth layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(512, (3, 3),strides=1,
@@ -218,8 +218,8 @@ class BayesVGG16(GenericModel):
             kernel_regularizer=regularizers.l2(0.0005))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
-        #model.add(Dropout(0.3))
-        
+        x = Dropout(0.2)(x,training=True)
+ 
         #Nineth layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(512, (3, 3),strides=1,
@@ -229,8 +229,8 @@ class BayesVGG16(GenericModel):
             kernel_regularizer=regularizers.l2(0.0005))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
-        #model.add(Dropout(0.3))
-        
+        x = Dropout(0.2)(x,training=True)
+ 
         #Tenth layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(512, (3, 3),strides=1,
@@ -241,8 +241,8 @@ class BayesVGG16(GenericModel):
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        #model.add(Dropout(0.3))
-        
+        x = Dropout(0.2)(x,training=True)
+ 
         #Eleventh layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(512, (3, 3),strides=1,
@@ -253,8 +253,8 @@ class BayesVGG16(GenericModel):
             kernel_regularizer=regularizers.l2(0.0005))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
-        #model.add(Dropout(0.3))
-        
+        x = Dropout(0.3)(x,training=True)
+ 
         #Twelth layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(512, (3, 3),strides=1,
@@ -265,8 +265,8 @@ class BayesVGG16(GenericModel):
             kernel_regularizer=regularizers.l2(0.0005))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
-        #model.add(Dropout(0.3))
-        
+        x = Dropout(0.3)(x,training=True)
+
         #Thirtenth layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(512, (3, 3),strides=1,
@@ -278,7 +278,7 @@ class BayesVGG16(GenericModel):
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        #model.add(Dropout(0.3))
+        x = Dropout(0.3)(x,training=True)
 
         #Freeze initial layers, except for the last 3:
         #for layer in original_vgg16.layers[:-2]:
@@ -286,10 +286,10 @@ class BayesVGG16(GenericModel):
         
         x = Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal')(x)
         x = Activation('relu')(x)
-        x = Dropout(0.75)(x,training=True)
+        x = Dropout(0.5)(x,training=True)
         x = Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal')(x)
         x = Activation('relu')(x)
-        x = Dropout(0.75)(x,training=True)
+        x = Dropout(0.5)(x,training=True)
         x = Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal')(x)
         x = Flatten()(x)
         x = Dense(self._ds.nclasses)(x)
