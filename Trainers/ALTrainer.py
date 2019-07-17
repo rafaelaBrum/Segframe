@@ -41,8 +41,6 @@ class ActiveLearningTrainer(Trainer):
         """
         super().__init__(config)
 
-        self.X = None
-        self.Y = None
         self.pool_x = None
         self.pool_y = None
         self.train_x = None
@@ -56,17 +54,17 @@ class ActiveLearningTrainer(Trainer):
         """
         Creates the initial sets: training (X,Y); example pool; validation set; test set
 
-        Except for self.X and self.Y all others are NP arrays!
+        All sets are kept as NP arrays
         """
-        self.X,self.Y = self._ds.load_metadata()
+        X,Y = self._ds.load_metadata()
 
         #Test set is extracted from the last items and is not changed for the whole run
-        t_idx = int(self._config.split[-1:][0] * len(self.X))
-        self.test_x = self.X[- t_idx:]
-        self.test_y = self.Y[- t_idx:]
+        t_idx = int(self._config.split[-1:][0] * len(X))
+        self.test_x = X[- t_idx:]
+        self.test_y = Y[- t_idx:]
 
-        self.pool_x = self.X[:-t_idx]
-        self.pool_y = self.Y[:-t_idx]
+        self.pool_x = X[:-t_idx]
+        self.pool_y = Y[:-t_idx]
 
         #Initial training set will be choosen at random from pool
         train_idx = np.random.choice(len(self.pool_x),self._config.init_train,replace=False)

@@ -194,8 +194,8 @@ class GenericDS(ABC):
             self._cache.dump((X,Y,self.name),metadata_file)
             self._cache.dump(tuple(self._config.split),'split_ratio.pik')
             
-        self.X = X
-        self.Y = Y
+        self.X = X.copy()
+        self.Y = Y.copy()
         return X,Y
     
     def load_data(self,split=None,keepImg=False,data=None):

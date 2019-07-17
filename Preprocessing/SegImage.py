@@ -31,6 +31,16 @@ class SegImage(ABC):
     def __eq__(self,other):
         return self._path == other.getPath()
 
+    def __getstate__(self):
+          """
+          Prepares for pickling.
+          """
+          state = self.__dict__.copy()
+          del state['_data']
+          state['data'] = None
+
+          return state
+      
     @abstractmethod
     def __hash__(self):
         pass

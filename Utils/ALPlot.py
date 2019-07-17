@@ -30,6 +30,11 @@ class Ploter(object):
         fig.subplots_adjust(top=0.3)
         
         #Train size x Acquisition step time (if that was logged)
+        if len(self.data['time']) != len(self.data['trainset']):
+            maxi = min(len(self.data['time']),len(self.data['trainset']))
+            self.data['time'] = self.data['time'][:maxi]
+            self.data['trainset'] = self.data['trainset'][:maxi]
+            
         if len(self.data['time']) > 0:
             plt.subplot(211)
             plt.plot(self.data['trainset'],self.data['time'],'bo')
