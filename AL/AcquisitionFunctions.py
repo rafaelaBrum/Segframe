@@ -58,11 +58,12 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
             print("\n")
         elif kwargs['config'].info:
             print("Step {0}/{1}".format(d+1,mc_dp))
-            
+           
+        #Keep verbosity in 0 to gain speed 
         proba = pred_model.predict_generator(generator,
-                                                workers=3*cpu_count,
-                                                max_queue_size=40*gpu_count,
-                                                verbose=verbose)
+                                                workers=4*cpu_count,
+                                                max_queue_size=50*gpu_count,
+                                                verbose=0)
 
         dropout_classes = proba.argmax(axis=-1)    
         dropout_classes = np.array([dropout_classes]).T
