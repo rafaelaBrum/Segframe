@@ -201,6 +201,8 @@ if __name__ == "__main__":
         help='Acquire this many samples at each acquisition step (Default: 1000).', default=1000)
     al_args.add_argument('-dropout_steps', dest='dropout_steps', type=int, 
         help='For Bayesian CNNs, sample the network this many times (Default: 100).', default=100)
+    al_args.add_argument('-bal', action='store_true', dest='balance',
+        help='Balance dataset samples between classes.',default=False)    
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')

@@ -4,6 +4,7 @@
 import os,sys
 import numpy as np
 import importlib
+import random
 from keras.preprocessing.image import ImageDataGenerator
 
 #Local
@@ -49,6 +50,44 @@ class ActiveLearningTrainer(Trainer):
         self.val_y = None
         self.test_x = None
         self.test_y = None
+
+
+    def _balance_classes(self,X,Y):
+        """
+        Returns a tuple (X,Y) of balanced classes
+
+        X and Y are lists
+        """
+        #Work with NP arrays
+        if isinstance(X,list):
+            X = np.asarray(X)
+        if isinstance(Y,list):
+            Y = np.asarray(Y)
+            
+        #Count the occurrences of each class
+        unique,count = np.unique(Y,return_counts=True)
+
+        #Extracts the positions of each class in the dataset
+        class_members = {i:np.where(Y == i)[0] for i in unique}
+
+        #Remount the lists
+        nX,nY = ([],[])
+        mcount = count.min()
+        for c in unique:
+            if count[c] > mcount:
+                ids = np.random.choice(count[c],mcount,replace=False)
+                nX.extend(X[class_members[c][ids]])
+                nY.extend(Y[class_members[c][ids]])
+            else:
+                nX.extend(X[class_members[c]])
+                nY.extend(Y[class_members[c]])
+
+        #Reshufle all elements
+        combined = list(zip(nX,nY))
+        random.shuffle(combined)
+        nX[:],nY[:] = zip(*combined)
+
+        return nX,nY
         
     def configure_sets(self):
         """
@@ -57,6 +96,9 @@ class ActiveLearningTrainer(Trainer):
         All sets are kept as NP arrays
         """
         X,Y = self._ds.load_metadata()
+
+        if self._config.balance:
+            X,Y = self._balance_classes(X,Y)
 
         #Test set is extracted from the last items and is not changed for the whole run
         t_idx = int(self._config.split[-1:][0] * len(X))
