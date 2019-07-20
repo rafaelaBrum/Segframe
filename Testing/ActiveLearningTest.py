@@ -2,38 +2,22 @@
 #-*- coding: utf-8
 
 import random
+import numpy as np
 from Datasources.CellRep import CellRep
 from Trainers import ActiveLearningTrainer
 
-def check_labels(config,ds):
+def check_labels(X,Y,X2,Y2):
     """
+    X,Y: Set to be checked
+    X2,Y2: Reference set
     Checks all labels from a sequential run against the ones produced by the Datasource classes.
     """
-    files = os.listdir(config.predst)
-    dlist = []
-    
-    for f in files:
-        item = os.path.join(config.predst,f)
-        if os.path.isdir(item):
-            dlist.append(item)
-    reference = {}
-    count = 0
-    item_c = len(dlist)
-    for item in dlist:
-        t_x,t_y = ds._load_metadata_from_dir(item)
-        t_dct = {t_x[i]:t_y[i] for i in range(len(t_x))}
-        reference.update(t_dct)
-        if config.info:
-            print("Processing dirs sequentialy ({0}/{1})".format(count,item_c))
-        count += 1
-            
-    #Now the DS metadata
-    X2,Y2 = ds.load_metadata()
+    reference = {X2[i]:Y2[i] for i in range(len(X2))}
 
-    for j in range(len(X2)):
-        if reference[X2[j]] != Y2[j]:
-            print("Item labels differ.\n - Reference item: {0};\n - Reference label: {1};\n Metadata label: {2}".format(
-                X2[j],reference[X2[j]],y2[j]))
+    for j in range(len(X)):
+        if reference[X[j]] != Y[j]:
+            print("Item labels differ.\n - Reference item: {0};\n - Reference label: {1};\n Corresponding in given set label: {2}".format(
+                X2[j],reference[X2[j]],Y[j]))
 
     print("If no messages reporting misslabeling was displayed, everything is good.")
     
@@ -48,11 +32,19 @@ def run(config):
     
     #Start training
     trainer = ActiveLearningTrainer(config)
-
+    trainer.load_modules()
+    
     #Test set balancing
-    X,Y = trainer._ds().load_metadata()
+    X,Y = trainer._ds.load_metadata()
     bX,bY = trainer._balance_classes(X,Y)
+    check_labels(bX,bY,X,Y)
 
-     
+    #Dataset size:
+    print("Balanced set: {0} items, {1} labels".format(len(bX),len(bY)))
+    unique,count = np.unique(bY,return_counts=True)
+    l_count = dict(zip(unique,count))
+    if not 1 in l_count:
+        l_count[1] = 0
+    print("Balanced set labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
     
     trainer.run()
