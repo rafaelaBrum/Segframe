@@ -32,12 +32,12 @@ class Ploter(object):
         #Train size x Acquisition step time (if that was logged)
         if len(self.data['time']) != len(self.data['trainset']):
             maxi = min(len(self.data['time']),len(self.data['trainset']))
-            self.data['time'] = self.data['time'][:maxi]
-            self.data['trainset'] = self.data['trainset'][:maxi]
+        else:
+            maxi = max(len(self.data['time']),len(self.data['trainset']))
             
         if len(self.data['time']) > 0:
             plt.subplot(211)
-            plt.plot(self.data['trainset'],self.data['time'],'bo')
+            plt.plot(self.data['trainset'][:maxi],self.data['time'][:maxi],'bo')
             plt.axis([self.data['trainset'][0]-100,self.data['trainset'][-1:][0]+100,0.1,self.data['time'][-1:][0]+0.5])
             fig.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
             #plt.gcf().autofmt_xdate()
@@ -46,6 +46,9 @@ class Ploter(object):
 
         #Train size x AUC
         if len(self.data['auc']) > len(self.data['trainset']):
+            print("AUC results are too many")
+            print(self.data['auc'])
+            print(self.data['trainset'])
             self.data['auc'].pop()
             
         plt.subplot(212)

@@ -173,7 +173,6 @@ class ActiveLearningTrainer(Trainer):
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are in order")
-                break
             
             #Attempt to free GPU memory
             K.clear_session()
