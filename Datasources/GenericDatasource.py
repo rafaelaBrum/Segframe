@@ -232,7 +232,7 @@ class GenericDS(ABC):
         else:    
             samples = len(X)
         y = np.array(Y[:samples], dtype=np.int32)
-        if not self._config.tdim is None:
+        if not self._config.tdim is None and len(self._config.tdim) == 2:
             img_dim = tuple(self._config.tdim) + (3,)
         else:
             dataset_dim = self.get_dataset_dimensions(X)[0]

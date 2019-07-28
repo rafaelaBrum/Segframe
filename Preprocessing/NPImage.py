@@ -76,7 +76,7 @@ class NPImage(SegImage):
         else:
             data = self.readImage()
             self._dim = data.shape
-            
+                
         return self._dim
 
     def readImageRegion(self,x,y,dx,dy):

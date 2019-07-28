@@ -7,6 +7,7 @@ import random
 
 #Keras MNIST
 from keras.datasets import mnist
+import keras.backend as K
 
 #Local modules
 from Datasources import GenericDatasource as gd
@@ -40,6 +41,16 @@ class MNIST(gd.GenericDS):
 
         (x_train, y_train), (x_test, y_test) = mnist.load_data()
 
+        # input image dimensions
+        img_rows, img_cols = 28, 28
+        
+        if K.image_data_format() == 'channels_first':
+            x_train = x_train.reshape(x_train.shape[0], 1, img_rows, img_cols)
+            x_test = x_test.reshape(x_test.shape[0], 1, img_rows, img_cols)
+        else:
+            x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
+            x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
+        
         tr_size = x_train.shape[0]
         test_size = x_test.shape[0]
 
