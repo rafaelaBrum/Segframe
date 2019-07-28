@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 #-*- coding: utf-8
 
-__all__ = ['CellRep','LDir','SDir']
+__all__ = ['CellRep','LDir','MNIST']
 
 from .CellRep import CellRep
 from .LDir import LDir
-#from .SDir import SDir
+from .MNIST import MNIST

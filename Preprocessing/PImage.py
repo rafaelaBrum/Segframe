@@ -10,7 +10,7 @@ from .SegImage import SegImage
 
 class PImage(SegImage):
     """
-    Represents any image handled by OpenCV.
+    Represents any image handled by skimage.
     """
     def __init__(self,path,keepImg=False,origin=None,coord=None,verbose=0):
         """
@@ -91,18 +91,6 @@ class PImage(SegImage):
             
         return data[y:(y+dy), x:(x+dx)]
 
-    def setKeepImg(self,keep):
-        """
-        If image should not be held anymore, delete data
-        """
-        if keep is None:
-            return
-        
-        if not keep:
-            del self._data
-            self._data = None
-
-        self._keep = keep
         
     def getImgDim(self):
         """

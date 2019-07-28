@@ -15,7 +15,7 @@ class SegImage(ABC):
         if isinstance(path,str) and os.path.isfile(path):
             self._path = path
         else:
-            raise ValueError("[GenericImage] Path does not correspond to a file.")
+            raise ValueError("[GenericImage] Path does not correspond to a file ({0}).".format(path))
 
         self._verbose = verbose
         self._keep = keepImg
@@ -37,7 +37,7 @@ class SegImage(ABC):
           """
           state = self.__dict__.copy()
           del state['_data']
-          state['data'] = None
+          state['_data'] = None
 
           return state
       
@@ -60,9 +60,18 @@ class SegImage(ABC):
         """
         pass
     
-    @abstractmethod
     def setKeepImg(self,keep):
-        pass
+        """
+        If image should not be held anymore, delete data
+        """
+        if keep is None:
+            return
+        
+        if not keep:
+            del self._data
+            self._data = None
+
+        self._keep = keep
     
     def getImgName(self):
         return os.path.basename(self._path).split('.')[0]

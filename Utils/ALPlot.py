@@ -5,6 +5,7 @@
 #import matplotlib
 #matplotlib.use('macosx')
 import matplotlib.pyplot as plt
+import pandas as pd
 from matplotlib.ticker import MaxNLocator
 
 import datetime
@@ -16,45 +17,43 @@ import sys
 class Ploter(object):
 
     def __init__(self,data=None, path=None):
-        self.data = data
-    
-        if os.path.isdir(path):
+        if not path is None and os.path.isdir(path):
             self.path = path
         else:
             self.path = None
 
-    def _draw_train_data(self,title=''):
+    def draw_data(self,data,title=''):
 
         fig = plt.figure(1)
         fig.suptitle(title)
         fig.subplots_adjust(top=0.3)
         
         #Train size x Acquisition step time (if that was logged)
-        if len(self.data['time']) != len(self.data['trainset']):
-            maxi = min(len(self.data['time']),len(self.data['trainset']))
+        if data['time'].shape != data['trainset'].shape:
+            maxi = min(data['time'].shape[0],data['trainset'].shape[0])
         else:
-            maxi = max(len(self.data['time']),len(self.data['trainset']))
-            
-        if len(self.data['time']) > 0:
+            maxi = max(data['time'].shape[0],data['trainset'].shape[0])
+
+        if data['time'].shape[0] > 0:
             plt.subplot(211)
-            plt.plot(self.data['trainset'][:maxi],self.data['time'][:maxi],'bo')
-            plt.axis([self.data['trainset'][0]-100,self.data['trainset'][-1:][0]+100,0.1,self.data['time'][-1:][0]+0.5])
+            plt.plot(data['trainset'][:maxi],data['time'][:maxi],'bo')
+            plt.axis([data['trainset'][0]-100,data['trainset'].max()+100,0.0,data['time'].max()+.2])
             fig.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
             #plt.gcf().autofmt_xdate()
             plt.xlabel('Train set size')
             plt.ylabel('Acquisition step time (hours)')
 
         #Train size x AUC
-        if len(self.data['auc']) > len(self.data['trainset']):
+        if data['auc'].shape[0] > data['trainset'].shape[0]:
             print("AUC results are too many")
-            print(self.data['auc'])
-            print(self.data['trainset'])
-            self.data['auc'].pop()
+            print(data['auc'])
+            print(data['trainset'])
+            data['auc'] = data['auc'][:-1]
             
         plt.subplot(212)
-        min_auc = np.asarray(self.data['auc']).min()
-        plt.plot(self.data['trainset'],self.data['auc'],'k-')
-        plt.axis([self.data['trainset'][0],self.data['trainset'][-1:][0],min_auc-0.1,1.0])
+        min_auc = data['auc'].min()
+        plt.plot(data['trainset'],data['auc'],'k-')
+        plt.axis([data['trainset'][0],data['trainset'][-1:][0],min_auc-0.1,1.0])
         fig.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
         plt.xlabel('Train set size')
         plt.ylabel('AUC')
@@ -62,13 +61,42 @@ class Ploter(object):
         plt.tight_layout()
         plt.show()
 
+    def draw_multiline(self,data,title):
+
+        palette = plt.get_cmap('Set1')
+
+        color = 0
+        for k in data:
+            plt.plot(data[k]['trainset'],data[k]['auc'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
+            color += 1
+
+        plt.legend(loc=2,ncol=2)
+        plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
+        plt.xlabel("Training set size")
+        plt.ylabel("AUC")
+
+        plt.tight_layout()
+        plt.show()
 
     def plotFromExec(self,data):
         pass
-    
-    def plotSlurm(self,path=None):
 
-        if path is None:
+    def parseResults(self,path,al_dirs):
+        data = {}
+
+        for d in al_dirs:
+            d_path = os.path.join(path,"AL-{0}".format(d))
+            if os.path.isdir(d_path):
+                data[d] = self.parseSlurm(d_path)
+
+        return data
+    
+    def parseSlurm(self,path=None):
+
+        if path is None and self.path is None:
+            print("No directory found")
+            sys.exit(-1)
+        elif path is None:
             path = self.path
 
         dir_contents = os.listdir(path)
@@ -76,8 +104,12 @@ class Ploter(object):
         for fi in dir_contents:
             if fi.startswith('slurm'):
                 slurm_path = os.path.join(path,fi)
-            
-        self.data = {'time':[],
+
+        if slurm_path is None:
+            print("No slurm file in path: {0}".format(path))
+            return None
+        
+        data = {'time':[],
                 'auc':[],
                 'trainset':[]}
         start_line = 0
@@ -100,17 +132,44 @@ class Ploter(object):
             trmatch = trainrc.fullmatch(lstrip)
             if tmatch:
                 td = datetime.timedelta(hours=int(tmatch.group('hours')),minutes=int(tmatch.group('min')),seconds=round(float(tmatch.group('sec'))))
-                self.data['time'].append(td.total_seconds()/3600.0)
+                data['time'].append(td.total_seconds()/3600.0)
             if aucmatch:
-                self.data['auc'].append(float(aucmatch.group('auc')))
+                data['auc'].append(float(aucmatch.group('auc')))
             if trmatch:
-                self.data['trainset'].append(int(trmatch.group('set')))
+                data['trainset'].append(int(trmatch.group('set')))
 
-        self._draw_train_data('SLURM log')
+        #Use NP arrays
+        data['time'] = np.asarray(data['time'])
+        data['auc'] = np.asarray(data['auc'])
+        data['trainset'] = np.asarray(data['trainset'])
+
+        print("Min AUC: {0}; Max AUC: {1}".format(data['auc'].min(),data['auc'].max()))
+        return data
 
 if __name__ == "__main__":
-    dataset = str(input("Enter dataset path: "))
 
-    p = Ploter(path=dataset)
-    p.plotSlurm()
+    if len(sys.argv) > 1:
+        p = Ploter()
+        if os.path.isdir(sys.argv[1]):
+            if len(sys.argv) >= 3:
+                plot_dirs = sys.argv[2].split(',')
+            else:
+                plot_dirs = str(input("Enter AL dir numbers to plot (comma separated): ")).split(',')
+            data = p.parseResults(sys.argv[1],plot_dirs)
+            if len(sys.argv) == 4:
+                title = sys.argv[3]
+            else:
+                title = 'AL Experiment'
+
+            p.draw_multiline(data,title)
+        else:
+            print("First argument should be a directory path where AL results are.")
+            sys.exit(-1)
+            
+    else:
+        dataset = str(input("Enter dataset path: "))
+
+        p = Ploter(path=dataset)
+        p.draw_data(p.parseSlurm(),'SLURM log')
+
     

@@ -123,6 +123,7 @@ class ActiveLearningTrainer(Trainer):
         
         #Initial validation set - keeps the same split ratio for train/val as defined in the configuration
         val_samples = int((self._config.init_train*self._config.split[1])/self._config.split[0])
+        val_samples = max(val_samples,100)
         val_idx = np.random.choice(self.pool_x.shape[0],val_samples,replace=False)
         self.val_x = self.pool_x[val_idx]
         self.val_y = self.pool_y[val_idx]
