@@ -67,10 +67,10 @@ class MNIST(gd.GenericDS):
             t_y.append(y_train[s])
             class_set.add(y_train[s])
 
-        for s in range(test_size):
-            t_x.append(NPImage(f_path,x_test[s],True,'x_test',s,self._verbose))
-            t_y.append(y_test[s])
-            class_set.add(y_test[s])
+        for i in range(test_size):
+            t_x.append(NPImage(f_path,x_test[i],True,'x_test',i,self._verbose))
+            t_y.append(y_test[i])
+            class_set.add(y_test[i])
 
         return t_x,t_y
             

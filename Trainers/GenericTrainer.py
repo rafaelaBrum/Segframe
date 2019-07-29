@@ -98,22 +98,30 @@ class Trainer(object):
         The type of generator depends on the config.delay_load option
         """
         train_generator,val_generator = (None,None)
-        
-        train_prep = ImageDataGenerator(
-            samplewise_center=self._config.batch_norm,
-            samplewise_std_normalization=self._config.batch_norm,
-            rotation_range=180,
-            width_shift_range=20,
-            height_shift_range=20,
-            zoom_range=.2,
-            #shear_range=.05,
-            horizontal_flip=True,
-            vertical_flip=True,
-            brightness_range=(-20.0,20.0))
 
-        val_prep = ImageDataGenerator(
-            samplewise_center=self._config.batch_norm,
-            samplewise_std_normalization=self._config.batch_norm)
+        if self._config.augment:
+            train_prep = ImageDataGenerator(
+                samplewise_center=self._config.batch_norm,
+                samplewise_std_normalization=self._config.batch_norm,
+                rotation_range=180,
+                width_shift_range=20,
+                height_shift_range=20,
+                zoom_range=.2,
+                #shear_range=.05,
+                horizontal_flip=True,
+                vertical_flip=True,
+                brightness_range=(-20.0,20.0))
+
+            val_prep = ImageDataGenerator(
+                samplewise_center=self._config.batch_norm,
+                samplewise_std_normalization=self._config.batch_norm)
+        else:
+            train_prep = ImageDataGenerator(
+                samplewise_center=self._config.batch_norm,
+                samplewise_std_normalization=self._config.batch_norm)
+            val_prep = ImageDataGenerator(
+                samplewise_center=self._config.batch_norm,
+                samplewise_std_normalization=self._config.batch_norm)
         
         if not self._config.tdim is None:
             fix_dim = self._config.tdim
@@ -195,7 +203,7 @@ class Trainer(object):
             print("Validate set: {0} items".format(len(val_data[0])))
 
         train_generator,val_generator = self._choose_generator(train_data,val_data)
-
+        
         single,parallel = model.build()
         if not parallel is None:
             training_model = parallel

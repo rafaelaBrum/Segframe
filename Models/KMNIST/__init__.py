@@ -3,5 +3,5 @@
 
 __all__ = ['knet']
 
-from .knet import KNet
+from .knet import KNet,BayesKNet
 

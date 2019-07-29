@@ -173,6 +173,8 @@ if __name__ == "__main__":
         help='Do not use older weights file.',default=False)
     train_args.add_argument('-tnorm', action='store_true', dest='batch_norm',
         help='Applies batch normalization during training.',default=False)
+    train_args.add_argument('-aug', action='store_true', dest='augment',
+        help='Applies data augmentation during training.',default=False)
     train_args.add_argument('-wpath', dest='weights_path',
         help='Use weights file contained in path - usefull for sequential training (Default: None).',
         default='ModelWeights')

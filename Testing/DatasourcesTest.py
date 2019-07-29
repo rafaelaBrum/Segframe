@@ -5,7 +5,6 @@ import random
 import os
 import numpy as np
 import importlib
-from matplotlib import pyplot as plt
 from Datasources.CellRep import CellRep
 
 def run(config):
@@ -118,6 +117,8 @@ def run_local(config,cr,X,Y):
     """
     Full dataset is too big for these
     """
+    from matplotlib import pyplot as plt
+    
     d_x,d_y = cr.load_data()
     print("X size: {0} \n ************* \n".format(len(X)))
     print("Y size: {0} \n ************* \n".format(len(Y)))
@@ -126,6 +127,9 @@ def run_local(config,cr,X,Y):
     rind = random.randint(0,len(d_x) - 1)
     img = d_x[rind]
     print("Image array shape: {0}; dtype: {1}".format(d_x.shape,d_x.dtype))
+    print("Image shape: {0}".format(img.shape))
+    if img.shape[2] == 1:
+        img = img.reshape(img.shape[0],img.shape[1])
     print("Image label is: {0}".format(d_y[rind]))
     plt.imshow(img)
     plt.xticks([]), plt.yticks([])  # to hide tick values on X and Y axis
@@ -135,7 +139,9 @@ def run_local(config,cr,X,Y):
     del(d_y)
 
     if not config.data == 'MNIST':
-        check_labels(config,cr)
+        check_labels_from_dir(config,cr)
+    else:
+        check_labels_mnist(config,cr)
     
 def check_data_split(split_data):
     """
@@ -155,7 +161,7 @@ def check_data_split(split_data):
             print("Item {0} of training set is also in test set".format(s))
     print("Done checking data split")
         
-def check_labels(config,ds):
+def check_labels_from_dir(config,ds):
     """
     Checks all labels from a sequential run against the ones produced by the Datasource classes.
     """
@@ -186,3 +192,26 @@ def check_labels(config,ds):
                 X2[j],reference[X2[j]],y2[j]))
 
     print("If no messages reporting misslabeling was displayed, everything is good.")
+
+def check_labels_mnist(config,ds):
+
+    from keras.datasets import mnist
+    from Preprocessing import NPImage
+    
+    # the data, split between train and test sets
+    (x_train, y_train), (x_test, y_test) = mnist.load_data()
+    reference = {}
+    for i in range(x_train.shape[0]):
+        reference[NPImage('/Users/alsm/.keras/datasets/mnist.npz',x_train[i],True,'x_train',i,1)] = y_train[i]
+    for j in range(x_test.shape[0]):
+        reference[NPImage('/Users/alsm/.keras/datasets/mnist.npz',x_test[j],True,'x_test',j,1)] = y_test[j]
+
+    #Now the DS metadata
+    X2,Y2 = ds.load_metadata()
+
+    for j in range(len(X2)):
+        if reference[X2[j]] != Y2[j]:
+            print("Item labels differ.\n - Reference item: {0};\n - Reference label: {1};\n Metadata label: {2}".format(
+                X2[j],reference[X2[j]],y2[j]))
+
+    print("If no messages reporting misslabeling was displayed, everything is good.")    
