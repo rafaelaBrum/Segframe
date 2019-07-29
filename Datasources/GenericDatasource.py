@@ -130,7 +130,7 @@ class GenericDS(ABC):
                                         step_size=1,output_dim=2,txt_label='directories',verbose=self._verbose)
 
         else:
-            mdata = self._run_multiprocess([self.path])
+            mdata = self._load_metadata_from_dir(self.path)
 
         X.extend(mdata[0]) #samples
         Y.extend(mdata[1]) #labels
