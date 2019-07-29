@@ -37,6 +37,7 @@ class GenericModel(ABC):
     @abstractmethod
     def get_weights_cache(self):
         pass
-
+    
+    @abstractmethod
     def get_weights_cache_mgpu(self):
-        return None
+        pass

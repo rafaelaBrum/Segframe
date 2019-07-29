@@ -38,7 +38,8 @@ class KNet(GenericModel):
         self.cache_m = CacheManager()
         self.cache_m.registerFile(os.path.join(config.model_path,self._modelCache),self._modelCache)
         self.cache_m.registerFile(os.path.join(config.weights_path,self._weightsCache),self._weightsCache)
-
+        self.cache_m.registerFile(os.path.join(config.weights_path,self._mgpu_weightsCache),self._mgpu_weightsCache)
+        
     def get_model_cache(self):
         """
         Returns path to model cache
@@ -50,6 +51,12 @@ class KNet(GenericModel):
         Returns path to model cache
         """
         return self.cache_m.fileLocation(self._weightsCache)
+
+    def get_mgpu_weights_cache(self):
+        """
+        Returns path to model cache
+        """
+        return self.cache_m.fileLocation(self._mgpu_weightsCache)
     
     def build(self,pre_trained=False):
         """
