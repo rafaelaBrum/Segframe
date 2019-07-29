@@ -284,7 +284,7 @@ if __name__ == "__main__":
     #Setup CacheManager - TODO: fill actual files
     files = {
         'tcga.pik':os.path.join(config.presrc,'piks','tcga.pik'),
-        'metadata.pik':os.path.join(config.cache,'metadata.pik'),
+        'metadata.pik':os.path.join(config.cache,'{0}-metadata.pik'.format(config.data)),
         'sampled_metadata.pik':os.path.join(config.cache,'sampled_metadata.pik'),
         'split_ratio.pik':os.path.join(config.cache,'split_ratio.pik'),
         'data_dims.pik':os.path.join(config.cache,'data_dims.pik'),

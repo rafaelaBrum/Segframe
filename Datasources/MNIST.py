@@ -31,7 +31,9 @@ class MNIST(gd.GenericDS):
         super().__init__(data_path,keepImg,config,name='MNIST')
         self.nclasses = 10
 
-
+        #MNIST is loaded from a single cache file
+        self.multi_dir = False
+        
     def _load_metadata_from_dir(self,d):
         """
         Create NPImages from KERAS MNIST

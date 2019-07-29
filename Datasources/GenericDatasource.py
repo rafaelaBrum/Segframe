@@ -25,6 +25,7 @@ class GenericDS(ABC):
         self.X = None
         self.Y = None
         self.name = name
+        self.multi_dir = True
         self._cache = CacheManager()
         self._keep = keepImg
         self._cpu_count = config.cpu_count if not config is None else 1
@@ -117,18 +118,23 @@ class GenericDS(ABC):
         dlist = []
         files = os.listdir(path)
         X,Y = ([],[])
-        for f in files:
-            item = os.path.join(path,f)
-            if os.path.isdir(item):
-                dlist.append(item)
 
-        mdata = multiprocess_run(self._run_multiprocess,tuple(),dlist,
-                                     self._cpu_count,self._pbar,
-                                     step_size=1,output_dim=2,txt_label='directories',verbose=self._verbose)
+        if self.multi_dir:
+            for f in files:
+                item = os.path.join(path,f)
+                if os.path.isdir(item):
+                    dlist.append(item)
+
+            mdata = multiprocess_run(self._run_multiprocess,tuple(),dlist,
+                                        self._cpu_count,self._pbar,
+                                        step_size=1,output_dim=2,txt_label='directories',verbose=self._verbose)
+
+        else:
+            mdata = self._run_multiprocess([self.path])
 
         X.extend(mdata[0]) #samples
         Y.extend(mdata[1]) #labels
-                    
+
         #Shuffle samples and labels maintaining relative order
         combined = list(zip(X,Y))
         random.shuffle(combined)
