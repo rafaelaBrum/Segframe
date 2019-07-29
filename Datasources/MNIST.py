@@ -42,7 +42,7 @@ class MNIST(gd.GenericDS):
         t_x,t_y = ([],[])
 
         (x_train, y_train), (x_test, y_test) = mnist.load_data()
-
+        
         # input image dimensions
         img_rows, img_cols = 28, 28
         
@@ -52,7 +52,12 @@ class MNIST(gd.GenericDS):
         else:
             x_train = x_train.reshape(x_train.shape[0], img_rows, img_cols, 1)
             x_test = x_test.reshape(x_test.shape[0], img_rows, img_cols, 1)
-        
+
+        #Normalize
+        x_train = x_train.astype('float32')
+        x_test = x_test.astype('float32')
+        x_train /= 255
+        x_test /= 255       
         tr_size = x_train.shape[0]
         test_size = x_test.shape[0]
 
