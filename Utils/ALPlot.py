@@ -49,15 +49,24 @@ class Ploter(object):
             print(data['auc'])
             print(data['trainset'])
             data['auc'] = data['auc'][:-1]
-            
-        plt.subplot(212)
-        min_auc = data['auc'].min()
-        plt.plot(data['trainset'],data['auc'],'k-')
-        plt.axis([data['trainset'][0],data['trainset'][-1:][0],min_auc-0.1,1.0])
-        fig.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
-        plt.xlabel('Train set size')
-        plt.ylabel('AUC')
 
+        if data['auc'].shape[0] > 0:
+            plt.subplot(212)
+            min_auc = data['auc'].min()
+            plt.plot(data['trainset'],data['auc'],'k-')
+            plt.axis([data['trainset'][0],data['trainset'][-1:][0],min_auc-0.1,1.0])
+            fig.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+            plt.xlabel('Train set size')
+            plt.ylabel('AUC')
+        elif data['accuracy'].shape[0] > 0:
+            plt.subplot(212)
+            min_auc = data['accuracy'].min()
+            plt.plot(data['trainset'],data['accuracy'],'k-')
+            plt.axis([data['trainset'][0],data['trainset'][-1:][0],min_auc-0.1,1.0])
+            fig.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+            plt.xlabel('Train set size')
+            plt.ylabel('Accuracy')
+            
         plt.tight_layout()
         plt.show()
 
@@ -111,7 +120,8 @@ class Ploter(object):
         
         data = {'time':[],
                 'auc':[],
-                'trainset':[]}
+                'trainset':[],
+                'accuracy':[]}
         start_line = 0
         timerex = r'Acquisition step took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
         aucrex = r'AUC: (?P<auc>0.[0-9]+)'
@@ -149,8 +159,10 @@ class Ploter(object):
         data['trainset'] = np.asarray(data['trainset'])
         data['accuracy'] = np.asarray(data['accuracy'])
 
-        print("Min AUC: {0}; Max AUC: {1}".format(data['auc'].min(),data['auc'].max()))
-        print("Min accuracy: {0}; Max accuracy: {1}".format(data['accuracy'].min(),data['accuracy'].max()))
+        if data['auc'].shape[0] > 0:
+            print("Min AUC: {0}; Max AUC: {1}".format(data['auc'].min(),data['auc'].max()))
+        if data['accuracy'].shape[0] > 0:
+            print("Min accuracy: {0}; Max accuracy: {1}".format(data['accuracy'].min(),data['accuracy'].max()))
         return data
 
 if __name__ == "__main__":
