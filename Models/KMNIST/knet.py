@@ -75,6 +75,7 @@ class KNet(GenericModel):
         else:
             input_shape = (height, width, channels)
 
+        print("knet.py: input shape = {0}".format(input_shape))
             
         self.cache_m = CacheManager()
         

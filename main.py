@@ -148,8 +148,8 @@ if __name__ == "__main__":
     pre_args.add_argument('-mag', dest='magnification', type=int, 
         help='For SVS images only, use specific magnification level.',
         choices=[2,4,8,10,20,40],default=40)
-    pre_args.add_argument('-tdim', dest='tdim', nargs=2, type=int, 
-        help='Tile width and heigth (Use: 200 200 for SVS 50 um).', 
+    pre_args.add_argument('-tdim', dest='tdim', nargs='+', type=int, 
+        help='Tile width and heigth, optionally inform the number of channels (Use: 200 200 for SVS 50 um).', 
         default=None, metavar=('Width', 'Height'))
     pre_args.add_argument('-norm', dest='normalize', type=str,default='Preprocessing/target_40X.png', 
         help='Normalize tiles based on reference image (given)')

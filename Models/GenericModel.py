@@ -15,7 +15,10 @@ class GenericModel(ABC):
     def _check_input_shape(self):
         #Image shape by OpenCV reports height x width
         if not self._config.tdim is None:
-            dims = [(None,) + tuple(self._config.tdim) + (3,)]
+            if len(self._config.tdim) == 2:
+                dims = [(None,) + tuple(self._config.tdim) + (3,)]
+            else:
+                dims = [(None,) + tuple(self._config.tdim)]
         elif not self._ds is None:
             dims = self._ds.get_dataset_dimensions()
         else:
