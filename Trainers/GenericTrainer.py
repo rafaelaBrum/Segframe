@@ -147,10 +147,10 @@ class Trainer(object):
                                                 shuffle=True,
                                                 verbose=self._config.verbose)
         else:
-            train,val,_ = self._ds.load_data(split=self._config.split,keepImg=False)
+            #Loads training images and validation images
+            x_train,y_train = self._ds.load_data(split=None,keepImg=self._config.keepimg,data=train_data)
             
-            x_train,y_train = train
-            x_val,y_val = val
+            x_val,y_val = self._ds.load_data(split=None,keepImg=self._config.keepimg,data=val_data)
 
             #Labels should be converted to categorical representation
             y_train = to_categorical(y_train,self._ds.nclasses)
@@ -191,13 +191,21 @@ class Trainer(object):
         if self._verbose > 0:
             unique,count = np.unique(train_data[1],return_counts=True)
             l_count = dict(zip(unique,count))
-            print("Train labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
+            if len(unique) > 2:
+                print("Training items:")
+                print("\n".join(["label {0}: {1} items" .format(key,l_count[key]) for key in unique]))
+            else:
+                print("Train labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
             
             unique,count = np.unique(val_data[1],return_counts=True)
             l_count = dict(zip(unique,count))
-            if not 1 in l_count:
-                l_count[1] = 0
-            print("Validation labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
+            if len(unique) > 2:
+                print("Validation items:")
+                print("\n".join(["label {0}: {1} items" .format(key,l_count[key]) for key in unique]))
+            else:            
+                if not 1 in l_count:
+                    l_count[1] = 0
+                print("Validation labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
             
             print("Train set: {0} items".format(len(train_data[0])))
             print("Validate set: {0} items".format(len(val_data[0])))
@@ -276,7 +284,7 @@ class Trainer(object):
         cache_m = CacheManager()
         single.save_weights(model.get_weights_cache())
         single.save(model.get_model_cache())
-        if not model.get_mgpu_weights_cache() is None:
+        if not parallel is None and model.get_mgpu_weights_cache() is None:
             parallel.save_weights(model.get_mgpu_weights_cache())
         cache_m.dump(tuple(self._config.split),'split_ratio.pik')
 

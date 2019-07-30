@@ -51,22 +51,28 @@ def print_prediction(config):
     y_pred = np.argmax(Y_pred, axis=1)
     
     #Output metrics
-    f1 = metrics.f1_score(expected,y_pred,pos_label=1)
+    if nclasses > 2:
+        f1 = metrics.f1_score(expected,y_pred,average='weighted')
+    else:
+        f1 = metrics.f1_score(expected,y_pred,pos_label=1)
     print("F1 score: {0:.2f}".format(f1))
 
     m_conf = PrintConfusionMatrix(y_pred,expected,nclasses,config,"TILs")
 
     #ROC AUC
-    #Get positive scores
-    scores = Y_pred.transpose()[1]
-        
-    fpr,tpr,thresholds = metrics.roc_curve(expected,scores,pos_label=1)
+    #Get positive scores (binary only)
+    if nclasses == 2:
+        scores = Y_pred.transpose()[1]
+        fpr,tpr,thresholds = metrics.roc_curve(expected,scores,pos_label=1)
+        print("AUC: {0:f}".format(metrics.roc_auc_score(expected,scores)))
+
+    print("Accuracy: {0:.3f}".format(m_conf[nclasses+2][nclasses]))
+
     if config.verbose > 1:
         print("False positive rates: {0}".format(fpr))
         print("True positive rates: {0}".format(tpr))
         print("Thresholds: {0}".format(thresholds))
-    print("AUC: {0:f}".format(metrics.roc_auc_score(expected,scores)))
-    
+        
 class Predictor(object):
     """
     Class responsible for running the predictions and outputing results
@@ -140,9 +146,13 @@ class Predictor(object):
         if self._config.verbose > 0:
             unique,count = np.unique(y_test,return_counts=True)
             l_count = dict(zip(unique,count))
-            if not 1 in l_count:
-                l_count[1] = 0
-            print("Test labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
+            if len(unique) > 2:
+                print("Test items:")
+                print("\n".join(["label {0}: {1} items" .format(key,l_count[key]) for key in unique]))
+            else:
+                if not 1 in l_count:
+                    l_count[1] = 0
+                print("Test labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
             
         X,Y = self._ds.load_data(data=(x_test,y_test),keepImg=self._keep)
         if self._config.verbose > 1:

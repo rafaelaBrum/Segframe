@@ -115,11 +115,13 @@ class Ploter(object):
         start_line = 0
         timerex = r'Acquisition step took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
         aucrex = r'AUC: (?P<auc>0.[0-9]+)'
+        accrex = r'Accuracy: (?P<acc>0.[0-9]+)'
         trainsetrex = r'Train set: (?P<set>[0-9]+) items'
         
         timerc = re.compile(timerex)
         aucrc = re.compile(aucrex)
         trainrc = re.compile(trainsetrex)
+        accrc = re.compile(accrex)
 
         with open(slurm_path,'r') as fd:
             lines = fd.readlines()
@@ -130,6 +132,7 @@ class Ploter(object):
             tmatch = timerc.fullmatch(lstrip)
             aucmatch = aucrc.fullmatch(lstrip)
             trmatch = trainrc.fullmatch(lstrip)
+            accmatch = accrc.fullmatch(lstrip)
             if tmatch:
                 td = datetime.timedelta(hours=int(tmatch.group('hours')),minutes=int(tmatch.group('min')),seconds=round(float(tmatch.group('sec'))))
                 data['time'].append(td.total_seconds()/3600.0)
@@ -137,13 +140,17 @@ class Ploter(object):
                 data['auc'].append(float(aucmatch.group('auc')))
             if trmatch:
                 data['trainset'].append(int(trmatch.group('set')))
+            if accmatch:
+                data['accuracy'].append(float(accmatch.group('acc')))
 
         #Use NP arrays
         data['time'] = np.asarray(data['time'])
         data['auc'] = np.asarray(data['auc'])
         data['trainset'] = np.asarray(data['trainset'])
+        data['accuracy'] = np.asarray(data['accuracy'])
 
         print("Min AUC: {0}; Max AUC: {1}".format(data['auc'].min(),data['auc'].max()))
+        print("Min accuracy: {0}; Max accuracy: {1}".format(data['accuracy'].min(),data['accuracy'].max()))
         return data
 
 if __name__ == "__main__":

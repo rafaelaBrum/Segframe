@@ -40,6 +40,9 @@ class KNet(GenericModel):
         self.cache_m.registerFile(os.path.join(config.model_path,self._modelCache),self._modelCache)
         self.cache_m.registerFile(os.path.join(config.weights_path,self._weightsCache),self._weightsCache)
         self.cache_m.registerFile(os.path.join(config.weights_path,self._mgpu_weightsCache),self._mgpu_weightsCache)
+
+        self.single = None
+        self.parallel = None
         
     def get_model_cache(self):
         """
@@ -114,6 +117,9 @@ class KNet(GenericModel):
                 #run_metadata=p_mtd
                 )
 
+        self.single = model
+        self.parallel = parallel_model
+
         return (model,parallel_model)
 
     def _build_architecture(self,input_shape):
@@ -152,7 +158,7 @@ class BayesKNet(KNet):
                         padding='valid',
                     name='block1_conv2')(x)
         x = Activation('relu')(x)
-        x = MaxPooling2D(pool_size=(2, 2),strides=1)(x)
+        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
         x = Dropout(0.25)(x,training=True)
         x = Flatten()(x)
         x = Dense(128)(x)

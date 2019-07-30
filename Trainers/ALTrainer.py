@@ -159,7 +159,7 @@ class ActiveLearningTrainer(Trainer):
         etime = None
         for r in range(self._config.acquisition_steps):
             if self._config.info:
-                print("[ALTrainer] Starting acquisition step {0}".format(r+1))
+                print("[ALTrainer] Starting acquisition step {0}/{1}".format(r+1,self._config.acquisition_steps))
                 stime = time.time()
 
             #Save current dataset and report partial result (requires multi load for reading)
