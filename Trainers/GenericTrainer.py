@@ -259,7 +259,8 @@ class Trainer(object):
                                            mode='auto',min_lr=1e-7))
         callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=1))
         ## CalculateF1Score
-        callbacks.append(CalculateF1Score(val_generator,self._config.f1period,self._config.batch_size,self._config.info))
+        if self._config.f1period > 0:
+            callbacks.append(CalculateF1Score(val_generator,self._config.f1period,self._config.batch_size,self._config.info))
 
         if self._config.info:
             print(single.summary())

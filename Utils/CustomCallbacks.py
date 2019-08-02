@@ -31,6 +31,7 @@ class SaveLRCallback(Callback):
 class CalculateF1Score(Callback):
     """
     Calculates F1 score as a callback function. The right way to do it.
+    NOTE: ONLY WORKS FOR BINARY CLASSIFICATION PROBLEM
     https://stackoverflow.com/questions/43547402/how-to-calculate-f1-macro-in-keras
     """
 
