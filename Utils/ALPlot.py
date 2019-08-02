@@ -75,16 +75,40 @@ class Ploter(object):
         palette = plt.get_cmap('Set1')
 
         color = 0
+        plotAUC = False
+        min_x = []
+        max_x = []
+        min_y = []
+        max_y = []
         for k in data:
-            plt.plot(data[k]['trainset'],data[k]['auc'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
-            color += 1
-
+            if data[k]['auc'].shape[0] > 0:            
+                plt.plot(data[k]['trainset'],data[k]['auc'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
+                color += 1
+                plotAUC = True
+                min_x.append(data[k]['trainset'].min())
+                max_x.append(data[k]['trainset'].max())
+                min_y.append(data[k]['auc'].min())
+                max_y.append(data[k]['auc'].max())           
+            else:
+                plt.plot(data[k]['trainset'],data[k]['accuracy'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
+                color += 1
+                min_x.append(data[k]['trainset'].min())
+                max_x.append(data[k]['trainset'].max())                
+                min_y.append(data[k]['accuracy'].min())
+                max_y.append(data[k]['accuracy'].max())
+                
         plt.legend(loc=2,ncol=2)
+        plt.xticks(np.arange(100, max(max_x)+1, 100.0))
+        plt.yticks(np.arange(min(min_y), 1.0, 0.06))
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         plt.xlabel("Training set size")
-        plt.ylabel("AUC")
+        if plotAUC:
+            plt.ylabel("AUC")
+        else:
+            plt.ylabel("Accuracy")
 
         plt.tight_layout()
+        plt.grid(True)
         plt.show()
 
     def plotFromExec(self,data):
@@ -94,7 +118,7 @@ class Ploter(object):
         data = {}
 
         for d in al_dirs:
-            d_path = os.path.join(path,"AL-{0}".format(d))
+            d_path = "{0}-{1}".format(path,d)
             if os.path.isdir(d_path):
                 data[d] = self.parseSlurm(d_path)
 
@@ -169,7 +193,7 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 1:
         p = Ploter()
-        if os.path.isdir(sys.argv[1]):
+        if os.path.isdir(os.path.dirname(sys.argv[1])):
             if len(sys.argv) >= 3:
                 plot_dirs = sys.argv[2].split(',')
             else:
