@@ -166,3 +166,51 @@ class BayesKNet(KNet):
         output = Activation('softmax')(x)
         
         return Model(inp,output)
+
+class GalKNet(KNet):
+    """
+    Bayesian model for the KNet
+    """
+    def __init__(self,config,ds):
+        super(GalKNet,self).__init__(config=config,ds=ds,name = "GalKNet")
+
+    def _build_architecture(self,input_shape):
+        inp = Input(shape=input_shape)
+
+        #Block 1
+        x = Convolution2D(32, (3, 3),input_shape=input_shape,
+                        strides=1,
+                        padding='valid',
+                        name='block1_conv1')(inp)
+        x = Activation('relu')(x)
+
+        x = Convolution2D(32, (3, 3),
+                        strides=1,
+                        padding='valid',
+                    name='block1_conv2')(x)
+        x = Activation('relu')(x)
+        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
+        x = Dropout(0.25)(x,training=True)
+
+        #Block 2
+        x = Convolution2D(64, (3, 3),
+                        strides=1,
+                        padding='valid',
+                        name='block2_conv1')(inp)
+        x = Activation('relu')(x)
+
+        x = Convolution2D(64, (3, 3),
+                        strides=1,
+                        padding='valid',
+                    name='block2_conv2')(x)
+        x = Activation('relu')(x)
+        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
+        x = Dropout(0.25)(x,training=True)
+        
+        x = Flatten()(x)
+        x = Dense(128)(x)
+        x = Dropout(0.5)(x,training=True)
+        x = Dense(self._ds.nclasses)(x)
+        output = Activation('softmax')(x)
+        
+        return Model(inp,output)    

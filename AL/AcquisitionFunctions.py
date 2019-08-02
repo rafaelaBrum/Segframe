@@ -69,6 +69,11 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
         dropout_classes = np.array([dropout_classes]).T
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
 
+    #TODO: REMOVE
+    print("All dropout {0}:".format(All_Dropout_Classes.shape))
+    for i in np.random.choice(All_Dropout_Classes.shape[0],100,replace=False):
+        print("Predictions for image ({0}): {1}".format(i,All_Dropout_Classes[i]))
+    
     Variation = np.zeros(shape=(data_size))
 
     for t in range(data_size):
@@ -78,10 +83,19 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
         Predicted_Class, Mode = mode(L[1:])
         v = np.array(  [1 - Mode/float(mc_dp)])
         Variation[t] = v
-
+    
+    #TODO: REMOVE
+    print("Variation {0}:".format(data_size))
+    for i in np.random.choice(data_size,100,replace=False):
+        print("Variation for image ({0}): {1}".format(i,Variation[i]))
+        
     a_1d = Variation.flatten()
     x_pool_index = a_1d.argsort()[-query:][::-1]
 
+    #TODO: REMOVE
+    print("Selected item indexes: {0}".format(x_pool_index))
+    print("Selected item's variation: {0}".format(a_1d[x_pool_index]))
+    
     return x_pool_index
 
 def bayesian_bald(pred_model,generator,data_size,**kwargs):
