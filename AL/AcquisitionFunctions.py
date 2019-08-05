@@ -93,8 +93,10 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     x_pool_index = a_1d.argsort()[-query:][::-1]
 
     #TODO: REMOVE
+    print("a_1d.argsort()[-query:]: {0}".format(a_1d.argsort()[-query:]))
     print("Selected item indexes: {0}".format(x_pool_index))
     print("Selected item's variation: {0}".format(a_1d[x_pool_index]))
+    print("Maximum variation in pool: {0}".format(a_1d.max()))
     
     return x_pool_index
 

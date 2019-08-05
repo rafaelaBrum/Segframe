@@ -208,7 +208,7 @@ class GalKNet(KNet):
         x = Dropout(0.25)(x,training=True)
         
         x = Flatten()(x)
-        x = Dense(128)(x)
+        x = Dense(128,kernel_regularizer=regularizers.l2(0.001))(x)
         x = Dropout(0.5)(x,training=True)
         x = Dense(self._ds.nclasses)(x)
         output = Activation('softmax')(x)
