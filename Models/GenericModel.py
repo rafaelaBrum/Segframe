@@ -30,7 +30,12 @@ class GenericModel(ABC):
         return (width,height,channels)
             
     @abstractmethod
-    def build(self):
+    def build(self,**kwargs):
+        """
+        Possible parameters to pass in kwargs (some models may use them, others not):
+        data_size <int>: Training data size, usefull for custom parameter settings
+        pre_trained <boolean>: Should load a pre-trained model?
+        """
         pass
 
     @abstractmethod

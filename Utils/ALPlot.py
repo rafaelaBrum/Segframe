@@ -97,7 +97,7 @@ class Ploter(object):
                 min_y.append(data[k]['accuracy'].min())
                 max_y.append(data[k]['accuracy'].max())
                 
-        plt.legend(loc=2,ncol=2)
+        plt.legend(loc=4,ncol=2)
         plt.xticks(np.arange(100, max(max_x)+1, 100.0))
         plt.yticks(np.arange(min(min_y), 1.0, 0.06))
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
@@ -184,9 +184,10 @@ class Ploter(object):
         data['accuracy'] = np.asarray(data['accuracy'])
 
         if data['auc'].shape[0] > 0:
-            print("Min AUC: {0}; Max AUC: {1}".format(data['auc'].min(),data['auc'].max()))
+            print("Min AUC: {0}; Max AUC: {1}".format(data['auc'].min(),data['auc'].max()))            
         if data['accuracy'].shape[0] > 0:
             print("Min accuracy: {0}; Max accuracy: {1}".format(data['accuracy'].min(),data['accuracy'].max()))
+
         return data
 
 if __name__ == "__main__":

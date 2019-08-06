@@ -53,7 +53,7 @@ class VGG16(GenericModel):
         """
         return self.cache_m.fileLocation(self._weightsCache)
     
-    def build(self,pre_trained=False):
+    def build(self,**kwargs):
         """
         Returns a VGG 16 model instance, final fully-connected layers are substituted by Conv2Ds
         
@@ -65,7 +65,6 @@ class VGG16(GenericModel):
             input_shape = (channels, height, width)
         else:
             input_shape = (height, width, channels)
-
             
         self.cache_m = CacheManager()
         

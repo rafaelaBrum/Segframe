@@ -62,14 +62,18 @@ class KNet(GenericModel):
         """
         return self.cache_m.fileLocation(self._mgpu_weightsCache)
     
-    def build(self,pre_trained=False):
+    def build(self,**kwargs):
         """
         Returns a VGG 16 model instance, final fully-connected layers are substituted by Conv2Ds
         
         @param pre_trained <boolean>: returned model should be pre-trained or not
+        @param data_size <int>: size of the training dataset
         """
         width,height,channels = self._check_input_shape()
-        
+
+        if 'data_size' in kwargs:
+            self.data_size = kwargs['data_size']
+            
         if backend.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
         else:
@@ -175,6 +179,14 @@ class GalKNet(KNet):
         super(GalKNet,self).__init__(config=config,ds=ds,name = "GalKNet")
 
     def _build_architecture(self,input_shape):
+
+        if hasattr(self,'data_size'):
+            weight_decay = 2.5/float(self.data_size)
+            if self._config.verbose > 1:
+                print("Setting weight decay to: {0}".format(weight_decay))
+        else:
+            weight_decay = 0.01
+            
         inp = Input(shape=input_shape)
 
         #Block 1
@@ -208,7 +220,7 @@ class GalKNet(KNet):
         x = Dropout(0.25)(x,training=True)
         
         x = Flatten()(x)
-        x = Dense(128,kernel_regularizer=regularizers.l2(0.325))(x)
+        x = Dense(128,kernel_regularizer=regularizers.l2(weight_decay))(x)
         x = Dropout(0.5)(x,training=True)
         x = Dense(self._ds.nclasses)(x)
         output = Activation('softmax')(x)

@@ -216,7 +216,7 @@ class ActiveLearningTrainer(Trainer):
             'dps':(self.pool_x,self.pool_y),
             'classes':self._ds.nclasses,
             'dim':fix_dim,
-            'batch_size':self._config.gpu_count * self._config.batch_size,
+            'batch_size':self._config.gpu_count * self._config.batch_size if self._config.gpu_count > 0 else self._config.batch_size,
             'image_generator':pool_prep,
             'shuffle':True,
             'verbose':self._config.verbose}

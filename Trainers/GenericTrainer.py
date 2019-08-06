@@ -212,7 +212,7 @@ class Trainer(object):
 
         train_generator,val_generator = self._choose_generator(train_data,val_data)
         
-        single,parallel = model.build()
+        single,parallel = model.build(data_size=len(train_data[0]))
         if not parallel is None:
             training_model = parallel
         else:
