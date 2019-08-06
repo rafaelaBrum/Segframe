@@ -62,8 +62,8 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
         #Keep verbosity in 0 to gain speed 
         proba = pred_model.predict_generator(generator,
                                                 workers=4*cpu_count,
-                                                max_queue_size=50*gpu_count,
-                                                verbose=0)
+                                                max_queue_size=100*gpu_count,
+                                                verbose=1)
 
         dropout_classes = proba.argmax(axis=-1)    
         dropout_classes = np.array([dropout_classes]).T

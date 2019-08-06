@@ -178,13 +178,13 @@ class GalKNet(KNet):
         inp = Input(shape=input_shape)
 
         #Block 1
-        x = Convolution2D(32, (3, 3),input_shape=input_shape,
+        x = Convolution2D(32, (4, 4),input_shape=input_shape,
                         strides=1,
                         padding='valid',
                         name='block1_conv1')(inp)
         x = Activation('relu')(x)
 
-        x = Convolution2D(32, (3, 3),
+        x = Convolution2D(32, (4, 4),
                         strides=1,
                         padding='valid',
                     name='block1_conv2')(x)
@@ -193,13 +193,13 @@ class GalKNet(KNet):
         x = Dropout(0.25)(x,training=True)
 
         #Block 2
-        x = Convolution2D(64, (3, 3),
+        x = Convolution2D(64, (4, 4),
                         strides=1,
                         padding='valid',
                         name='block2_conv1')(inp)
         x = Activation('relu')(x)
 
-        x = Convolution2D(64, (3, 3),
+        x = Convolution2D(64, (4, 4),
                         strides=1,
                         padding='valid',
                     name='block2_conv2')(x)
@@ -208,7 +208,7 @@ class GalKNet(KNet):
         x = Dropout(0.25)(x,training=True)
         
         x = Flatten()(x)
-        x = Dense(128,kernel_regularizer=regularizers.l2(0.001))(x)
+        x = Dense(128,kernel_regularizer=regularizers.l2(0.325))(x)
         x = Dropout(0.5)(x,training=True)
         x = Dense(self._ds.nclasses)(x)
         output = Activation('softmax')(x)
