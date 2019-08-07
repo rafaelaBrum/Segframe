@@ -218,7 +218,7 @@ class ActiveLearningTrainer(Trainer):
             'dim':fix_dim,
             'batch_size':self._config.gpu_count * self._config.batch_size if self._config.gpu_count > 0 else self._config.batch_size,
             'image_generator':pool_prep,
-            'shuffle':True,
+            'shuffle':False,
             'verbose':self._config.verbose}
 
         generator = ThreadedGenerator(**generator_params)
