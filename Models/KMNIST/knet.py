@@ -148,6 +148,13 @@ class BayesKNet(KNet):
         super(BayesKNet,self).__init__(config=config,ds=ds,name = "BayesKNet")
 
     def _build_architecture(self,input_shape):
+        if hasattr(self,'data_size'):
+            weight_decay = 2.5/float(self.data_size)
+            if self._config.verbose > 1:
+                print("Setting weight decay to: {0}".format(weight_decay))
+        else:
+            weight_decay = 0.01
+            
         inp = Input(shape=input_shape)
 
         x = Convolution2D(32, (3, 3),input_shape=input_shape,
@@ -155,16 +162,17 @@ class BayesKNet(KNet):
                         padding='valid',
                         name='block1_conv1')(inp)
         x = Activation('relu')(x)
-
-        x = Convolution2D(64, (3, 3),
+        x = Convolution2D(32, (3, 3),
                         strides=1,
                         padding='valid',
                     name='block1_conv2')(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
         x = Dropout(0.25)(x,training=True)
+        
         x = Flatten()(x)
-        x = Dense(128)(x)
+        x = Dense(128,kernel_regularizer=regularizers.l2(weight_decay))(x)
+        x = Activation('relu')(x)        
         x = Dropout(0.5)(x,training=True)
         x = Dense(self._ds.nclasses)(x)
         output = Activation('softmax')(x)
