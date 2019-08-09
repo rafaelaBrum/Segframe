@@ -19,8 +19,8 @@ class GenericIterator(Iterator):
         
         # Arguments
         image_data_generator: Instance of `ImageDataGenerator`
-        data: tuple (X,Y) where X are samples, Y are corresponding labels
-        to use for random transformations and normalization.
+        data: tuple (X,Y) where X are samples, Y are corresponding labels to use for random transformations and normalization.
+        classes: number of classes
         batch_size: Integer, size of a batch.
         shuffle: Boolean, whether to shuffle the data between epochs.
         seed: Random seed for data shuffling.

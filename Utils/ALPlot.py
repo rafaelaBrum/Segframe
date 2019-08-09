@@ -14,7 +14,7 @@ import os
 import re
 import sys
 
-class Ploter(object):
+class Plotter(object):
 
     def __init__(self,data=None, path=None):
         if not path is None and os.path.isdir(path):
@@ -81,7 +81,7 @@ class Ploter(object):
         min_y = []
         max_y = []
         for k in data:
-            if data[k]['auc'].shape[0] > 0:            
+            if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:            
                 plt.plot(data[k]['trainset'],data[k]['auc'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
                 color += 1
                 plotAUC = True
@@ -123,12 +123,26 @@ class Ploter(object):
                 data[d] = self.parseSlurm(d_path)
 
         return data
-    
+
+    def extractNPData(self,path):
+        if not os.path.isfile(path):
+            print("Given file path is incorrect. Check that.")
+            sys.exit(1)
+
+        data = np.load(path)
+        return data
+
+    def generateIndexes(self,size,start,step):
+        """
+        Should be used when X values are not given but are a sequence of fixed period integers
+        """
+        return np.asarray(range(start,(size*step)+start,step))
+                              
     def parseSlurm(self,path=None):
 
         if path is None and self.path is None:
             print("No directory found")
-            sys.exit(-1)
+            sys.exit(1)
         elif path is None:
             path = self.path
 
@@ -193,7 +207,7 @@ class Ploter(object):
 if __name__ == "__main__":
 
     if len(sys.argv) > 1:
-        p = Ploter()
+        p = Plotter()
         if os.path.isdir(os.path.dirname(sys.argv[1])):
             if len(sys.argv) >= 3:
                 plot_dirs = sys.argv[2].split(',')
@@ -213,7 +227,7 @@ if __name__ == "__main__":
     else:
         dataset = str(input("Enter dataset path: "))
 
-        p = Ploter(path=dataset)
+        p = Plotter(path=dataset)
         p.draw_data(p.parseSlurm(),'SLURM log')
 
     
