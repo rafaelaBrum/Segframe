@@ -88,7 +88,8 @@ class Plotter(object):
                 min_x.append(data[k]['trainset'].min())
                 max_x.append(data[k]['trainset'].max())
                 min_y.append(data[k]['auc'].min())
-                max_y.append(data[k]['auc'].max())           
+                max_y.append(data[k]['auc'].max())
+                print(data[k]['trainset'])
             else:
                 plt.plot(data[k]['trainset'],data[k]['accuracy'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
                 color += 1
@@ -98,7 +99,7 @@ class Plotter(object):
                 max_y.append(data[k]['accuracy'].max())
                 
         plt.legend(loc=4,ncol=2)
-        plt.xticks(np.arange(100, max(max_x)+1, 100.0))
+        plt.xticks(np.arange(min(min_x), max(max_x)+1, min(min_x)))
         plt.yticks(np.arange(min(min_y), 1.0, 0.06))
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         plt.xlabel("Training set size")
