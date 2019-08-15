@@ -130,12 +130,10 @@ class BayesVGG16(GenericModel):
 
         layer_dict = dict([(layer.name, layer) for layer in original_vgg16.layers])
 
+        S = 1000
         if hasattr(self,'data_size'):
-            weight_decay = 2.5/float(self.data_size)
-            if self._config.verbose > 1:
-                print("Setting weight decay to: {0}".format(weight_decay))
-        else:
-            weight_decay = 0.01
+            S = self.data_size
+        wd = lambda p,N: (1-p)*0.5/N
         
         inp = Input(shape=input_shape)
         x = Convolution2D(64, (3, 3),input_shape=input_shape,
@@ -143,7 +141,7 @@ class BayesVGG16(GenericModel):
                     padding='valid',
                     name='block1_conv1',
                     weights=layer_dict['block1_conv1'].get_weights(),
-                    kernel_regularizer=regularizers.l2(weight_decay))(inp)
+                    kernel_regularizer=regularizers.l2(wd(0.1,S)))(inp)
         #x = GroupNormalization(groups=4,axis=-1))(x)
         x = Activation('relu')(x)
         x = Dropout(0.1)(x,training=True)
@@ -154,7 +152,7 @@ class BayesVGG16(GenericModel):
                     padding='valid',
                     name='block1_conv2',
                     weights=layer_dict['block1_conv2'].get_weights(),
-                    kernel_regularizer=regularizers.l2(weight_decay))(x)
+                    kernel_regularizer=regularizers.l2(wd(0.1,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
@@ -166,7 +164,7 @@ class BayesVGG16(GenericModel):
                     padding='valid',
                     name='block2_conv1',
                     weights=layer_dict['block2_conv1'].get_weights(),
-                    kernel_regularizer=regularizers.l2(weight_decay))(x)
+                    kernel_regularizer=regularizers.l2(wd(0.1,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = Dropout(0.1)(x,training=True)
@@ -177,7 +175,7 @@ class BayesVGG16(GenericModel):
                 padding='valid',
                 name='block2_conv2',
                 weights=layer_dict['block2_conv2'].get_weights(),
-                kernel_regularizer=regularizers.l2(weight_decay))(x)
+                kernel_regularizer=regularizers.l2(wd(0.1,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
@@ -189,7 +187,7 @@ class BayesVGG16(GenericModel):
                 padding='valid',
                 name='block3_conv1',
                 weights=layer_dict['block3_conv1'].get_weights(),
-                kernel_regularizer=regularizers.l2(weight_decay))(x)
+                kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = Dropout(0.2)(x,training=True)
@@ -200,7 +198,7 @@ class BayesVGG16(GenericModel):
                 padding='valid',
                 name='block3_conv2',
                 weights=layer_dict['block3_conv2'].get_weights(),
-                kernel_regularizer=regularizers.l2(weight_decay))(x)
+                kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = Dropout(0.2)(x,training=True)
@@ -211,7 +209,7 @@ class BayesVGG16(GenericModel):
             padding='valid',
             name='block3_conv3',
             weights=layer_dict['block3_conv3'].get_weights(),
-            kernel_regularizer=regularizers.l2(weight_decay))(x)
+            kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
@@ -223,7 +221,7 @@ class BayesVGG16(GenericModel):
             padding='valid',
             name='block4_conv1',
             weights=layer_dict['block4_conv1'].get_weights(),
-            kernel_regularizer=regularizers.l2(weight_decay))(x)
+            kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = Dropout(0.2)(x,training=True)
@@ -234,7 +232,7 @@ class BayesVGG16(GenericModel):
             padding='valid',
             name='block4_conv2',
             weights=layer_dict['block4_conv2'].get_weights(),
-            kernel_regularizer=regularizers.l2(weight_decay))(x)
+            kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = Dropout(0.2)(x,training=True)
@@ -245,7 +243,7 @@ class BayesVGG16(GenericModel):
             padding='valid',
             name='block4_conv3',
             weights=layer_dict['block4_conv3'].get_weights(),
-            kernel_regularizer=regularizers.l2(weight_decay))(x)
+            kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
@@ -258,7 +256,7 @@ class BayesVGG16(GenericModel):
             name='block5_conv1',
             #kernel_initializer='he_normal',
             weights=layer_dict['block5_conv1'].get_weights(),
-            kernel_regularizer=regularizers.l2(weight_decay))(x)
+            kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = Dropout(0.3)(x,training=True)
@@ -270,7 +268,7 @@ class BayesVGG16(GenericModel):
             name='block5_conv2',
             #kernel_initializer='he_normal',
             weights=layer_dict['block5_conv2'].get_weights(),
-            kernel_regularizer=regularizers.l2(weight_decay))(x)
+            kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = Dropout(0.3)(x,training=True)
@@ -282,7 +280,7 @@ class BayesVGG16(GenericModel):
             name='block5_conv3',
             #kernel_initializer='he_normal',
             weights=layer_dict['block5_conv3'].get_weights(),
-            kernel_regularizer=regularizers.l2(weight_decay))(x)
+            kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
@@ -293,11 +291,11 @@ class BayesVGG16(GenericModel):
         #    layer.trainable = False
         
         x = Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal',
-                              kernel_regularizer=regularizers.l2(weight_decay))(x)
+                              kernel_regularizer=regularizers.l2(wd(0.5,S)))(x)
         x = Activation('relu')(x)
         x = Dropout(0.5)(x,training=True)
         x = Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal',
-                              kernel_regularizer=regularizers.l2(weight_decay))(x)
+                              kernel_regularizer=regularizers.l2(wd(0.5,S)))(x)
         x = Activation('relu')(x)
         x = Dropout(0.5)(x,training=True)
         x = Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal')(x)

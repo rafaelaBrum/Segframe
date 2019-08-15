@@ -98,8 +98,10 @@ class Plotter(object):
                 min_y.append(data[k]['accuracy'].min())
                 max_y.append(data[k]['accuracy'].max())
                 
-        plt.legend(loc=4,ncol=2)
-        plt.xticks(np.arange(min(min_x), max(max_x)+1, min(min_x)))
+        plt.legend(loc=2,ncol=2)
+        plt.xticks(np.arange(min(min_x), max(max_x)+1, 2000))
+        if max(max_x) > 1000:
+            plt.xticks(rotation=30)
         plt.yticks(np.arange(min(min_y), 1.0, 0.06))
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         plt.xlabel("Training set size")
