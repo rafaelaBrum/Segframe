@@ -69,10 +69,10 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
         dropout_classes = np.array([dropout_classes]).T
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
 
-    #TODO: REMOVE
-    print("All dropout {0}:".format(All_Dropout_Classes.shape))
-    for i in np.random.choice(All_Dropout_Classes.shape[0],100,replace=False):
-        print("Predictions for image ({0}): {1}".format(i,All_Dropout_Classes[i]))
+    if verbose > 0:
+        print("All dropout {0}:".format(All_Dropout_Classes.shape))
+        for i in np.random.choice(All_Dropout_Classes.shape[0],100,replace=False):
+            print("Predictions for image ({0}): {1}".format(i,All_Dropout_Classes[i]))
     
     Variation = np.zeros(shape=(data_size))
 
@@ -84,18 +84,18 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
         v = np.array(  [1 - Mode/float(mc_dp)])
         Variation[t] = v
     
-    #TODO: REMOVE
-    print("Variation {0}:".format(data_size))
-    for i in np.random.choice(data_size,100,replace=False):
-        print("Variation for image ({0}): {1}".format(i,Variation[i]))
+    if verbose > 0:
+        print("Variation {0}:".format(data_size))
+        for i in np.random.choice(data_size,100,replace=False):
+            print("Variation for image ({0}): {1}".format(i,Variation[i]))
         
     a_1d = Variation.flatten()
     x_pool_index = a_1d.argsort()[-query:][::-1]
 
-    #TODO: REMOVE
-    #print("Selected item indexes: {0}".format(x_pool_index))
-    print("Selected item's variation: {0}".format(a_1d[x_pool_index]))
-    print("Maximum variation in pool: {0}".format(a_1d.max()))
+    if verbose > 0:
+        #print("Selected item indexes: {0}".format(x_pool_index))
+        print("Selected item's variation: {0}".format(a_1d[x_pool_index]))
+        print("Maximum variation in pool: {0}".format(a_1d.max()))
     
     return x_pool_index
 
@@ -104,20 +104,75 @@ def bayesian_bald(pred_model,generator,data_size,**kwargs):
     Calculation as defined in paper:
     Bayesian convolutional neural networks with Bernoulli approximate variational inference
     """
-    if 'model' in kwargs:
-        model = kwargs['model']
-    else:
-        return None
 
     if 'config' in kwargs:
         mc_dp = kwargs['config'].dropout_steps
+        gpu_count = kwargs['config'].gpu_count
+        cpu_count = kwargs['config'].cpu_count
+        verbose = kwargs['config'].verbose
+        pbar = kwargs['config'].progressbar
+        query = kwargs['config'].acquire
     else:
-        mc_dp = 30
+        return None        
 
-    batch_size = kwargs['config'].batch_size
+    All_Entropy_Dropout = np.zeros(shape=data_size)
+    score_All = np.zeros(shape=(data_size, generator.classes))
     
+    if pbar:
+        l = tqdm(range(mc_dp), desc="MC Dropout",position=0)
+    else:
+        if kwargs['config'].info:
+            print("Starting MC dropout sampling...")
+        l = range(mc_dp)
+                
+    for d in l:
+        if pbar:
+            print("\n")
+        elif kwargs['config'].info:
+            print("Step {0}/{1}".format(d+1,mc_dp))
+
+        dropout_score = pred_model.predict_generator(generator,
+                                                        workers=4*cpu_count,
+                                                        max_queue_size=100*gpu_count,
+                                                        verbose=0)
+        #computing G_X
+        score_All = score_All + dropout_score
+
+        #computing F_X
+        dropout_score_log = np.log2(dropout_score)
+        Entropy_Compute = - np.multiply(dropout_score, dropout_score_log)
+        Entropy_Per_Dropout = np.sum(Entropy_Compute, axis=1)
+        
+        All_Entropy_Dropout = All_Entropy_Dropout + Entropy_Per_Dropout 
 
 
+    Avg_Pi = np.divide(score_All, mc_dp)
+    Log_Avg_Pi = np.log2(Avg_Pi)
+    Entropy_Avg_Pi = - np.multiply(Avg_Pi, Log_Avg_Pi)
+    Entropy_Average_Pi = np.sum(Entropy_Avg_Pi, axis=1)
+
+    G_X = Entropy_Average_Pi
+    
+    Average_Entropy = np.divide(All_Entropy_Dropout, mc_dp)
+
+    F_X = Average_Entropy
+
+    U_X = G_X - F_X
+
+    # THIS FINDS THE MINIMUM INDEX 
+    # a_1d = U_X.flatten()
+    # x_pool_index = a_1d.argsort()[-Queries:]
+
+    a_1d = U_X.flatten()
+    x_pool_index = a_1d.argsort()[-query:][::-1]    
+
+    if verbose > 0:
+        #print("Selected item indexes: {0}".format(x_pool_index))
+        print("Selected item's average entropy: {0}".format(a_1d[x_pool_index]))
+        print("Maximum entropy in pool: {0}".format(a_1d.max()))
+    
+    return x_pool_index
+    
 def random_sample(pred_model,generator,data_size,**kwargs):
     """
     Returns a random list of indexes from the given dataset
