@@ -33,17 +33,28 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     verbose <int>: verbosity level
     pbar <boolean>: user progress bars
     """
-
+    from Utils import CacheManager
+    cache_m = CacheManager()
+    
     if 'config' in kwargs:
-        mc_dp = kwargs['config'].dropout_steps
-        gpu_count = kwargs['config'].gpu_count
-        cpu_count = kwargs['config'].cpu_count
-        verbose = kwargs['config'].verbose
-        pbar = kwargs['config'].progressbar
-        query = kwargs['config'].acquire
+        config = kwargs['config']
+        mc_dp = config.dropout_steps
+        gpu_count = config.gpu_count
+        cpu_count = config.cpu_count
+        verbose = config.verbose
+        pbar = config.progressbar
+        query = config.acquire
+        save_var = config.save_var
     else:
         return None        
 
+    if 'acquisition' in kwargs:
+        r = kwargs['acquisition']
+
+    if save_var:
+        fid = 'al-uncertainty-{1}-r{0}.pik'.format(r,config.ac_function)
+        cache_m.registerFile(os.path.join(config.logdir,fid),fid)
+        
     All_Dropout_Classes = np.zeros(shape=(data_size,1))
 
     if pbar:
@@ -92,6 +103,9 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     a_1d = Variation.flatten()
     x_pool_index = a_1d.argsort()[-query:][::-1]
 
+    if save_var:
+        cache_m.dump((x_pool_index,a_1d),fid)
+        
     if verbose > 0:
         #print("Selected item indexes: {0}".format(x_pool_index))
         print("Selected item's variation: {0}".format(a_1d[x_pool_index]))
@@ -104,16 +118,27 @@ def bayesian_bald(pred_model,generator,data_size,**kwargs):
     Calculation as defined in paper:
     Bayesian convolutional neural networks with Bernoulli approximate variational inference
     """
+    from Utils import CacheManager
+    cache_m = CacheManager()
 
     if 'config' in kwargs:
-        mc_dp = kwargs['config'].dropout_steps
-        gpu_count = kwargs['config'].gpu_count
-        cpu_count = kwargs['config'].cpu_count
-        verbose = kwargs['config'].verbose
-        pbar = kwargs['config'].progressbar
-        query = kwargs['config'].acquire
+        config = kwargs['config']
+        mc_dp = config.dropout_steps
+        gpu_count = config.gpu_count
+        cpu_count = config.cpu_count
+        verbose = config.verbose
+        pbar = config.progressbar
+        query = config.acquire
+        save_var = config.save_var
     else:
-        return None        
+        return None
+
+    if 'acquisition' in kwargs:
+        r = kwargs['acquisition']
+
+    if save_var:
+        fid = 'al-uncertainty-{1}-r{0}.pik'.format(r,config.ac_function)
+        cache_m.registerFile(os.path.join(config.logdir,fid),fid)
 
     All_Entropy_Dropout = np.zeros(shape=data_size)
     score_All = np.zeros(shape=(data_size, generator.classes))
@@ -166,6 +191,9 @@ def bayesian_bald(pred_model,generator,data_size,**kwargs):
     a_1d = U_X.flatten()
     x_pool_index = a_1d.argsort()[-query:][::-1]    
 
+    if save_var:
+        cache_m.dump((x_pool_index,a_1d),fid)
+        
     if verbose > 0:
         #print("Selected item indexes: {0}".format(x_pool_index))
         print("Selected item's average entropy: {0}".format(a_1d[x_pool_index]))

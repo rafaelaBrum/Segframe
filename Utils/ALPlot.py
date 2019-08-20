@@ -99,7 +99,7 @@ class Plotter(object):
                 max_y.append(data[k]['accuracy'].max())
                 
         plt.legend(loc=2,ncol=2)
-        plt.xticks(np.arange(min(min_x), max(max_x)+1, 2000))
+        plt.xticks(np.arange(min(min_x), max(max_x)+1, 100))
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
         plt.yticks(np.arange(min(min_y), 1.0, 0.06))

@@ -204,7 +204,9 @@ if __name__ == "__main__":
     al_args.add_argument('-dropout_steps', dest='dropout_steps', type=int, 
         help='For Bayesian CNNs, sample the network this many times (Default: 100).', default=100)
     al_args.add_argument('-bal', action='store_true', dest='balance',
-        help='Balance dataset samples between classes.',default=False)    
+        help='Balance dataset samples between classes.',default=False)
+    al_args.add_argument('-sv', action='store_true', dest='save_var',
+        help='Save aquisition variations array and selected items indexes.',default=False)    
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')

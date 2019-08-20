@@ -171,7 +171,7 @@ class ActiveLearningTrainer(Trainer):
 
             predictor.run(self.test_x,self.test_y)
             
-            if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model):
+            if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are in order")
             
@@ -218,7 +218,7 @@ class ActiveLearningTrainer(Trainer):
             'dim':fix_dim,
             'batch_size':self._config.gpu_count * self._config.batch_size if self._config.gpu_count > 0 else self._config.batch_size,
             'image_generator':pool_prep,
-            'shuffle':False,
+            'shuffle':False, #DO NOT SET TRUE!
             'verbose':self._config.verbose}
 
         generator = ThreadedGenerator(**generator_params)
