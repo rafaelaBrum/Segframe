@@ -13,6 +13,7 @@ import numpy as np
 import os
 import re
 import sys
+import argparse
 
 class Plotter(object):
 
@@ -22,6 +23,13 @@ class Plotter(object):
         else:
             self.path = None
 
+    def draw_uncertainty(self,data,title=''):
+        """
+        Data: list of tuples in the form (indexes,uncertainties), where both indexes and uncertainties are numpy
+        arrays.
+        """
+        pass
+    
     def draw_data(self,data,title=''):
 
         fig = plt.figure(1)
@@ -98,7 +106,7 @@ class Plotter(object):
                 min_y.append(data[k]['accuracy'].min())
                 max_y.append(data[k]['accuracy'].max())
                 
-        plt.legend(loc=2,ncol=2)
+        plt.legend(loc=4,ncol=2)
         plt.xticks(np.arange(min(min_x), max(max_x)+1, 100))
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
@@ -207,30 +215,95 @@ class Plotter(object):
 
         return data
 
+
+def retrieveUncertainty(config):
+    unc_files = []
+    import pickle
+    
+    if not config.all:
+        for i in config.ac_n:
+            unc_file = 'al-uncertainty-{}-r{}.pik'.format(config.ac_func,i)
+            if os.path.isfile(os.path.join(config.sdir,unc_file)):
+                unc_files.append(unc_file)
+    else:
+        items = os.listdir(config.sdir)            
+        for f in items:
+            if f.startswith('al-uncertainty'):
+                unc_files.append(f)
+
+    data = []
+
+    for f in unc_files:
+        with open(os.path.join(config.sdir,f),'rb') as fd:
+            indexes,uncertainties = pickle.load(fd)
+        data.append((indexes,uncertainties))
+
+    return data
+
+    
 if __name__ == "__main__":
 
-    if len(sys.argv) > 1:
+
+    #Parse input parameters
+    arg_groups = []
+    parser = argparse.ArgumentParser(description='Convolunional Neural \
+        Network for Image Segmentation.')
+
+    ##Multiline SLURM parse
+    parser.add_argument('--multi', action='store_true', dest='multi', default=False, 
+        help='Plot multiple lines from slurm files.')
+    parser.add_argument('-r', dest='results', type=str,default='results', 
+        help='Directory containing results.')
+    parser.add_argument('-ids', dest='ids', nargs='+', type=int, 
+        help='Experiment IDs to plot.', default=None,required=False)
+    parser.add_argument('-t', dest='title', type=str,default='AL Experiment', 
+        help='Figure title.')
+    parser.add_argument('-type', dest='tmode', type=str, 
+        help='Experiment type: \n \
+        AL - General active learning experiment; \n \
+        MN - MNIST dataset experiment.',
+       choices=['AL','MN'],default='AL')
+    
+    ##Single experiment plot
+    parser.add_argument('--single', action='store_true', dest='single', default=False, 
+        help='Plot data from a single experiment.')
+    parser.add_argument('-sd', dest='sdir', type=str,default=None, 
+        help='Experiment result path (should contain an slurm file).')    
+
+    ##Draw uncertainties
+    parser.add_argument('--uncertainty', action='store_true', dest='unc', default=False, 
+        help='Plot experiment uncertainties selected acquisitions.')
+    parser.add_argument('-ac', dest='ac_n', nargs='+', type=int, 
+        help='Acquisitions to plot.', default=None,required=False)
+    parser.add_argument('-all', action='store_true', dest='all', default=False, 
+        help='Plot all acquisitions.')
+    parser.add_argument('-ac_func', dest='ac_func', type=str,default='bayesian_bald', 
+        help='Function to look for uncertainties.')
+    
+    config, unparsed = parser.parse_known_args()
+
+    if config.ids is None and config.sdir is None:
+        print("You should either specify an ID or a full path to grab data")
+        sys.exit(1)
+        
+    exp_type = os.path.join(config.results,config.tmode)
+    if not os.path.isdir(config.results):
+        print("Directory not found: {}".format(config.results))
+        sys.exit(1)
+        
+    if config.multi:
         p = Plotter()
-        if os.path.isdir(os.path.dirname(sys.argv[1])):
-            if len(sys.argv) >= 3:
-                plot_dirs = sys.argv[2].split(',')
-            else:
-                plot_dirs = str(input("Enter AL dir numbers to plot (comma separated): ")).split(',')
-            data = p.parseResults(sys.argv[1],plot_dirs)
-            if len(sys.argv) == 4:
-                title = sys.argv[3]
-            else:
-                title = 'AL Experiment'
+        data = p.parseResults(exp_type,config.ids)
+        p.draw_multiline(data,config.title)
+                
+    elif config.single:
+        p = Plotter(path=config.results)
+        p.draw_data(p.parseSlurm(),config.title)
 
-            p.draw_multiline(data,title)
-        else:
-            print("First argument should be a directory path where AL results are.")
-            sys.exit(-1)
-            
-    else:
-        dataset = str(input("Enter dataset path: "))
+    elif config.unc:
+        p = Plotter()
 
-        p = Plotter(path=dataset)
-        p.draw_data(p.parseSlurm(),'SLURM log')
+        data = retrieveUncertainty(config)
+        p.draw_uncertainty(data,config.title)
 
     

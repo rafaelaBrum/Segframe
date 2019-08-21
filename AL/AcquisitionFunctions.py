@@ -146,14 +146,14 @@ def bayesian_bald(pred_model,generator,data_size,**kwargs):
     if pbar:
         l = tqdm(range(mc_dp), desc="MC Dropout",position=0)
     else:
-        if kwargs['config'].info:
+        if config.info:
             print("Starting MC dropout sampling...")
         l = range(mc_dp)
                 
     for d in l:
         if pbar:
             print("\n")
-        elif kwargs['config'].info:
+        elif config.info:
             print("Step {0}/{1}".format(d+1,mc_dp))
 
         dropout_score = pred_model.predict_generator(generator,
