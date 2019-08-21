@@ -206,8 +206,8 @@ if __name__ == "__main__":
     al_args.add_argument('-bal', action='store_true', dest='balance',
         help='Balance dataset samples between classes.',default=False)
     al_args.add_argument('-sv', action='store_true', dest='save_var',
-        help='Save aquisition variations array and selected items indexes.',default=False)    
-    
+        help='Save aquisition variations array and selected items indexes.',default=False)
+
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')
     arg_groups.append(post_args)
