@@ -4,6 +4,7 @@
 
 #import matplotlib
 #matplotlib.use('macosx')
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.ticker import MaxNLocator
@@ -23,13 +24,70 @@ class Plotter(object):
         else:
             self.path = None
 
-    def draw_uncertainty(self,data,title=''):
+    def draw_uncertainty(self,data,xticks,spread=1,title=''):
         """
         Data: list of tuples in the form (indexes,uncertainties), where both indexes and uncertainties are numpy
         arrays.
         """
-        pass
-    
+        mpl.rcParams['agg.path.chunksize'] = 1000000
+        n_points = 20000
+        plots = []
+        maxu = 0.0
+        pl1,pl2 = None,None
+        for k in range(len(data)):
+            indexes,unc = data[k]
+            selected = unc[indexes]
+            unselected = np.delete(unc,indexes)
+            mk = np.max(unselected)
+            if mk > maxu:
+                maxu = mk
+            pl1 = plt.plot(np.random.rand(selected.shape[0])*spread+xticks[k],selected, 'oc',alpha=0.6)
+            pl2 = plt.plot(np.random.rand(n_points)*spread+xticks[k],np.random.choice(unselected,n_points),
+                         'oy',markersize=2,alpha=0.5)
+            
+        plots.append(pl1)
+        plots.append(pl2)
+
+        labels = ['Selected images','Unselected images']
+        plt.legend(plots,labels=labels,loc=4,ncol=2)
+        plt.xticks(xticks)
+        plt.yticks(np.arange(0.0, maxu+0.1, 0.2))
+        plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
+        plt.xlabel("Acquisition #")
+        plt.ylabel("Uncertainty")
+
+        plt.tight_layout()
+        plt.grid(True)
+        plt.show()
+
+    def draw_stats(self,data,xticks,confidence=2,spread=1,title=''):
+        """
+        @param data <list>: a list as returned by calculate_stats
+        """
+
+        plots = []
+        for d in data:
+            x_data,y_data,dev,y_label = d
+            _,ax = plt.subplots()
+            plots.append(ax)
+            ax.plot(x_data, y_data, lw = 1, color = '#539caf', alpha = 1)
+            # Shade the confidence interval
+            low_ci = y_data - confidence*dev
+            upper_ci = y_data + confidence*dev
+            ax.fill_between(x_data, low_ci, upper_ci, color = '#539caf', alpha = 0.4)
+            ax.set_xlabel("Trainset size")
+            ax.set_ylabel(y_label)
+
+        # Label the axes and provide a title
+        labels = ['Mean','{} STD'.format(confidence)]
+        plt.legend(plots,labels=labels,loc=4,ncol=2)
+        plt.xticks(np.arange(min(x_data), max(x_data)+xticks, xticks))
+        plt.yticks(np.arange(np.min(low_ci)-0.05, np.max(upper_ci)+0.05, 0.1))
+        plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')            
+        plt.tight_layout()
+        plt.grid(True)
+        plt.show()
+        
     def draw_data(self,data,title=''):
 
         fig = plt.figure(1)
@@ -78,7 +136,7 @@ class Plotter(object):
         plt.tight_layout()
         plt.show()
 
-    def draw_multiline(self,data,title):
+    def draw_multiline(self,data,title,xtick):
 
         palette = plt.get_cmap('Set1')
 
@@ -89,7 +147,11 @@ class Plotter(object):
         min_y = []
         max_y = []
         for k in data:
-            if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:            
+            if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
+                #Repeat last point if needed
+                if data[k]['trainset'].shape[0] > data[k]['auc'].shape[0]:
+                    data[k]['auc'].append(data[k]['auc'][-1])
+                    
                 plt.plot(data[k]['trainset'],data[k]['auc'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
                 color += 1
                 plotAUC = True
@@ -99,6 +161,10 @@ class Plotter(object):
                 max_y.append(data[k]['auc'].max())
                 print(data[k]['trainset'])
             else:
+                #Repeat last point if needed
+                if data[k]['trainset'].shape[0] > data[k]['accuracy'].shape[0]:
+                    data[k]['accuracy'].append(data[k]['accuracy'][-1])
+                    
                 plt.plot(data[k]['trainset'],data[k]['accuracy'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
                 color += 1
                 min_x.append(data[k]['trainset'].min())
@@ -107,7 +173,7 @@ class Plotter(object):
                 max_y.append(data[k]['accuracy'].max())
                 
         plt.legend(loc=4,ncol=2)
-        plt.xticks(np.arange(min(min_x), max(max_x)+1, 100))
+        plt.xticks(np.arange(min(min_x), max(max_x)+1, xtick))
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
         plt.yticks(np.arange(min(min_y), 1.0, 0.06))
@@ -216,30 +282,69 @@ class Plotter(object):
         return data
 
 
-def retrieveUncertainty(config):
-    unc_files = []
-    import pickle
-    
-    if not config.all:
-        for i in config.ac_n:
-            unc_file = 'al-uncertainty-{}-r{}.pik'.format(config.ac_func,i)
-            if os.path.isfile(os.path.join(config.sdir,unc_file)):
-                unc_files.append(unc_file)
-    else:
-        items = os.listdir(config.sdir)            
-        for f in items:
-            if f.startswith('al-uncertainty'):
-                unc_files.append(f)
+    def retrieveUncertainty(self,config):
+        unc_files = []
+        import pickle
 
-    data = []
+        if not config.all:
+            for i in config.ac_n:
+                unc_file = 'al-uncertainty-{}-r{}.pik'.format(config.ac_func,i)
+                if os.path.isfile(os.path.join(config.sdir,unc_file)):
+                    unc_files.append(unc_file)
+        else:
+            items = os.listdir(config.sdir)            
+            for f in items:
+                if f.startswith('al-uncertainty'):
+                    unc_files.append(f)
 
-    for f in unc_files:
-        with open(os.path.join(config.sdir,f),'rb') as fd:
-            indexes,uncertainties = pickle.load(fd)
-        data.append((indexes,uncertainties))
+        data = []
 
-    return data
+        for f in unc_files:
+            with open(os.path.join(config.sdir,f),'rb') as fd:
+                indexes,uncertainties = pickle.load(fd)
+            data.append((indexes,uncertainties))
 
+        return data
+
+    def calculate_stats(self,data,auc_only):
+        """
+        @param data <dict>: a dictionary as returned by parseResults
+
+        Calculates mean and standard deviation for AUC and/or Accuracy.
+
+        Returns a list of tuples (trainset,mean_values,std dev) for each AUC and Accuracy
+        """
+        auc_value = None
+        acc_value = None
+        i = 0
+        trainset = None
+        
+        for k in data:
+            if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
+                #Repeat last point if needed
+                if data[k]['trainset'].shape[0] > data[k]['auc'].shape[0]:
+                    data[k]['auc'].append(data[k]['auc'][-1])
+                if auc_value is None:
+                    trainset = data[k]['trainset']
+                    shape = (len(data),len(trainset))
+                    auc_value = np.ndarray(shape=shape,dtype=np.float32)
+                auc_value[i] = data[k]['auc']
+            if not auc_only and 'accuracy' in data[k] and data[k]['accuracy'].shape[0] > 0:
+                #Repeat last point if needed
+                if data[k]['trainset'].shape[0] > data[k]['accuracy'].shape[0]:
+                    data[k]['accuracy'].append(data[k]['accuracy'][-1])
+                if auc_value is None:
+                    shape = (len(data),len(data[k]['trainset']))
+                    acc_value = np.ndarray(shape=shape,dtype=np.float32)
+                acc_value[i] = data[k]['accuracy']
+
+            i += 1
+        #Return mean and STD dev
+        if auc_only:
+            return [(trainset,np.mean(auc_value.transpose(),axis=1),np.std(auc_value.transpose(),axis=1),"AUC")]
+        else:
+            return [(trainset,np.mean(arr[0].transpose(),axis=1),np.std(arr[0].transpose(),axis=1),arr[1]) for arr in ((auc_value,"AUC"),
+                                                                                                              (acc_value,"Accuracy"))]
     
 if __name__ == "__main__":
 
@@ -256,6 +361,8 @@ if __name__ == "__main__":
         help='Directory containing results.')
     parser.add_argument('-ids', dest='ids', nargs='+', type=int, 
         help='Experiment IDs to plot.', default=None,required=False)
+    parser.add_argument('-xtick', dest='xtick', nargs=1, type=int, 
+        help='xtick interval.', default=200,required=False)    
     parser.add_argument('-t', dest='title', type=str,default='AL Experiment', 
         help='Figure title.')
     parser.add_argument('-type', dest='tmode', type=str, 
@@ -268,8 +375,16 @@ if __name__ == "__main__":
     parser.add_argument('--single', action='store_true', dest='single', default=False, 
         help='Plot data from a single experiment.')
     parser.add_argument('-sd', dest='sdir', type=str,default=None, 
-        help='Experiment result path (should contain an slurm file).')    
+        help='Experiment result path (should contain an slurm file).')
 
+    ##Make stats
+    parser.add_argument('--stats', action='store_true', dest='stats', default=False, 
+        help='Make mean and STD dev from multiple runs.')
+    parser.add_argument('-auc', action='store_true', dest='auc_only', default=True, 
+        help='Calculate statistics for AUC only.')
+    parser.add_argument('-ci', dest='confidence', nargs=1, type=int, 
+        help='CI.', default=2,required=False)
+    
     ##Draw uncertainties
     parser.add_argument('--uncertainty', action='store_true', dest='unc', default=False, 
         help='Plot experiment uncertainties selected acquisitions.')
@@ -279,6 +394,8 @@ if __name__ == "__main__":
         help='Plot all acquisitions.')
     parser.add_argument('-ac_func', dest='ac_func', type=str,default='bayesian_bald', 
         help='Function to look for uncertainties.')
+    parser.add_argument('-sp', dest='spread', nargs=1, type=int, 
+        help='Spread points in interval.', default=10,required=False)
     
     config, unparsed = parser.parse_known_args()
 
@@ -293,8 +410,12 @@ if __name__ == "__main__":
         
     if config.multi:
         p = Plotter()
+        
         data = p.parseResults(exp_type,config.ids)
-        p.draw_multiline(data,config.title)
+        if len(data) == 0:
+            print("Something is wrong with your command options. No data to plot")
+            sys.exit(1)        
+        p.draw_multiline(data,config.title,config.xtick)
                 
     elif config.single:
         p = Plotter(path=config.results)
@@ -303,7 +424,26 @@ if __name__ == "__main__":
     elif config.unc:
         p = Plotter()
 
-        data = retrieveUncertainty(config)
-        p.draw_uncertainty(data,config.title)
+        if config.sdir is None:
+            print("You should specify an experiment directory (use -sd option).")
+            sys.exit(1)
+            
+        data = p.retrieveUncertainty(config)
+        if len(data) == 0:
+            print("Something is wrong with your command options. No data to plot")
+            sys.exit(1)
+        p.draw_uncertainty(data,config.ac_n,config.spread,config.title)
 
-    
+    elif config.stats:
+        p = Plotter()
+
+        if config.ids is None:
+            print("You should define a set of experiment IDs (-id).")
+            sys.exit(1)
+            
+        data = p.parseResults(exp_type,config.ids)
+        data = p.calculate_stats(data,config.auc_only)
+        if len(data) == 0:
+            print("Something is wrong with your command options. No data to plot")
+            sys.exit(1)
+        p.draw_stats(data,config.xtick,config.confidence,config.spread,config.title)
