@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH -p GPU-AI
 #SBATCH -t 25:00:00
-#SBATCH --gres=gpu:volta16:3
+#SBATCH --gres=gpu:volta16:1
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=alsmeirelles@gmail.com
 
@@ -26,7 +26,7 @@ module load cuda/9.0
 echo '[START] training'
 date +"%D %T"
 
-time python3 main.py -i -v --al -predst ~/.keras/datasets -split 0.857 0.013 0.13 -net GalKNet -data MNIST -init_train 20 -ac_steps 50 -dropout_steps 50 -ac_function bayesian_varratios -acquire 20 -k -e 50 -b 96 -f1 0 -out logs/ -cpu 9 -gpu 3 -tn -wpath results/MN-36 -model_dir results/MN-36 -logdir results/MN-36
+time python3 main.py -i -v --al -predst ~/.keras/datasets -split 0.857 0.013 0.13 -net GalKNet -data MNIST -init_train 20 -ac_steps 50 -dropout_steps 50 -ac_function bayesian_varratios -acquire 20 -k -e 50 -b 96 -f1 0 -sv -out logs/ -cpu 4 -gpu 1 -tn -wpath results/MN-62 -model_dir results/MN-62 -logdir results/MN-62
 
 echo '[FINAL] done training'
 

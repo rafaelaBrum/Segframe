@@ -62,6 +62,7 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     if 'acquisition' in kwargs:
         r = kwargs['acquisition']
 
+    fidp = None
     if save_var:
         fid = 'al-uncertainty-{1}-r{0}.pik'.format(r,config.ac_function)
         cache_m.registerFile(os.path.join(config.logdir,fid),fid)
