@@ -22,9 +22,20 @@ def debug_acquisition(s_expected,all_probs,x_pool_index,classes,cache_m,config,f
     
     #After transposition shape will be (classes,items,mc_dp)
     s_probs = all_probs[:config.dropout_steps,x_pool_index].T
+    
+    if config.verbose > 0:
+        print("Probabilities ({1}): {0}".format(s_probs,s_probs.shape))
+        prob_mean = np.mean(np.mean(s_probs,axis=-1),axis=-1)
+        print("\n".join(["Mean probabilities for class {}:{}".format(k,prob_mean[k]) for k in range(prob_mean.shape[0])]))
+        
     s_pred_all = s_probs[:,:].argmax(axis=0)
+
+    if config.verbose > 0:
+        print("Votes: {}".format(s_pred_all))
     #s_pred holds the predictions for each item after a vote
     s_pred = np.asarray([np.bincount(s_pred_all[i]).argmax(axis=0) for i in range(0,s_pred_all.shape[0])])
+    if config.verbose > 0:
+        print("Classification after vote: {}".format(s_pred))
     PrintConfusionMatrix(s_pred,s_expected,classes,config,"Selected images (AL)")
     if config.save_var:
         cache_m.dump((s_expected,s_probs),fidp)
