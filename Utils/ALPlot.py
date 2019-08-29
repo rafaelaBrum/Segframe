@@ -60,26 +60,36 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
 
-    def draw_stats(self,data,xticks,confidence=2,spread=1,title=''):
+    def draw_stats(self,data,xticks,auc_only,labels=None,confidence=2,spread=1,title=''):
         """
         @param data <list>: a list as returned by calculate_stats
         """
-
+        palette = plt.get_cmap('Set1')
+        color = 0
         plots = []
         for d in data:
             x_data,y_data,dev,y_label = d
-            _,ax = plt.subplots()
+            if auc_only:
+                ax = plt
+            else:
+                _,ax = plt.subplots()
             plots.append(ax)
-            ax.plot(x_data, y_data, lw = 1, color = '#539caf', alpha = 1)
+            ax.plot(x_data, y_data, lw = 1, color = palette(color), alpha = 1)
             # Shade the confidence interval
             low_ci = y_data - confidence*dev
             upper_ci = y_data + confidence*dev
-            ax.fill_between(x_data, low_ci, upper_ci, color = '#539caf', alpha = 0.4)
-            ax.set_xlabel("Trainset size")
-            ax.set_ylabel(y_label)
-
+            ax.fill_between(x_data, low_ci, upper_ci, color = palette(color), alpha = 0.4)
+            color += 1
+            if auc_only:
+                ax.xlabel("Trainset size")
+                ax.ylabel(y_label)
+            else:
+                ax.set_xlabel("Trainset size")
+                ax.set_ylabel(y_label)
+                
         # Label the axes and provide a title
-        labels = ['Mean','{} STD'.format(confidence)]
+        if labels is None:
+            labels = ['Mean','{} STD'.format(confidence)]
         plt.legend(plots,labels=labels,loc=4,ncol=2)
         plt.xticks(np.arange(min(x_data), max(x_data)+xticks, xticks))
         plt.yticks(np.arange(np.min(low_ci)-0.05, np.max(upper_ci)+0.05, 0.1))
@@ -384,6 +394,12 @@ if __name__ == "__main__":
         help='Calculate statistics for AUC only.')
     parser.add_argument('-ci', dest='confidence', nargs=1, type=int, 
         help='CI.', default=2,required=False)
+    parser.add_argument('-n', dest='n_exp', nargs=2, type=int, 
+        help='N experiments for each curve (allows plotting 2 curves together).',
+        default=(3,3),required=False)
+    parser.add_argument('-labels', dest='labels', nargs=2, type=str, 
+        help='Curve labels.',
+        default=None,required=False)
     
     ##Draw uncertainties
     parser.add_argument('--uncertainty', action='store_true', dest='unc', default=False, 
@@ -408,7 +424,7 @@ if __name__ == "__main__":
         print("Directory not found: {}".format(config.results))
         sys.exit(1)
         
-    if config.multi:
+    if config.multi and not config.stats:
         p = Plotter()
         
         data = p.parseResults(exp_type,config.ids)
@@ -442,8 +458,18 @@ if __name__ == "__main__":
             sys.exit(1)
             
         data = p.parseResults(exp_type,config.ids)
-        data = p.calculate_stats(data,config.auc_only)
+        if config.multi:
+            c1 = p.calculate_stats({k:data[k] for k in config.ids[:config.n_exp[0]]},config.auc_only)
+            c2 = p.calculate_stats({k:data[k] for k in config.ids[config.n_exp[1]:]},config.auc_only)
+            c1.extend(c2)
+            data = c1
+        else:
+            data = p.calculate_stats(data,config.auc_only)
+            
         if len(data) == 0:
             print("Something is wrong with your command options. No data to plot")
             sys.exit(1)
-        p.draw_stats(data,config.xtick,config.confidence,config.spread,config.title)
+            
+        p.draw_stats(data,config.xtick,config.auc_only,config.labels,config.confidence,config.spread,config.title)
+
+        

@@ -17,7 +17,18 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-
+def debug_acquisition(s_expected,all_probs,x_pool_index,classes,cache_m,config,fidp):
+    from Utils import PrintConfusionMatrix
+    
+    #After transposition shape will be (classes,items,mc_dp)
+    s_probs = all_probs[:config.dropout_steps,x_pool_index].T
+    s_pred_all = s_probs[:,:].argmax(axis=0)
+    #s_pred holds the predictions for each item after a vote
+    s_pred = np.asarray([np.bincount(s_pred_all[i]).argmax(axis=0) for i in range(0,s_pred_all.shape[0])])
+    PrintConfusionMatrix(s_pred,s_expected,classes,config,"Selected images (AL)")
+    if config.save_var:
+        cache_m.dump((s_expected,s_probs),fidp)
+    
 def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     """
     Calculation as defined in paper:
@@ -54,20 +65,28 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     if save_var:
         fid = 'al-uncertainty-{1}-r{0}.pik'.format(r,config.ac_function)
         cache_m.registerFile(os.path.join(config.logdir,fid),fid)
+        if config.debug:
+            fidp = 'al-probs-{1}-r{0}.pik'.format(r,config.ac_function)
+            cache_m.registerFile(os.path.join(config.logdir,fidp),fidp)
         
     All_Dropout_Classes = np.zeros(shape=(data_size,1))
 
     if pbar:
         l = tqdm(range(mc_dp), desc="MC Dropout",position=0)
     else:
-        if kwargs['config'].info:
+        if config.info:
             print("Starting MC dropout sampling...")
         l = range(mc_dp)
-                
+
+    #Keep probabilities for analysis
+    all_probs = None
+    if config.debug:
+        all_probs = np.zeros(shape=(mc_dp,data_size,generator.classes))
+        
     for d in l:
         if pbar:
             print("\n")
-        elif kwargs['config'].info:
+        elif config.info:
             print("Step {0}/{1}".format(d+1,mc_dp))
            
         #Keep verbosity in 0 to gain speed 
@@ -76,6 +95,9 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
                                                 max_queue_size=100*gpu_count,
                                                 verbose=0)
 
+        if config.debug:
+            all_probs[d] = proba
+            
         dropout_classes = proba.argmax(axis=-1)    
         dropout_classes = np.array([dropout_classes]).T
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
@@ -103,6 +125,10 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     a_1d = Variation.flatten()
     x_pool_index = a_1d.argsort()[-query:][::-1]
 
+    if config.debug:
+        s_expected = generator.returnLabelsFromIndex(x_pool_index)
+        debug_acquisition(s_expected,all_probs,x_pool_index,generator.classes,cache_m,config,fidp)
+            
     if save_var:
         cache_m.dump((x_pool_index,a_1d),fid)
         

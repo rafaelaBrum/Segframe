@@ -83,9 +83,6 @@ class GenericIterator(Iterator):
         # The transformation of images is not under thread lock
         # so it can be done in parallel
         return self._get_batches_of_transformed_samples(index_array)
-
-    def returnNumClasses(self):
-        return len(self.classes)
             
     def returnDataInOrder(self,idx):
         """
@@ -94,6 +91,18 @@ class GenericIterator(Iterator):
         index_array = [i for i in range(idx,idx+self.batch_size)]
         # Check which element(s) to use
         return self._get_batches_of_transformed_samples(index_array)
+
+    def returnLabelsFromIndex(self,idx):
+        """
+        Returns the labels of the data samples refered by idx. Useful for 
+        debuging.
+
+        @param idx <int,ndarray>: a single index or an array of indexes
+        """
+        Y = np.asarray(self.data[1])
+        if isinstance(idx,int) or isinstance(idx,np.ndarray):
+            return Y[idx]
+
 
 class SingleGenerator(GenericIterator):
     """
