@@ -17,16 +17,14 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-def debug_acquisition(s_expected,all_probs,x_pool_index,classes,cache_m,config,fidp):
+def debug_acquisition(s_expected,s_probs,classes,cache_m,config,fidp):
     from Utils import PrintConfusionMatrix
     
-    #After transposition shape will be (classes,items,mc_dp)
-    s_probs = all_probs[:config.dropout_steps,x_pool_index].T
-    
     if config.verbose > 0:
-        print("Probabilities ({1}): {0}".format(s_probs[np.random.randint(0,classes)],s_probs.shape))
+        r_class = np.random.randint(0,classes)
+        print("Selected item's probabilities for class {2} ({1}): {0}".format(s_probs[r_class],s_probs.shape,r_class))
         prob_mean = np.mean(np.mean(s_probs,axis=-1),axis=-1)
-        print("\n".join(["Mean probabilities for class {}:{}".format(k,prob_mean[k]) for k in range(prob_mean.shape[0])]))
+        print("\n".join(["Selected item's mean probabilities for class {}:{}".format(k,prob_mean[k]) for k in range(prob_mean.shape[0])]))
         
     s_pred_all = s_probs[:,:].argmax(axis=0)
 
@@ -139,7 +137,9 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
 
     if config.debug:
         s_expected = generator.returnLabelsFromIndex(x_pool_index)
-        debug_acquisition(s_expected,all_probs,x_pool_index,generator.classes,cache_m,config,fidp)
+        #After transposition shape will be (classes,items,mc_dp)
+        s_probs = all_probs[:mc_dp,x_pool_index].T
+        debug_acquisition(s_expected,s_probs,generator.classes,cache_m,config,fidp)
             
     if save_var:
         cache_m.dump((x_pool_index,a_1d),fid)
