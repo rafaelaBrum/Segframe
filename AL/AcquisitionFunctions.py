@@ -24,7 +24,7 @@ def debug_acquisition(s_expected,all_probs,x_pool_index,classes,cache_m,config,f
     s_probs = all_probs[:config.dropout_steps,x_pool_index].T
     
     if config.verbose > 0:
-        print("Probabilities ({1}): {0}".format(s_probs,s_probs.shape))
+        print("Probabilities ({1}): {0}".format(s_probs[np.random.randint(0,classes)],s_probs.shape))
         prob_mean = np.mean(np.mean(s_probs,axis=-1),axis=-1)
         print("\n".join(["Mean probabilities for class {}:{}".format(k,prob_mean[k]) for k in range(prob_mean.shape[0])]))
         
@@ -129,7 +129,7 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
         v = np.array(  [1 - Mode/float(mc_dp)])
         Variation[t] = v
     
-    if verbose > 0:
+    if verbose > 1:
         print("Variation {0}:".format(data_size))
         for i in np.random.choice(data_size,100,replace=False):
             print("Variation for image ({0}): {1}".format(i,Variation[i]))

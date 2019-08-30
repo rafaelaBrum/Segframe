@@ -26,7 +26,7 @@ module load cuda/9.0
 echo '[START] training'
 date +"%D %T"
 
-time python3 main.py -i -v --al -predst ~/.keras/datasets -split 0.857 0.013 0.13 -net BayesKNet -data MNIST -tnorm -init_train 20 -ac_steps 50 -dropout_steps 50 -ac_function bayesian_varratios -acquire 20 -k -e 50 -b 128 -out logs/ -cpu 4 -gpu 1 -f1 0 -tn -sv -wpath results/MN-61 -model_dir results/MN-61 -logdir results/MN-61
+time python3 main.py -i -v --al -predst ~/.keras/datasets -split 0.857 0.013 0.13 -net BayesKNet -data MNIST -tnorm -init_train 20 -ac_steps 50 -dropout_steps 50 -ac_function bayesian_varratios -acquire 20 -k -e 50 -b 128 -out logs/ -cpu 4 -gpu 1 -f1 0 -tn -sv -db -wpath results/tmp -model_dir results/tmp -logdir results/tmp
 
 echo '[FINAL] done training'
 
