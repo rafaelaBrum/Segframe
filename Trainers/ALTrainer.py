@@ -169,7 +169,7 @@ class ActiveLearningTrainer(Trainer):
 
             self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))            
 
-            predictor.run(self.test_x,self.test_y)
+            predictor.run(self.test_x,self.test_y,load_full=False)
             
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r):
                 if self._config.info:

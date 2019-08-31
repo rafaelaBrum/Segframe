@@ -87,7 +87,7 @@ class Predictor(object):
         self._ds = None
         self._keep = keepImg
 
-    def run(self,x_test=None,y_test=None):
+    def run(self,x_test=None,y_test=None,load_full=True):
         """
         Checks configurations, loads correct module, loads data
         Trains!
@@ -117,9 +117,9 @@ class Predictor(object):
         if self._config.testdir is None:
             self._ds.load_metadata()
 
-        self.run_test(net_model,x_test,y_test)
+        self.run_test(net_model,x_test,y_test,load_full)
         
-    def run_test(self,model,x_test=None,y_test=None):
+    def run_test(self,model,x_test=None,y_test=None,load_full=True):
         """
         This should be executed after a model has been trained
         """
@@ -171,18 +171,18 @@ class Predictor(object):
         K.set_session(sess)
         
         #During test phase multi-gpu mode is not necessary, load full model (multi-gpu would need to load training weights)
-        if os.path.isfile(model.get_model_cache()):
+        if load_full and os.path.isfile(model.get_model_cache()):
             try:
                 pred_model = load_model(model.get_model_cache())
                 if self._config.info:
                     print("Model loaded from: {0}".format(model.get_model_cache()))
             except ValueError:
-                pred_model,_ = model.build()
+                pred_model,_ = model.build(training=False)
                 pred_model.load_weights(model.get_weights_cache())
                 if self._config.info:
                     print("Model weights loaded from: {0}".format(model.get_weights_cache()))
         elif os.path.isfile(model.get_weights_cache()):
-                pred_model,_ = model.build()
+                pred_model,_ = model.build(training=False)
                 pred_model.load_weights(model.get_weights_cache())
                 if self._config.info:
                     print("Model weights loaded from: {0}".format(model.get_weights_cache()))

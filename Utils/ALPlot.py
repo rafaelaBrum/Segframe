@@ -93,7 +93,9 @@ class Plotter(object):
         plt.legend(plots,labels=labels,loc=4,ncol=2)
         plt.xticks(np.arange(min(x_data), max(x_data)+xticks, xticks))
         plt.yticks(np.arange(np.min(low_ci)-0.05, np.max(upper_ci)+0.05, 0.1))
-        plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')            
+        plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
+        if max(x_data) > 1000:
+            plt.xticks(rotation=30)
         plt.tight_layout()
         plt.grid(True)
         plt.show()
@@ -331,7 +333,11 @@ class Plotter(object):
                 y_true,sprobs = pickle.load(fd)
                 fd.close()
                 s_pred_all = sprobs[:,:].argmax(axis=0)
+                print("Votes array ({})".format(s_pred_all.shape))
+                for k in range(0,10):
+                    print(s_pred_all[k])
                 y_pred = np.asarray([np.bincount(s_pred_all[i]).argmax(axis=0) for i in range(0,s_pred_all.shape[0])])
+                print(y_pred)
                 acc = metrics.accuracy_score(y_true,y_pred)
                 acq = extract_acq(f)
                 data['accuracy'].append(acc)
@@ -471,12 +477,16 @@ if __name__ == "__main__":
         print("You should either specify an ID or a full path to grab data")
         sys.exit(1)
         
-    exp_type = os.path.join(config.sdir,config.tmode)
     if not os.path.isdir(config.sdir):
         print("Directory not found: {}".format(config.sdir))
         sys.exit(1)
         
     if config.multi and not (config.stats or config.debug):
+        if config.sdir is None:
+            print("You should specify an experiment directory (use -sd option).")
+            sys.exit(1)
+
+        exp_type = os.path.join(config.sdir,config.tmode)
         p = Plotter()
         
         data = p.parseResults(exp_type,config.ids)
@@ -504,7 +514,12 @@ if __name__ == "__main__":
 
     elif config.stats:
         p = Plotter()
+        if config.sdir is None:
+            print("You should specify an experiment directory (use -sd option).")
+            sys.exit(1)
 
+        exp_type = os.path.join(config.sdir,config.tmode)
+        
         if config.ids is None:
             print("You should define a set of experiment IDs (-id).")
             sys.exit(1)
@@ -512,8 +527,9 @@ if __name__ == "__main__":
         data = p.parseResults(exp_type,config.ids)
         if config.multi:
             c1 = p.calculate_stats({k:data[k] for k in config.ids[:config.n_exp[0]]},config.auc_only)
-            c2 = p.calculate_stats({k:data[k] for k in config.ids[config.n_exp[1]:]},config.auc_only)
-            c1.extend(c2)
+            if config.n_exp[1] > 0:
+                c2 = p.calculate_stats({k:data[k] for k in config.ids[config.n_exp[1]:]},config.auc_only)
+                c1.extend(c2)
             data = c1
         else:
             data = p.calculate_stats(data,config.auc_only)
@@ -537,6 +553,9 @@ if __name__ == "__main__":
             #In multi_plot, change the xvalues so that curves reflect the same acquisition
             d2 = p.parseSlurm()
             data['trainset'] = d2['trainset']
+            #The debug function only  considers accuracy
+            if 'auc' in d2:
+                del d2['auc']
             mdata = {'AL selected':data,
                     'AL trained':d2}
             p.draw_multiline(mdata,config.title,config.xtick)

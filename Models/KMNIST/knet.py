@@ -73,6 +73,11 @@ class KNet(GenericModel):
 
         if 'data_size' in kwargs:
             self.data_size = kwargs['data_size']
+
+        if 'training' in kwargs:
+            training = kwargs['training']
+        else:
+            training = True
             
         if backend.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
@@ -81,7 +86,7 @@ class KNet(GenericModel):
 
         self.cache_m = CacheManager()
         
-        model = self._build_architecture(input_shape)
+        model = self._build_architecture(input_shape,training)
         
         #Check if previous training and LR is saved, if so, use it
         lr_cache = "{0}_learning_rate.txt".format(self.name)
@@ -125,7 +130,8 @@ class KNet(GenericModel):
 
         return (model,parallel_model)
 
-    def _build_architecture(self,input_shape):
+    def _build_architecture(self,input_shape,training=None):
+            
         model = Sequential()
         model.add(Convolution2D(32, kernel_size=(3, 3),
                     activation='relu',
@@ -147,13 +153,19 @@ class BayesKNet(KNet):
     def __init__(self,config,ds):
         super(BayesKNet,self).__init__(config=config,ds=ds,name = "BayesKNet")
 
-    def _build_architecture(self,input_shape):
+    def _build_architecture(self,input_shape,training):
         if hasattr(self,'data_size'):
             weight_decay = 2.5/float(self.data_size)
             if self._config.verbose > 1:
                 print("Setting weight decay to: {0}".format(weight_decay))
         else:
             weight_decay = 0.01
+
+        #TODO: REMOVE
+        if training:
+            print("REMOVE ME! Dropout enabled during training.")
+        else:
+            print("REMOVE ME! Prediction mode, dropout disabled.")
             
         inp = Input(shape=input_shape)
 
@@ -168,12 +180,12 @@ class BayesKNet(KNet):
                     name='block1_conv2')(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        x = Dropout(0.25)(x,training=True)
+        x = Dropout(0.25)(x,training=training)
         
         x = Flatten()(x)
         x = Dense(128,kernel_regularizer=regularizers.l2(weight_decay))(x)
         x = Activation('relu')(x)        
-        x = Dropout(0.5)(x,training=True)
+        x = Dropout(0.5)(x,training=training)
         x = Dense(self._ds.nclasses)(x)
         output = Activation('softmax')(x)
         
