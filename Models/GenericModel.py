@@ -11,6 +11,8 @@ class GenericModel(ABC):
         self._config = config
         self._ds = ds
         self.name = name
+        self.single = None
+        self.parallel = None
 
     def _check_input_shape(self):
         #Image shape by OpenCV reports height x width

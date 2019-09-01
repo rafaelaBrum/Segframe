@@ -41,8 +41,6 @@ class BayesVGG16(GenericModel):
         self.cache_m.registerFile(os.path.join(config.model_path,self._modelCache),self._modelCache)
         self.cache_m.registerFile(os.path.join(config.weights_path,self._weightsCache),self._weightsCache)
         self.cache_m.registerFile(os.path.join(config.weights_path,self._mgpu_weightsCache),self._mgpu_weightsCache)
-        self.single = None
-        self.parallel = None
 
     def get_model_cache(self):
         """
