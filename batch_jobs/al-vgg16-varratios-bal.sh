@@ -32,7 +32,7 @@ module load cuda/9.0
 echo '[START] training'
 date +"%D %T"
 
-time python3 main.py -i -v --al -predst $LOCAL/test/lym_cnn_training_data/ -split 0.9 0.05 0.05 -net BayesVGG16 -data CellRep -bal -init_train 500 -ac_steps 10 -dropout_steps 20 -ac_function bayesian_varratios -acquire 100 -d -e 50 -b 90 -tdim 240 240 -out logs/ -cpu 9 -gpu 3 -tnorm -aug -tn -sv -wpath results/AL-65 -model_dir results/AL-65 -logdir results/AL-65
+time python3 main.py -i -v --al -predst $LOCAL/test/lym_cnn_training_data/ -split 0.9 0.05 0.05 -net BayesVGG16 -data CellRep -bal -init_train 500 -ac_steps 10 -dropout_steps 20 -ac_function bayesian_varratios -acquire 100 -d -e 50 -b 90 -tdim 240 240 -out logs/ -cpu 9 -gpu 3 -tnorm -aug -tn -sv -db -wpath results/DB-2 -model_dir results/DB-2 -logdir results/DB-2
 
 echo '[FINAL] done training'
 
