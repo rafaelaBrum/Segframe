@@ -256,7 +256,7 @@ def oracle_sample(pred_model,generator,data_size,**kwargs):
     """
 
     if 'config' in kwargs:
-        k = kwargs['config'].acquire
+        acquire = kwargs['config'].acquire
         cpu_count = kwargs['config'].cpu_count
         gpu_count = kwargs['config'].gpu_count
     else:
@@ -273,15 +273,17 @@ def oracle_sample(pred_model,generator,data_size,**kwargs):
             
     pred_classes = proba.argmax(axis=-1)    
     expected = generator.returnLabelsFromIndex()
+    miss = np.where(pred_classes != expected)[0]
     miss_prob = np.zeros(shape=expected.shape)
-    for k in range(miss_prob.shape[0]):
-        miss_prob[k] = abs(expected[k] - proba[k][pred_classes[k]])
+    for k in range(miss.shape[0]):
+        miss_prob[miss[k]] = proba[miss[k]][pred_classes[miss[k]]]
 
-    x_pool_idx = np.argsort(miss_prob)[-k:]
+    x_pool_idx = np.argsort(miss_prob)[-acquire:]
     
-    if kwargs['config'].verbose > 0:
-        miss = np.where(pred_classes != expected)
+    if kwargs['config'].verbose > 1:
+        print('Misses ({}): {}'.format(miss.shape[0]/expected.shape[0],miss))
         print("Probabilities for selected items:\n {}".format(miss_prob[x_pool_idx]))
-        print("Compare indexes of selected items and those that are a miss:\n Miss{}\n Selected{}".format(miss,x_pool_idx))
+        print("Selected item's prediction/true label:\n Prediction: {}\n True label: {}".format(pred_classes[x_pool_idx],
+                                                                                                   expected[x_pool_idx]))
 
     return x_pool_idx

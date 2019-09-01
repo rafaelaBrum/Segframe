@@ -160,12 +160,6 @@ class BayesKNet(KNet):
                 print("Setting weight decay to: {0}".format(weight_decay))
         else:
             weight_decay = 0.01
-
-        #TODO: REMOVE
-        if training:
-            print("REMOVE ME! Dropout enabled during training.")
-        else:
-            print("REMOVE ME! Prediction mode, dropout disabled.")
             
         inp = Input(shape=input_shape)
 
