@@ -262,7 +262,10 @@ def oracle_sample(pred_model,generator,data_size,**kwargs):
     else:
         return None
 
-    #Keep verbosity in 0 to gain speed 
+    if kwargs['config'].info:
+        print("Oracle prediction starting...")
+        
+    #Keep verbosity in 0 to gain speed
     proba = pred_model.predict_generator(generator,
                                              workers=4*cpu_count,
                                              max_queue_size=100*gpu_count,
