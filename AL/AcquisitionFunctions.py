@@ -272,7 +272,7 @@ def oracle_sample(pred_model,generator,data_size,**kwargs):
     expected = generator.returnLabelsFromIndex()
     miss_prob = np.zeros(shape=expected.shape)
     for k in range(miss_prob.shape[0]):
-        miss_prob[k] = abs(expected[k] - proba[pred_classes[k]])
+        miss_prob[k] = abs(expected[k] - proba[k][pred_classes[k]])
 
     x_pool_idx = np.argsort(miss_prob)[-k:]
     
