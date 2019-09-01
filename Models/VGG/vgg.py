@@ -36,10 +36,11 @@ class VGG16(GenericModel):
             self.name = "VGG16_A1"
         self._modelCache = "{0}-model.h5".format(self.name)
         self._weightsCache = "{0}-weights.h5".format(self.name)
-        
+        self._mgpu_weightsCache = "{0}-mgpu-weights.h5".format(self.name)
         self.cache_m = CacheManager()
         self.cache_m.registerFile(os.path.join(config.model_path,self._modelCache),self._modelCache)
         self.cache_m.registerFile(os.path.join(config.weights_path,self._weightsCache),self._weightsCache)
+        self.cache_m.registerFile(os.path.join(config.weights_path,self._mgpu_weightsCache),self._mgpu_weightsCache)
 
     def get_model_cache(self):
         """
@@ -53,6 +54,12 @@ class VGG16(GenericModel):
         """
         return self.cache_m.fileLocation(self._weightsCache)
     
+    def get_mgpu_weights_cache(self):
+        """
+        Returns path to model cache
+        """
+        return self.cache_m.fileLocation(self._mgpu_weightsCache)
+    
     def build(self,**kwargs):
         """
         Returns a VGG 16 model instance, final fully-connected layers are substituted by Conv2Ds
@@ -65,6 +72,9 @@ class VGG16(GenericModel):
             input_shape = (channels, height, width)
         else:
             input_shape = (height, width, channels)
+
+        if 'data_size' in kwargs:
+            self.data_size = kwargs['data_size']
             
         self.cache_m = CacheManager()
         
@@ -146,187 +156,180 @@ class VGG16A2(VGG16):
                                          input_shape=input_shape)
         layer_dict = dict([(layer.name, layer) for layer in original_vgg16.layers])
 
-        model = Sequential()
+        S = 1000
+        if hasattr(self,'data_size'):
+            S = self.data_size
+        wd = lambda p,N: (1-p)*0.5/N
+            
+        inp = Input(shape=input_shape)
         x = Convolution2D(64, (3, 3),input_shape=input_shape,
                     strides=1,
                     padding='valid',
                     name='block1_conv1',
                     weights=layer_dict['block1_conv1'].get_weights(),
-                    kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))
-        model.add(Activation('relu'))
-        #model.add(Dropout(0.1))
-    
+                    kernel_regularizer=regularizers.l2(wd(0.1,S)))(inp)
+        #x = GroupNormalization(groups=4,axis=-1))(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.1)(x)
+ 
         #Second layer
-        model.add(ZeroPadding2D(padding=1))
+        x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(64, (3, 3),strides=1,
                     padding='valid',
                     name='block1_conv2',
                     weights=layer_dict['block1_conv2'].get_weights(),
-                    kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))        
-        model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2),strides=2))
-        #model.add(Dropout(0.1))
-        
+                    kernel_regularizer=regularizers.l2(wd(0.1,S)))(x)
+        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = Activation('relu')(x)
+        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
+        x = Dropout(0.1)(x)
+ 
         #Third layer
-        model.add(ZeroPadding2D(padding=1))
+        x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(128, (3, 3),strides=1,
                     padding='valid',
                     name='block2_conv1',
                     weights=layer_dict['block2_conv1'].get_weights(),
-                    kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))        
-        model.add(Activation('relu'))
-        #model.add(Dropout(0.2))
-        
+                    kernel_regularizer=regularizers.l2(wd(0.1,S)))(x)
+        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.1)(x)
+ 
         #Fourth layer
-        model.add(ZeroPadding2D(padding=1))
+        x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(128, (3, 3),strides=1,
                 padding='valid',
                 name='block2_conv2',
                 weights=layer_dict['block2_conv2'].get_weights(),
-                kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))        
-        model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2),strides=2))
-        #model.add(Dropout(0.2))
-        
+                kernel_regularizer=regularizers.l2(wd(0.1,S)))(x)
+        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = Activation('relu')(x)
+        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
+        x = Dropout(0.1)(x)
+ 
         #Fifth layer
-        model.add(ZeroPadding2D(padding=1))
+        x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(256, (3, 3),strides=1,
                 padding='valid',
                 name='block3_conv1',
                 weights=layer_dict['block3_conv1'].get_weights(),
-                kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))        
-        model.add(Activation('relu'))
-        #model.add(Dropout(0.2))
-        
+                kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.2)(x)
+ 
         #Sith layer
-        model.add(ZeroPadding2D(padding=1))
+        x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(256, (3, 3),strides=1,
                 padding='valid',
                 name='block3_conv2',
                 weights=layer_dict['block3_conv2'].get_weights(),
-                kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))        
-        model.add(Activation('relu'))
-        #model.add(Dropout(0.3))
-        
+                kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.2)(x)
+ 
         #Seventh layer
-        model.add(ZeroPadding2D(padding=1))
+        x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(256, (3, 3),strides=1,
             padding='valid',
             name='block3_conv3',
             weights=layer_dict['block3_conv3'].get_weights(),
-            kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))        
-        model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2),strides=2))
-        #model.add(Dropout(0.3))
-        
+            kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = Activation('relu')(x)
+        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
+        x = Dropout(0.2)(x)
+ 
         #Eigth layer
-        model.add(ZeroPadding2D(padding=1))
+        x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(512, (3, 3),strides=1,
             padding='valid',
             name='block4_conv1',
             weights=layer_dict['block4_conv1'].get_weights(),
-            kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))        
-        model.add(Activation('relu'))
-        #model.add(Dropout(0.3))
-        
+            kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.2)(x)
+ 
         #Nineth layer
-        model.add(ZeroPadding2D(padding=1))
+        x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(512, (3, 3),strides=1,
             padding='valid',
             name='block4_conv2',
             weights=layer_dict['block4_conv2'].get_weights(),
-            kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))        
-        model.add(Activation('relu'))
-        #model.add(Dropout(0.3))
-        
+            kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.2)(x)
+ 
         #Tenth layer
-        model.add(ZeroPadding2D(padding=1))
+        x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(512, (3, 3),strides=1,
             padding='valid',
             name='block4_conv3',
             weights=layer_dict['block4_conv3'].get_weights(),
-            kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))        
-        model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2),strides=2))
-        #model.add(Dropout(0.3))
-        
+            kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = Activation('relu')(x)
+        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
+        x = Dropout(0.2)(x)
+ 
         #Eleventh layer
-        model.add(ZeroPadding2D(padding=1))
+        x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(512, (3, 3),strides=1,
             padding='valid',
             name='block5_conv1',
             #kernel_initializer='he_normal',
             weights=layer_dict['block5_conv1'].get_weights(),
-            kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))        
-        model.add(Activation('relu'))
-        #model.add(Dropout(0.3))
-        
+            kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
+        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.3)(x)
+ 
         #Twelth layer
-        model.add(ZeroPadding2D(padding=1))
+        x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(512, (3, 3),strides=1,
             padding='valid',
             name='block5_conv2',
             #kernel_initializer='he_normal',
             weights=layer_dict['block5_conv2'].get_weights(),
-            kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))
-        model.add(Activation('relu'))
-        #model.add(Dropout(0.3))
-        
+            kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
+        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.3)(x)
+
         #Thirtenth layer
-        model.add(ZeroPadding2D(padding=1))
+        x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(512, (3, 3),strides=1,
             padding='valid',
             name='block5_conv3',
             #kernel_initializer='he_normal',
             weights=layer_dict['block5_conv3'].get_weights(),
-            kernel_regularizer=regularizers.l2(0.0005))
-        model.add(x)
-        model.add(GroupNormalization(groups=4,axis=-1))
-        model.add(Activation('relu'))
-        model.add(MaxPooling2D(pool_size=(2, 2),strides=2))
-        #model.add(Dropout(0.3))
+            kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
+        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = Activation('relu')(x)
+        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
+        x = Dropout(0.3)(x)
 
         #Freeze initial layers, except for the last 3:
-        #for layer in model.layers[:-3]:
+        #for layer in original_vgg16.layers[:-2]:
         #    layer.trainable = False
-
-        #Last FC layers are substituted by Conv layers
-        model.add(Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal'))
-        model.add(Activation('relu'))
-        model.add(Dropout(0.75))
-        model.add(Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
-        model.add(Activation('relu'))
-        model.add(Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
-        model.add(Flatten())
-        model.add(Dropout(0.75))
-        model.add(Dense(self._ds.nclasses))
-        model.add(Activation('softmax'))
         
-        return model
+        x = Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal',
+                              kernel_regularizer=regularizers.l2(wd(0.5,S)))(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.5)(x)
+        x = Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal',
+                              kernel_regularizer=regularizers.l2(wd(0.5,S)))(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.5)(x)
+        x = Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal')(x)
+        x = Flatten()(x)
+        x = Dense(self._ds.nclasses)(x)
+        output = Activation('softmax')(x)
+
+        return Model(inp,output)
 
 class VGG16A3(VGG16):
     """

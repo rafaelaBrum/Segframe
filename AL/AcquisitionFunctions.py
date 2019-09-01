@@ -249,3 +249,36 @@ def random_sample(pred_model,generator,data_size,**kwargs):
         return None
     
     return np.random.choice(range(data_size),k,replace=False)
+
+def oracle_sample(pred_model,generator,data_size,**kwargs):
+    """
+    Returns the indexes of images that the current network missclassified with high probability.
+    """
+
+    if 'config' in kwargs:
+        k = kwargs['config'].acquire
+        cpu_count = kwargs['config'].cpu_count
+        gpu_count = kwargs['config'].gpu_count
+    else:
+        return None
+
+    #Keep verbosity in 0 to gain speed 
+    proba = pred_model.predict_generator(generator,
+                                             workers=4*cpu_count,
+                                             max_queue_size=100*gpu_count,
+                                             verbose=0)
+            
+    pred_classes = proba.argmax(axis=-1)    
+    expected = generator.returnLabelsFromIndex()
+    miss_prob = np.zeros(shape=expected.shape)
+    for k in range(miss_prob.shape[0]):
+        miss_prob[k] = abs(expected[k] - proba[pred_classes[k]])
+
+    x_pool_idx = np.argsort(miss_prob)[-k:]
+    
+    if kwargs['config'].verbose > 0:
+        miss = np.where(pred_classes != expected)
+        print("Probabilities for selected items:\n {}".format(miss_prob[x_pool_idx]))
+        print("Compare indexes of selected items and those that are a miss:\n Miss{}\n Selected{}".format(miss,x_pool_idx))
+
+    return x_pool_idx

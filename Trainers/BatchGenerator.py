@@ -92,7 +92,7 @@ class GenericIterator(Iterator):
         # Check which element(s) to use
         return self._get_batches_of_transformed_samples(index_array)
 
-    def returnLabelsFromIndex(self,idx):
+    def returnLabelsFromIndex(self,idx=None):
         """
         Returns the labels of the data samples refered by idx. Useful for 
         debuging.
@@ -100,6 +100,9 @@ class GenericIterator(Iterator):
         @param idx <int,ndarray>: a single index or an array of indexes
         """
         Y = np.asarray(self.data[1])
+        if idx is None:
+            return Y
+        
         if isinstance(idx,int) or isinstance(idx,np.ndarray):
             return Y[idx]
 
