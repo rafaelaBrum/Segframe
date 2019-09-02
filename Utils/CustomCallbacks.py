@@ -56,7 +56,7 @@ class CalculateF1Score(Callback):
         if (epoch+1) % self.period != 0:
             return None
 
-        if self.val_data.classes > 2:
+        if not hasattr(self.val_data,'classes') or self.val_data.classes > 2:
             return None
         
         from sklearn import metrics

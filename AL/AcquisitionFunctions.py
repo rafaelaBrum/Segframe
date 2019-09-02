@@ -280,7 +280,7 @@ def oracle_sample(pred_model,generator,data_size,**kwargs):
 
     x_pool_idx = np.argsort(miss_prob)[-acquire:]
     
-    if kwargs['config'].verbose > 1:
+    if kwargs['config'].verbose > 0:
         print('Misses ({}): {}'.format(miss.shape[0]/expected.shape[0],miss))
         print("Probabilities for selected items:\n {}".format(miss_prob[x_pool_idx]))
         print("Selected item's prediction/true label:\n Prediction: {}\n True label: {}".format(pred_classes[x_pool_idx],

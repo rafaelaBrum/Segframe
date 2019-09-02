@@ -210,15 +210,28 @@ class Plotter(object):
     def plotFromExec(self,data):
         pass
 
-    def parseResults(self,path,al_dirs):
-        data = {}
+    def parseResults(self,path,al_dirs,n_ids=None):
 
-        for d in al_dirs:
-            d_path = "{0}-{1}".format(path,d)
-            if os.path.isdir(d_path):
-                data[d] = self.parseSlurm(d_path)
+        def parseDirs(path,al_dirs):
+            data = {}
+            for d in al_dirs:
+                d_path = "{0}-{1}".format(path,d)
+                if os.path.isdir(d_path):
+                    data[d] = self.parseSlurm(d_path)
+            return data
+                    
+        if isinstance(path,list):
+            data = {}
+            if n_ids is None:
+                return parseDirs(path,al_dirs)
+            li = 0
+            for k in range(len(path)):
+                data.update(parseDirs(path[k],al_dirs[li:li+n_ids[k]]))
+                li = n_ids[k]
+            return data
+        else:
+            return parseDirs(path,al_dirs)
 
-        return data
 
     def extractNPData(self,path):
         if not os.path.isfile(path):
@@ -241,6 +254,9 @@ class Plotter(object):
             sys.exit(1)
         elif path is None:
             path = self.path
+        elif isinstance(path,list):
+            print("Parse a single file at a time")
+            return None
 
         dir_contents = os.listdir(path)
         slurm_path = None
@@ -429,11 +445,11 @@ if __name__ == "__main__":
         help='xtick interval.', default=200,required=False)    
     parser.add_argument('-t', dest='title', type=str,default='AL Experiment', 
         help='Figure title.')
-    parser.add_argument('-type', dest='tmode', type=str, 
+    parser.add_argument('-type', dest='tmode', type=str, nargs='+',
         help='Experiment type: \n \
         AL - General active learning experiment; \n \
         MN - MNIST dataset experiment.',
-       choices=['AL','MN'],default='AL')
+       choices=['AL','MN','DB','OR'],default='AL')
     
     ##Single experiment plot
     parser.add_argument('--single', action='store_true', dest='single', default=False, 
@@ -477,7 +493,7 @@ if __name__ == "__main__":
         print("You should either specify an ID or a full path to grab data")
         sys.exit(1)
         
-    if not os.path.isdir(config.sdir):
+    if config.sdir is None or not os.path.isdir(config.sdir):
         print("Directory not found: {}".format(config.sdir))
         sys.exit(1)
         
@@ -486,7 +502,11 @@ if __name__ == "__main__":
             print("You should specify an experiment directory (use -sd option).")
             sys.exit(1)
 
-        exp_type = os.path.join(config.sdir,config.tmode)
+        if len(config.tmode) == 1:
+            exp_type = os.path.join(config.sdir,config.tmode[0])
+        else:
+            exp_type = [os.path.join(config.sdir,tmode) for tmode in config.tmode]
+            
         p = Plotter()
         
         data = p.parseResults(exp_type,config.ids)
@@ -518,13 +538,17 @@ if __name__ == "__main__":
             print("You should specify an experiment directory (use -sd option).")
             sys.exit(1)
 
-        exp_type = os.path.join(config.sdir,config.tmode)
+        if len(config.tmode) == 1:
+            exp_type = os.path.join(config.sdir,config.tmode[0])
+        else:
+            exp_type = [os.path.join(config.sdir,tmode) for tmode in config.tmode]
         
         if config.ids is None:
             print("You should define a set of experiment IDs (-id).")
             sys.exit(1)
             
-        data = p.parseResults(exp_type,config.ids)
+        data = p.parseResults(exp_type,config.ids,config.n_exp)
+
         if config.multi:
             c1 = p.calculate_stats({k:data[k] for k in config.ids[:config.n_exp[0]]},config.auc_only)
             if config.n_exp[1] > 0:
