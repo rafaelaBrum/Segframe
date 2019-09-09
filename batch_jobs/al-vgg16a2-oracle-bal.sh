@@ -32,7 +32,7 @@ module load cuda/9.0
 echo '[START] training'
 date +"%D %T"
 
-time python3 main.py -i -v --al -predst $LOCAL/test/lym_cnn_training_data/ -split 0.9 0.05 0.05 -net VGG16A2 -data CellRep -bal -init_train 500 -ac_steps 20 -ac_function oracle_sample -acquire 200 -d -e 50 -b 90 -tdim 240 240 -out logs/ -cpu 9 -gpu 3 -tnorm -aug -tn -sv -db -wpath results/OR-1 -model_dir results/OR-1 -logdir results/OR-1
+time python3 main.py -i -v --al -predst $LOCAL/test/lym_cnn_training_data/ -split 0.9 0.05 0.05 -net VGG16A2 -data CellRep -bal -init_train 500 -ac_steps 20 -ac_function oracle_sample -acquire 200 -d -e 50 -b 90 -tdim 240 240 -out logs/ -cpu 9 -gpu 3 -tnorm -aug -tn -sv -db -wpath results/OR-3 -model_dir results/OR-3 -logdir results/OR-3
 
 echo '[FINAL] done training'
 
