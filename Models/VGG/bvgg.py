@@ -309,12 +309,12 @@ class BayesVGG16(GenericModel):
         return Model(inp,output)
 
 
-class BayesVGG16A2(GenericModel):
+class BayesVGG16A2(BayesVGG16):
     """
     VGG variation, uses GroupNormalization and more dropout
     """
     def __init__(self,config,ds):
-        super(VGG16A2,self).__init__(config=config,ds=ds,name = "BVGG16_A2")
+        super(BayesVGG16,self).__init__(config=config,ds=ds,name = "BVGG16_A2")
 
 
     def _build_architecture(self,input_shape,training):
@@ -336,7 +336,7 @@ class BayesVGG16A2(GenericModel):
                     name='block1_conv1',
                     weights=layer_dict['block1_conv1'].get_weights(),
                     kernel_regularizer=regularizers.l2(wd(0.1,S)))(inp)
-        x = GroupNormalization(groups=4,axis=-1))(x)
+        x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = Dropout(0.1)(x,training=training)
  
