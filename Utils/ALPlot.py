@@ -60,7 +60,7 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
 
-    def draw_stats(self,data,xticks,auc_only,labels=None,confidence=2,spread=1,title=''):
+    def draw_stats(self,data,xticks,auc_only,labels=None,spread=1,title=''):
         """
         @param data <list>: a list as returned by calculate_stats
         """
@@ -68,24 +68,18 @@ class Plotter(object):
         color = 0
         plots = []
         for d in data:
-            x_data,y_data,dev,y_label = d
-            if auc_only:
-                ax = plt
-            else:
-                _,ax = plt.subplots()
-            plots.append(ax)
-            ax.plot(x_data, y_data, lw = 1, color = palette(color), alpha = 1)
+            x_data,y_data,ci,y_label = d
+            if auc_only and y_label != 'AUC':
+                continue
+            c = plt.plot(x_data, y_data, lw = 1, color = palette(color), alpha = 1)
+            plots.append(c)
             # Shade the confidence interval
-            low_ci = y_data - confidence*dev
-            upper_ci = y_data + confidence*dev
-            ax.fill_between(x_data, low_ci, upper_ci, color = palette(color), alpha = 0.4)
+            low_ci = y_data - ci
+            upper_ci = y_data + ci
+            plt.fill_between(x_data, low_ci, upper_ci, color = palette(color), alpha = 0.4)
             color += 1
-            if auc_only:
-                ax.xlabel("Trainset size")
-                ax.ylabel(y_label)
-            else:
-                ax.set_xlabel("Trainset size")
-                ax.set_ylabel(y_label)
+            plt.xlabel("Trainset size")
+            plt.ylabel(y_label)
                 
         # Label the axes and provide a title
         if labels is None:
@@ -388,7 +382,7 @@ class Plotter(object):
 
         return data
 
-    def calculate_stats(self,data,auc_only):
+    def calculate_stats(self,data,auc_only,ci):
         """
         @param data <dict>: a dictionary as returned by parseResults
 
@@ -400,7 +394,18 @@ class Plotter(object):
         acc_value = None
         i = 0
         trainset = None
-        
+        stats = []
+
+        def calc_ci(val,ci):
+            import scipy.stats
+
+            a = np.zeros(shape=val.shape[0],dtype=np.float32)
+            for k in range(a.shape[0]):
+                n = val[k].shape[0]
+                se = scipy.stats.sem(val[k])
+                a[k] = se * scipy.stats.t.ppf((1 + ci) / 2., n-1)
+            return a
+
         for k in data:
             if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
                 #Repeat last point if needed
@@ -415,18 +420,25 @@ class Plotter(object):
                 #Repeat last point if needed
                 if data[k]['trainset'].shape[0] > data[k]['accuracy'].shape[0]:
                     data[k]['accuracy'].append(data[k]['accuracy'][-1])
-                if auc_value is None:
+                if acc_value is None:
+                    trainset = data[k]['trainset']
                     shape = (len(data),len(data[k]['trainset']))
                     acc_value = np.ndarray(shape=shape,dtype=np.float32)
                 acc_value[i] = data[k]['accuracy']
-
+                
             i += 1
+
+        if not auc_value is None:
+            stats.append((auc_value,"AUC"))
+        if not acc_value is None:
+            stats.append((acc_value,"Accuracy"))
+
         #Return mean and STD dev
         if auc_only:
-            return [(trainset,np.mean(auc_value.transpose(),axis=1),np.std(auc_value.transpose(),axis=1),"AUC")]
+            return [(trainset,np.mean(auc_value.transpose(),axis=1),calc_ci(auc_value.transpose(),ci),"AUC")]
         else:
-            return [(trainset,np.mean(arr[0].transpose(),axis=1),np.std(arr[0].transpose(),axis=1),arr[1]) for arr in ((auc_value,"AUC"),
-                                                                                                              (acc_value,"Accuracy"))]
+            return [(trainset,np.mean(arr[0].transpose(),axis=1),np.std(arr[0].transpose(),axis=1),arr[1]) for arr in stats]
+                                                                                                              
     
 if __name__ == "__main__":
 
@@ -460,10 +472,10 @@ if __name__ == "__main__":
     ##Make stats
     parser.add_argument('--stats', action='store_true', dest='stats', default=False, 
         help='Make mean and STD dev from multiple runs.')
-    parser.add_argument('-auc', action='store_true', dest='auc_only', default=True, 
+    parser.add_argument('-auc', action='store_true', dest='auc_only', default=False, 
         help='Calculate statistics for AUC only.')
-    parser.add_argument('-ci', dest='confidence', nargs=1, type=int, 
-        help='CI.', default=2,required=False)
+    parser.add_argument('-ci', dest='confidence', nargs=1, type=float, 
+        help='CI (T-Student).', default=0.95,required=False)
     parser.add_argument('-n', dest='n_exp', nargs=2, type=int, 
         help='N experiments for each curve (allows plotting 2 curves together).',
         default=(3,3),required=False)
@@ -549,10 +561,16 @@ if __name__ == "__main__":
             
         data = p.parseResults(exp_type,config.ids,config.n_exp)
 
+        if isinstance(config.confidence,list):
+            config.confidence = config.confidence[0]
+        elif config.confidence < 0.0 or config.confidence > 1.0:
+            print("CI interval should be between 0.0 and 1.0")
+            sys.exit(1)
+
         if config.multi:
-            c1 = p.calculate_stats({k:data[k] for k in config.ids[:config.n_exp[0]]},config.auc_only)
+            c1 = p.calculate_stats({k:data[k] for k in config.ids[:config.n_exp[0]]},config.auc_only,config.confidence)
             if config.n_exp[1] > 0:
-                c2 = p.calculate_stats({k:data[k] for k in config.ids[config.n_exp[1]:]},config.auc_only)
+                c2 = p.calculate_stats({k:data[k] for k in config.ids[config.n_exp[0]:]},config.auc_only,config.confidence)
                 c1.extend(c2)
             data = c1
         else:
@@ -561,8 +579,8 @@ if __name__ == "__main__":
         if len(data) == 0:
             print("Something is wrong with your command options. No data to plot")
             sys.exit(1)
-            
-        p.draw_stats(data,config.xtick,config.auc_only,config.labels,config.confidence,config.spread,config.title)
+
+        p.draw_stats(data,config.xtick,config.auc_only,config.labels,config.spread,config.title)
 
     elif config.debug:
 
