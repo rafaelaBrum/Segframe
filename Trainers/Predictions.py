@@ -114,7 +114,7 @@ class Predictor(object):
         net_module = importlib.import_module('Models',net_name)
         net_model = getattr(net_module,net_name)(self._config,self._ds)
 
-        if self._config.testdir is None or x_test is None or y_test is None:
+        if self._config.testdir is None and (x_test is None or y_test is None):
             self._ds.load_metadata()
 
         self.run_test(net_model,x_test,y_test,load_full)
