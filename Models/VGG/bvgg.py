@@ -314,7 +314,7 @@ class BayesVGG16A2(BayesVGG16):
     VGG variation, uses GroupNormalization and more dropout
     """
     def __init__(self,config,ds):
-        super(BayesVGG16,self).__init__(config=config,ds=ds,name = "BVGG16_A2")
+        super(BayesVGG16A2,self).__init__(config=config,ds=ds,name = "BVGG16_A2")
 
 
     def _build_architecture(self,input_shape,training):
