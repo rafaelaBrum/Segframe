@@ -206,6 +206,7 @@ class GenericDS(ABC):
         if reload_data:
             X,Y = self._run_dir(self.path)
 
+        if reload_data or reshuffle:
             self._cache.dump((X,Y,self.name),metadata_file)
             self._cache.dump(tuple(self._config.split),'split_ratio.pik')
             
