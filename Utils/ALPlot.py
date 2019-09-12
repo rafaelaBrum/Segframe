@@ -410,7 +410,7 @@ class Plotter(object):
             if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
                 #Repeat last point if needed
                 if data[k]['trainset'].shape[0] > data[k]['auc'].shape[0]:
-                    data[k]['auc'].append(data[k]['auc'][-1])
+                    data[k]['auc'] = np.concatenate((data[k]['auc'],data[k]['auc'][-1:]),axis=0)
                 if auc_value is None:
                     trainset = data[k]['trainset']
                     shape = (len(data),len(trainset))
@@ -419,7 +419,7 @@ class Plotter(object):
             if not auc_only and 'accuracy' in data[k] and data[k]['accuracy'].shape[0] > 0:
                 #Repeat last point if needed
                 if data[k]['trainset'].shape[0] > data[k]['accuracy'].shape[0]:
-                    data[k]['accuracy'].append(data[k]['accuracy'][-1])
+                    data[k]['accuracy'] = np.concatenate((data[k]['accuracy'],data[k]['accuracy'][-1:]),axis=0)
                 if acc_value is None:
                     trainset = data[k]['trainset']
                     shape = (len(data),len(data[k]['trainset']))
@@ -563,7 +563,8 @@ if __name__ == "__main__":
 
         if isinstance(config.confidence,list):
             config.confidence = config.confidence[0]
-        elif config.confidence < 0.0 or config.confidence > 1.0:
+
+        if config.confidence < 0.0 or config.confidence > 1.0:
             print("CI interval should be between 0.0 and 1.0")
             sys.exit(1)
 

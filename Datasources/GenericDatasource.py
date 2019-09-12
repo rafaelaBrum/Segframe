@@ -135,13 +135,17 @@ class GenericDS(ABC):
         X.extend(mdata[0]) #samples
         Y.extend(mdata[1]) #labels
 
+        X,Y = self._shuffle(X,Y)
+        return X,Y
+
+    def _shuffle(self,X,Y):
         #Shuffle samples and labels maintaining relative order
         combined = list(zip(X,Y))
         random.shuffle(combined)
         X[:],Y[:] = zip(*combined)
-            
+
         return X,Y
-            
+        
     def split_metadata(self,split,data=None):
         """
         Returns all metadata split into N sets, defined by the spliting tuples
@@ -165,12 +169,13 @@ class GenericDS(ABC):
 
         X,Y = (None,None)
         reload_data = False
+        reshuffle = False
         
         if self._cache.checkFileExistence('split_ratio.pik'):
             split = self._cache.load('split_ratio.pik')
             if self._config.split != split:
-                reload_data = True
                 #Dump old data
+                reshuffle = True
                 if not self.X is None or not self.Y is None:
                     del(self.X)
                     del(self.Y)
@@ -193,6 +198,10 @@ class GenericDS(ABC):
                 print("[GenericDatasource] Loaded split data cache. Used previously defined splitting.")
         else:
             reload_data = True
+
+
+        if reshuffle:
+            X,Y = self._shuffle(X,Y)
             
         if reload_data:
             X,Y = self._run_dir(self.path)
