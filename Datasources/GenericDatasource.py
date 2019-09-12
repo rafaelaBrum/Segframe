@@ -183,7 +183,7 @@ class GenericDS(ABC):
                     self.Y = None
                     
                 if self._config.info:
-                    print("Previous split ratio {} is different from requested one {}. Metadata will be rebuilt.".format(split,self._config.split))
+                    print("Previous split ratio {} is different from requested one {}. Metadata will be reshuffled.".format(split,self._config.split))
                 
         if self._cache.checkFileExistence(metadata_file) and not reload_data:
             try:
