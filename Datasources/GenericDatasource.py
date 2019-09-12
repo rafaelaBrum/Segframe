@@ -307,7 +307,7 @@ class GenericDS(ABC):
             if name != self.name:
                 reload_data = True
 
-            if not reload_data and self._verbose > 0:
+            if not reload_data and not reshuffle and self._verbose > 0:
                 print("[GenericDatasource] Loaded split sampled data cache. Used previously defined splitting.")
         else:
             reload_data = True
