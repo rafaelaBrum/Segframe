@@ -29,7 +29,10 @@ class SegImage(ABC):
         return os.path.basename(self.path)
 
     def __eq__(self,other):
-        return self._path == other.getPath()
+        if not isinstance(other,SegImage):
+            return False
+        else:
+            return self._path == other.getPath()
 
     def __getstate__(self):
           """
