@@ -36,9 +36,9 @@ def grab_images(config):
             
         if initial_set is None:
             #Acquisitions are obtained from keys k and k-1
-            initial_set = list(train)
+            initial_set = list(train[0])
         else:
-            imgs = np.setdiff1d(list(train),initial_set,True)
+            imgs = np.setdiff1d(list(train[0]),initial_set,True)
             print("Acquired {} images in acquisition {}".format(imgs.shape[0],k-1))
             ac_imgs[k-1] = imgs
             initial_set = train

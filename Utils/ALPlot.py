@@ -67,6 +67,7 @@ class Plotter(object):
         palette = plt.get_cmap('Set1')
         color = 0
         plots = []
+        up = 0.0
         for d in data:
             x_data,y_data,ci,y_label = d
             if auc_only and y_label != 'AUC':
@@ -76,6 +77,8 @@ class Plotter(object):
             # Shade the confidence interval
             low_ci = y_data - ci
             upper_ci = y_data + ci
+            ym = np.max(upper_ci)+0.05
+            up = ym if ym > up else up
             plt.fill_between(x_data, low_ci, upper_ci, color = palette(color), alpha = 0.4)
             color += 1
             plt.xlabel("Trainset size")
@@ -86,7 +89,8 @@ class Plotter(object):
             labels = ['Mean','{} STD'.format(confidence)]
         plt.legend(plots,labels=labels,loc=4,ncol=2)
         plt.xticks(np.arange(min(x_data), max(x_data)+xticks, xticks))
-        plt.yticks(np.arange(np.min(low_ci)-0.05, np.max(upper_ci)+0.05, 0.1))
+        rg = np.arange(np.min(low_ci)-0.05, up if up <= 1.05 else 1.05, 0.1)
+        plt.yticks(rg)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         if max(x_data) > 1000:
             plt.xticks(rotation=30)
@@ -476,10 +480,10 @@ if __name__ == "__main__":
         help='Calculate statistics for AUC only.')
     parser.add_argument('-ci', dest='confidence', nargs=1, type=float, 
         help='CI (T-Student).', default=0.95,required=False)
-    parser.add_argument('-n', dest='n_exp', nargs=2, type=int, 
+    parser.add_argument('-n', dest='n_exp', nargs='+', type=int, 
         help='N experiments for each curve (allows plotting 2 curves together).',
         default=(3,3),required=False)
-    parser.add_argument('-labels', dest='labels', nargs=2, type=str, 
+    parser.add_argument('-labels', dest='labels', nargs='+', type=str, 
         help='Curve labels.',
         default=None,required=False)
     
@@ -569,11 +573,13 @@ if __name__ == "__main__":
             sys.exit(1)
 
         if config.multi:
-            c1 = p.calculate_stats({k:data[k] for k in config.ids[:config.n_exp[0]]},config.auc_only,config.confidence)
-            if config.n_exp[1] > 0:
-                c2 = p.calculate_stats({k:data[k] for k in config.ids[config.n_exp[0]:]},config.auc_only,config.confidence)
-                c1.extend(c2)
-            data = c1
+            idx = 0
+            c = []
+            for i in config.n_exp:
+                if i > 0:
+                    c.extend(p.calculate_stats({k:data[k] for k in config.ids[idx:idx+i]},config.auc_only,config.confidence))
+                    idx += i
+            data = c
         else:
             data = p.calculate_stats(data,config.auc_only)
             
