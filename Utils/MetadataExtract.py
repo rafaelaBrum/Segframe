@@ -41,7 +41,7 @@ def grab_images(config):
             imgs = np.setdiff1d(list(train[0]),initial_set,True)
             print("Acquired {} images in acquisition {}".format(imgs.shape[0],k-1))
             ac_imgs[k-1] = imgs
-            initial_set = train
+            initial_set = list(train)
             
     return [ac_imgs[k][:config.n] for k in config.ac_n]
 
@@ -67,14 +67,21 @@ if __name__ == "__main__":
 
     acquisitions = grab_images(config)
 
-    print("# of acquisitions obtained: {}".format(len(acquisitions)))
+    print("# of acquisitions obtained: {} -> ".format(len(acquisitions)),end='')
+    print(" ".join([str(len(d)) for d in acquisitions]))
     print("Copying...")
 
+    same_name = {}
     for a in range(len(config.ac_n)):
-        ac_path = os.path.join(config.out_dir,config.ac_n[a])
+        ac_path = os.path.join(config.out_dir,str(config.ac_n[a]))
         if not os.path.isdir(ac_path):
             os.mkdir(ac_path)
         for img in acquisitions[a]:
+            img_name = os.path.basename(img.getPath())
+            if img_name in same_name:
+                print("Images with the same name detected: {}\n{}\n{}".format(img_name,img.getPath(),same_name[img_name]))
+            else:
+                same_name[img_name] = img.getPath()
             shutil.copy(img.getPath(),ac_path)
 
     print("Acquired images copied to output dir")
