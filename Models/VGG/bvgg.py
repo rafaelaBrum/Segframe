@@ -59,8 +59,26 @@ class BayesVGG16(GenericModel):
         Returns path to model cache
         """
         return self.cache_m.fileLocation(self._mgpu_weightsCache)
-    
+
+
+    def build_extractor(self,**kwargs):
+        """
+        Builds a feature extractor
+        """
+
+        return self._build(**kwargs)
+        
     def build(self,**kwargs):
+
+        model,parallel_model = self._build(**kwargs)
+        
+        self.single = model
+        self.parallel = parallel_model
+        
+        return (model,parallel_model)
+
+        
+    def _build(self,**kwargs):
         """
         Returns a VGG 16 model instance, final fully-connected layers are substituted by Conv2Ds
         
@@ -80,10 +98,13 @@ class BayesVGG16(GenericModel):
             training = kwargs['training']
         else:
             training = True
+
+        if 'feature' in kwargs:
+            feature = kwargs['feature']
+        else:
+            feature = False
             
         self.cache_m = CacheManager()
-        
-        model = self._build_architecture(input_shape,training)
         
         #Check if previous training and LR is saved, if so, use it
         lr_cache = "{0}_learning_rate.txt".format(self.name)
@@ -99,6 +120,8 @@ class BayesVGG16(GenericModel):
         
         #Return parallel model if multiple GPUs are available
         parallel_model = None
+
+        model = self._build_architecture(input_shape,training, feature)
         
         if self._config.gpu_count > 1:
             with tf.device('/cpu:0'):
@@ -120,13 +143,10 @@ class BayesVGG16(GenericModel):
                 #options=p_opt, 
                 #run_metadata=p_mtd
                 )
-
-        self.single = model
-        self.parallel = parallel_model
         
         return (model,parallel_model)
 
-    def _build_architecture(self,input_shape,training):
+    def _build_architecture(self,input_shape,training,feature):
         original_vgg16 = vgg16.VGG16(weights=self.cache_m.fileLocation('vgg16_weights_notop.h5'),
                                          include_top=False,
                                          input_shape=input_shape)
@@ -289,6 +309,10 @@ class BayesVGG16(GenericModel):
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
         x = Dropout(0.3)(x,training=training)
 
+        if feature:
+            output = x
+            return Model(inp,output)
+        
         #Freeze initial layers, except for the last 3:
         #for layer in original_vgg16.layers[:-2]:
         #    layer.trainable = False
@@ -317,7 +341,7 @@ class BayesVGG16A2(BayesVGG16):
         super(BayesVGG16A2,self).__init__(config=config,ds=ds,name = "BVGG16_A2")
 
 
-    def _build_architecture(self,input_shape,training):
+    def _build_architecture(self,input_shape,training,feature):
         original_vgg16 = vgg16.VGG16(weights=self.cache_m.fileLocation('vgg16_weights_notop.h5'),
                                          include_top=False,
                                          input_shape=input_shape)
@@ -480,6 +504,10 @@ class BayesVGG16A2(BayesVGG16):
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
         x = Dropout(0.3)(x,training=training)
 
+        if feature:
+            output = x
+            return Model(inp,output)
+        
         #Freeze initial layers, except for the last 3:
         #for layer in original_vgg16.layers[:-2]:
         #    layer.trainable = False

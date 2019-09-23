@@ -37,6 +37,78 @@ def debug_acquisition(s_expected,s_probs,classes,cache_m,config,fidp):
     PrintConfusionMatrix(s_pred,s_expected,classes,config,"Selected images (AL)")
     if config.save_var:
         cache_m.dump((s_expected,s_probs),fidp)
+
+
+def km_varratios(bayesian_model,generator,data_size,**kwargs):
+    """
+    Cluster in K centroids and extract N samples from each cluster, based on maximum bayesian_varratios
+    uncertainty.
+
+    Function needs to extract the following configuration parameters:
+    model <keras.Model>: model to use for predictions
+    generator <keras.Sequence>: data generator for predictions
+    data_size <int>: number of data samples
+    mc_dp <int>: number of dropout iterations
+    cpu_count <int>: number of cpu cores (used to define number of generator workers)
+    gpu_count <int>: number of gpus available
+    verbose <int>: verbosity level
+    pbar <boolean>: user progress bars
+    """
+    from sklearn.cluster import KMeans
+    
+    if 'config' in kwargs:
+        config = kwargs['config']
+        gpu_count = config.gpu_count
+        cpu_count = config.cpu_count
+        verbose = config.verbose
+        pbar = config.progressbar
+        query = config.acquire
+        clusters = config.clusters
+    else:
+        return None
+
+    if 'model' in kwargs:
+        model = kwargs['model']
+    else:
+        print("[km_varratios] GenericModel is needed by km_varratios. Set model kw argument")
+        return None
+
+    if os.path.isfile(model.get_weights_cache()):
+        if hasattr(model,'build_extractor'):
+            pred_model,_ = model.build_extractor(training=False,feature=True)
+        else:
+            if config.info:
+                print("Model is not prepared to produce features. No feature extractor")
+            return None
+        pred_model.load_weights(model.get_weights_cache(),by_name=True)
+        if config.info:
+            print("Model weights loaded from: {0}".format(model.get_weights_cache()))
+    else:
+        if config.info:
+            print("No trained model or weights file found")
+        return None
+
+    if config.info:
+        print("Starting feature extraction...")
+        
+    #Extract features for all images in the pool
+    features = pred_model.predict_generator(generator,
+                                             workers=4*cpu_count,
+                                             max_queue_size=100*gpu_count,
+                                             verbose=0)
+    print("Features array shape: {}".format(features.shape))
+    feature = features.reshape(features.shape[0],np.prod(features.shape[1:]))
+    print("Features array shape: {}".format(features.shape))
+
+    km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=cpu_count).fit(features)
+    print("Labels of some of the points: {}".format(np.random.choice(range(km.shape[0]),100,replace=False)))
+    
+    #TODO:
+    #3- run pred_model.predict (on all samples - check if it's running in parallel)
+    #4- cluster the data
+    #5- run normal varratios
+    #6- extract config.acquire/cluster items from each cluster, in decreasing order of uncertainty
+    
     
 def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     """

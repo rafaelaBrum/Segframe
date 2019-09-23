@@ -209,6 +209,8 @@ if __name__ == "__main__":
         help='Save aquisition variations/probability arrays and selected items indexes.',default=False)
     al_args.add_argument('-db', action='store_true', dest='debug',
         help='Runs debugging procedures.',default=False)
+    al_args.add_argument('-clusters', dest='clusters', type=int, 
+        help='Number of clusters to form in similarity selections (Default 0).', default=0)
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')

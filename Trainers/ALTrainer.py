@@ -201,6 +201,9 @@ class ActiveLearningTrainer(Trainer):
             kwargs = {}
 
         kwargs['config'] = self._config
+
+        #Some acquisition functions may need access to GenericModel
+        kwargs['model'] = model
         
         if not self._config.tdim is None:
             fix_dim = self._config.tdim

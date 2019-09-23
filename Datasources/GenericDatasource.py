@@ -47,13 +47,6 @@ class GenericDS(ABC):
         Return: SORTED list of tuples (# samples,width,height,channels)
         """
 
-        if X is None and self.X is None:
-            return None
-        elif X is None:
-            X = self.X
-        
-        samples = len(X)
-
         cache_m = CacheManager()
         reload_data = False
         if cache_m.checkFileExistence('data_dims.pik'):
@@ -68,6 +61,12 @@ class GenericDS(ABC):
                 
         if reload_data:
             dims = set()
+            if X is None and self.X is None:
+                return None
+            elif X is None:
+                X = self.X
+        
+            samples = len(X)            
             if self._config.info:
                 print("Checking a sample of dataset images for different dimensions...")
 
