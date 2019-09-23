@@ -75,7 +75,7 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
 
     if os.path.isfile(model.get_weights_cache()):
         if hasattr(model,'build_extractor'):
-            pred_model,_ = model.build_extractor(training=False,feature=True)
+            single_m,parallel_m = model.build_extractor(training=False,feature=True)
         else:
             if config.info:
                 print("Model is not prepared to produce features. No feature extractor")
@@ -87,6 +87,11 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
         if config.info:
             print("No trained model or weights file found")
         return None
+
+    if gpu_count > 1 and not parallel_m is None:
+        pred_model = parallel_m
+    else:
+        pred_model = single_m
 
     if config.info:
         print("Starting feature extraction...")
