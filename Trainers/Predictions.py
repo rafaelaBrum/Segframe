@@ -153,7 +153,7 @@ class Predictor(object):
                 if not 1 in l_count:
                     l_count[1] = 0
                 print("Test labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
-            print("Test set: {} items".format(y_test.shape[0]))
+            print("Test set: {} items".format(len(y_test)))
             
         X,Y = self._ds.load_data(data=(x_test,y_test),keepImg=self._keep)
         if self._config.verbose > 1:

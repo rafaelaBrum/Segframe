@@ -99,6 +99,8 @@ class ActiveLearningTrainer(Trainer):
 
         if self._config.balance:
             X,Y = self._balance_classes(X,Y)
+            if self._config.info:
+                print("[ALTrainer] Using a balanced initial dataset for AL ({} total elements).".format(len(X)))
 
         #Test set is extracted from the last items and is not changed for the whole run
         t_idx = int(self._config.split[-1:][0] * len(X))
