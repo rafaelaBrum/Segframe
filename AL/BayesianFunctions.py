@@ -97,19 +97,16 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
             print("Model weights loaded from: {0}".format(model.get_weights_cache()))
 
     if config.info:
-        print("Starting feature extraction ({} images)...".format(len(generator)))
+        print("Starting feature extraction ({} batches)...".format(len(generator)))
         
     #Extract features for all images in the pool
     features = pred_model.predict_generator(generator,
                                              workers=4*cpu_count,
                                              max_queue_size=100*gpu_count,
                                              verbose=0)
-    print("Features array shape: {}".format(features.shape))
     features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
-    print("Features array reshaped: {}".format(features.shape))
 
     km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=int(cpu_count/2)).fit(features)
-    print("Labels of some of the points: {}".format(km.labels_[:100]))
     
     #TODO:
     #3- run pred_model.predict (on all samples - check if it's running in parallel)
