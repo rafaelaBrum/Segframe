@@ -3,5 +3,5 @@
 
 __all__ = ['bayesian_varratios']
 
-from .AcquisitionFunctions import bayesian_varratios,bayesian_bald,random_sample,oracle_sample
-from .AcquisitionFunctions import km_varratios
+from .BayesianFunctions import bayesian_varratios,bayesian_bald,random_sample,oracle_sample
+from .BayesianFunctions import km_varratios
