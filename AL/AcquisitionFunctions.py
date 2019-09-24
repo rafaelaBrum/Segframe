@@ -102,7 +102,7 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
                                              max_queue_size=100*gpu_count,
                                              verbose=0)
     print("Features array shape: {}".format(features.shape))
-    feature = features.reshape(features.shape[0],np.prod(features.shape[1:]))
+    features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
     print("Features array shape: {}".format(features.shape))
 
     km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=cpu_count).fit(features)
