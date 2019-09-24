@@ -232,6 +232,9 @@ class ActiveLearningTrainer(Trainer):
         else:
             pred_model = model.single
 
+        if self._config.verbose > 0:
+            print("Pool size: {}".format(self.pool_x.shape[0]))
+
         if self._config.verbose > 1:
             print("Starting acquisition using model: {0}".format(hex(id(pred_model))))
         
