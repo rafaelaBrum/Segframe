@@ -97,7 +97,7 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
             print("Model weights loaded from: {0}".format(model.get_weights_cache()))
 
     if config.info:
-        print("Starting feature extraction ({} images)...".format(len(predict_generator)))
+        print("Starting feature extraction ({} images)...".format(len(generator)))
         
     #Extract features for all images in the pool
     features = pred_model.predict_generator(generator,
