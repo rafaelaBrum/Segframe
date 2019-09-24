@@ -80,9 +80,6 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
             if config.info:
                 print("Model is not prepared to produce features. No feature extractor")
             return None
-        pred_model.load_weights(model.get_weights_cache(),by_name=True)
-        if config.info:
-            print("Model weights loaded from: {0}".format(model.get_weights_cache()))
     else:
         if config.info:
             print("No trained model or weights file found")
@@ -90,8 +87,14 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
 
     if gpu_count > 1 and not parallel_m is None:
         pred_model = parallel_m
+        pred_model.load_weights(model.get_mgpu_weights_cache(),by_name=True)
+        if config.info:
+            print("Model weights loaded from: {0}".format(model.get_mgpu_weights_cache()))
     else:
         pred_model = single_m
+        pred_model.load_weights(model.get_weights_cache(),by_name=True)
+        if config.info:
+            print("Model weights loaded from: {0}".format(model.get_weights_cache()))
 
     if config.info:
         print("Starting feature extraction...")
@@ -105,8 +108,8 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
     features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
     print("Features array shape: {}".format(features.shape))
 
-    km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=cpu_count).fit(features)
-    print("Labels of some of the points: {}".format(np.random.choice(range(km.shape[0]),100,replace=False)))
+    km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=int(cpu_count/2)).fit(features)
+    print("Labels of some of the points: {}".format(km.labels_[:100]))
     
     #TODO:
     #3- run pred_model.predict (on all samples - check if it's running in parallel)

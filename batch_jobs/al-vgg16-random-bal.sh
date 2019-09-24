@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p GPU-AI
-#SBATCH -t 15:00:00
+#SBATCH -t 30:00:00
 #SBATCH --gres=gpu:volta16:3
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=alsmeirelles@gmail.com
@@ -8,7 +8,7 @@
 #echo commands to stdout
 #set -x
 
-DIRID="AL-119"
+DIRID="AL-120"
 
 export PYTHONPATH=$HOME/.local/lib/python3.6/site-packages:/pylon5/ac3uump/alsm/lib64/python3.6/site-packages:$PYTHONPATH
 
