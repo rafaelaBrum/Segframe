@@ -107,6 +107,28 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
     features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
 
     km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=int(cpu_count/2)).fit(features)
+
+    #Any uncertainty function could be used
+    n_config = config.copy()
+    n_config.acquire = data_size
+    kwargs['config'] = n_config
+    un_function = importlib.import_module('AL',config.un_function)
+    un_indexes = un_function(bayesian_model,generator,data_size,**kwargs)
+
+    print('Ordered indexes: {}'.format(un_indexes.shape))
+
+    un_clusters = {k:[] for k in range(config.clusters)}
+
+    for iid in un_indexes:
+        un_clusters[km.labels_[iid]].append(iid)
+
+    ac_count = 0
+    acquired = []
+    while ac_count < query:
+        acquired.append(un_clusters[ac_count % clusters].pop(0))
+        ac_count += 1
+
+    return np.asarray(acquired)
     
     #TODO:
     #3- run pred_model.predict (on all samples - check if it's running in parallel)
