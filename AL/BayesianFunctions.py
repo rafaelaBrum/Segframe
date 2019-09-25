@@ -55,6 +55,7 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
     pbar <boolean>: user progress bars
     """
     from sklearn.cluster import KMeans
+    import importlib
     
     if 'config' in kwargs:
         config = kwargs['config']
