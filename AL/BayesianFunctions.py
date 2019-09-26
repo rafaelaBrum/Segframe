@@ -56,7 +56,8 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
     """
     from sklearn.cluster import KMeans
     import importlib
-    
+    import copy
+ 
     if 'config' in kwargs:
         config = kwargs['config']
         gpu_count = config.gpu_count
@@ -110,7 +111,7 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
     km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=int(cpu_count/2)).fit(features)
 
     #Any uncertainty function could be used
-    n_config = config.copy()
+    n_config = copy.copy(config)
     n_config.acquire = data_size
     kwargs['config'] = n_config
     un_function = importlib.import_module('AL',config.un_function)
