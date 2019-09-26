@@ -113,6 +113,7 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
     stime = None
     etime = None
     if config.verbose > 0:
+        print("Done extraction...starting KMeans")
         stime = time.time()
         
     km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=int(cpu_count/2)).fit(features)
@@ -128,8 +129,6 @@ def km_varratios(bayesian_model,generator,data_size,**kwargs):
     kwargs['config'] = n_config
     un_function = getattr(importlib.import_module('AL'),config.un_function)
     un_indexes = un_function(bayesian_model,generator,data_size,**kwargs)
-
-    print('Ordered indexes: {}'.format(un_indexes.shape))
 
     un_clusters = {k:[] for k in range(config.clusters)}
 
