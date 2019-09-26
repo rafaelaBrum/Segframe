@@ -39,7 +39,7 @@ def debug_acquisition(s_expected,s_probs,classes,cache_m,config,fidp):
         cache_m.dump((s_expected,s_probs),fidp)
 
 
-def km_varratios(bayesian_model,generator,data_size,**kwargs):
+def km_uncert(bayesian_model,generator,data_size,**kwargs):
     """
     Cluster in K centroids and extract N samples from each cluster, based on maximum bayesian_varratios
     uncertainty.
