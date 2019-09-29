@@ -132,23 +132,23 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
 
     un_clusters = {k:[] for k in range(config.clusters)}
 
+    #Distributes items in clusters in descending order of uncertainty
     for iid in un_indexes:
         un_clusters[km.labels_[iid]].append(iid)
 
     ac_count = 0
     acquired = []
+    j = 0
     while ac_count < query:
-        acquired.append(un_clusters[ac_count % clusters].pop(0))
-        ac_count += 1
+        q = un_clusters[ac_count+j % clusters]
+        if len(q) > 0:
+            acquired.append(q.pop(0))
+            ac_count += 1
+        else:
+            j += 1
+            continue
 
     return np.asarray(acquired)
-    
-    #TODO:
-    #3- run pred_model.predict (on all samples - check if it's running in parallel)
-    #4- cluster the data
-    #5- run normal varratios
-    #6- extract config.acquire/cluster items from each cluster, in decreasing order of uncertainty
-    
     
 def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     """
