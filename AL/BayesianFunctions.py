@@ -150,13 +150,6 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
 
     return np.asarray(acquired)
     
-    #TODO:
-    #3- run pred_model.predict (on all samples - check if it's running in parallel)
-    #4- cluster the data
-    #5- run normal varratios
-    #6- extract config.acquire/cluster items from each cluster, in decreasing order of uncertainty
-    
-    
 def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     """
     Calculation as defined in paper:
