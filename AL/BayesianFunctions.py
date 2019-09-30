@@ -136,6 +136,13 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     for iid in un_indexes:
         un_clusters[km.labels_[iid]].append(iid)
 
+    #If debug
+    if config.debug:
+        for k in range(len(un_clusters)):
+            ind = np.asarray(un_clusters[k])
+            print("Cluster {}, # of items: {}".format(k,ind.shape[0]))
+            print("Cluster {} first 30 item indexes: {}".format(k,un_indexes[ind]))
+            
     ac_count = 0
     acquired = []
     j = 0

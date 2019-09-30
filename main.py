@@ -209,8 +209,6 @@ if __name__ == "__main__":
         help='Balance dataset samples between classes.',default=False)
     al_args.add_argument('-sv', action='store_true', dest='save_var',
         help='Save aquisition variations/probability arrays and selected items indexes.',default=False)
-    al_args.add_argument('-db', action='store_true', dest='debug',
-        help='Runs debugging procedures.',default=False)
     al_args.add_argument('-clusters', dest='clusters', type=int, 
         help='Number of clusters to form in similarity selections (Default 0).', default=0)
     
@@ -261,7 +259,9 @@ if __name__ == "__main__":
         help='Keep loaded images in memory.')
     parser.add_argument('-d', action='store_true', dest='delay_load', default=False, 
         help='Delay the loading of images to the latest moment possible (memory efficiency).')
-
+    parser.add_argument('-db', action='store_true', dest='debug',
+        help='Runs debugging procedures.',default=False)
+    
     ##Run prediction options
     parser.add_argument('--pred', action='store_true', dest='pred', default=False, 
         help='Runs prediction with a given model (use -net parameter).')

@@ -212,7 +212,7 @@ class GalKNet(KNet):
     def __init__(self,config,ds):
         super(GalKNet,self).__init__(config=config,ds=ds,name = "GalKNet")
 
-    def _build_architecture(self,input_shape):
+    def _build_architecture(self,input_shape,training,feature):
 
         if hasattr(self,'data_size'):
             weight_decay = 2.5/float(self.data_size)
@@ -236,7 +236,7 @@ class GalKNet(KNet):
                     name='block1_conv2')(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        x = Dropout(0.25)(x,training=True)
+        x = Dropout(0.25)(x,training=training)
 
         #Block 2
         x = Convolution2D(64, (4, 4),
@@ -251,11 +251,14 @@ class GalKNet(KNet):
                     name='block2_conv2')(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        x = Dropout(0.25)(x,training=True)
+        x = Dropout(0.25)(x,training=training)
+
+        if feature:
+            return Model(inp,x)
         
         x = Flatten()(x)
         x = Dense(128,kernel_regularizer=regularizers.l2(weight_decay))(x)
-        x = Dropout(0.5)(x,training=True)
+        x = Dropout(0.5)(x,training=training)
         x = Dense(self._ds.nclasses)(x)
         output = Activation('softmax')(x)
         
