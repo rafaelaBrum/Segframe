@@ -465,7 +465,7 @@ if __name__ == "__main__":
         help='Experiment type: \n \
         AL - General active learning experiment; \n \
         MN - MNIST dataset experiment.',
-       choices=['AL','MN','DB','OR'],default='AL')
+       choices=['AL','MN','DB','OR','KM'],default='AL')
     
     ##Single experiment plot
     parser.add_argument('--single', action='store_true', dest='single', default=False, 

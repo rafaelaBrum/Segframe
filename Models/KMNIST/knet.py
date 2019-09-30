@@ -61,11 +61,25 @@ class KNet(GenericModel):
         Returns path to model cache
         """
         return self.cache_m.fileLocation(self._mgpu_weightsCache)
-    
-    def build(self,**kwargs):
+
+    def build_extractor(self,**kwargs):
         """
-        Returns a VGG 16 model instance, final fully-connected layers are substituted by Conv2Ds
+        Builds a feature extractor
+        """
+
+        return self._build(**kwargs)
         
+    def build(self,**kwargs):
+
+        model,parallel_model = self._build(**kwargs)
+        
+        self.single = model
+        self.parallel = parallel_model
+        
+        return (model,parallel_model)
+    
+    def _build(self,**kwargs):
+        """
         @param pre_trained <boolean>: returned model should be pre-trained or not
         @param data_size <int>: size of the training dataset
         """
@@ -79,6 +93,11 @@ class KNet(GenericModel):
         else:
             training = True
             
+        if 'feature' in kwargs:
+            feature = kwargs['feature']
+        else:
+            feature = False
+            
         if backend.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
         else:
@@ -86,7 +105,7 @@ class KNet(GenericModel):
 
         self.cache_m = CacheManager()
         
-        model = self._build_architecture(input_shape,training)
+        model = self._build_architecture(input_shape,training,feature)
         
         #Check if previous training and LR is saved, if so, use it
         lr_cache = "{0}_learning_rate.txt".format(self.name)
@@ -125,12 +144,9 @@ class KNet(GenericModel):
                 #run_metadata=p_mtd
                 )
 
-        self.single = model
-        self.parallel = parallel_model
-
         return (model,parallel_model)
 
-    def _build_architecture(self,input_shape,training=None):
+    def _build_architecture(self,input_shape,training=None,feature=False):
             
         model = Sequential()
         model.add(Convolution2D(32, kernel_size=(3, 3),
@@ -153,7 +169,7 @@ class BayesKNet(KNet):
     def __init__(self,config,ds):
         super(BayesKNet,self).__init__(config=config,ds=ds,name = "BayesKNet")
 
-    def _build_architecture(self,input_shape,training):
+    def _build_architecture(self,input_shape,training,feature):
         if hasattr(self,'data_size'):
             weight_decay = 2.5/float(self.data_size)
             if self._config.verbose > 1:
@@ -175,6 +191,10 @@ class BayesKNet(KNet):
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
         x = Dropout(0.25)(x,training=training)
+
+        if feature:
+            output = x
+            return Model(inp,output)
         
         x = Flatten()(x)
         x = Dense(128,kernel_regularizer=regularizers.l2(weight_decay))(x)

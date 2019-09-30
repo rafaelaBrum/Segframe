@@ -241,6 +241,10 @@ class ActiveLearningTrainer(Trainer):
             print("Starting acquisition using model: {0}".format(hex(id(pred_model))))
         
         pooled_idx = function(pred_model,generator,self.pool_x.shape[0],**kwargs)
+        if pooled_idx is None:
+            if self._config.info:
+                print("[ALTrainer] No indexes returned. Something is wrong.")
+            sys.exit(1)
         self.train_x = np.concatenate((self.train_x,self.pool_x[pooled_idx]),axis=0)
         self.train_y = np.concatenate((self.train_y,self.pool_y[pooled_idx]),axis=0)
         self.pool_x = np.delete(self.pool_x,pooled_idx)
