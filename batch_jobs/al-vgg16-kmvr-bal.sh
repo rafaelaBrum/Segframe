@@ -8,7 +8,7 @@
 #echo commands to stdout
 #set -x
 
-DIRID="KM-9"
+DIRID="KM-12"
 export PYTHONPATH=$HOME/.local/lib/python3.6/site-packages:/pylon5/ac3uump/alsm/lib64/python3.6/site-packages:$PYTHONPATH
 
 if [ ! -d $LOCAL/test ]

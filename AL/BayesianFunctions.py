@@ -140,7 +140,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     acquired = []
     j = 0
     while ac_count < query:
-        q = un_clusters[ac_count+j % clusters]
+        q = un_clusters[(ac_count+j) % clusters]
         if len(q) > 0:
             acquired.append(q.pop(0))
             ac_count += 1
