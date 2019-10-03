@@ -151,7 +151,7 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
 
-    def draw_multiline(self,data,title,xtick):
+    def draw_multiline(self,data,title,xtick,labels=None):
 
         palette = plt.get_cmap('Set1')
 
@@ -167,8 +167,13 @@ class Plotter(object):
                 if data[k]['trainset'].shape[0] > data[k]['auc'].shape[0]:
                     print("Shape mismatch:\n Trainset: {}; AUC:{}".format(data[k]['trainset'].shape,data[k]['auc'].shape))
                     data[k]['auc'] = np.hstack((data[k]['auc'],data[k]['auc'][-1:]))
+
+                if labels is None:
+                    lb = k
+                else:
+                    lb = labels[k]
                     
-                plt.plot(data[k]['trainset'],data[k]['auc'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
+                plt.plot(data[k]['trainset'],data[k]['auc'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
                 color += 1
                 plotAUC = True
                 min_x.append(data[k]['trainset'].min())
@@ -181,7 +186,11 @@ class Plotter(object):
                 if data[k]['trainset'].shape[0] > data[k]['accuracy'].shape[0]:
                     print("Shape mismatch:\n Trainset: {}; ACC:{}".format(data[k]['trainset'].shape,data[k]['accuracy'].shape))
                     data[k]['accuracy'] = np.hstack((data[k]['accuracy'],data[k]['accuracy'][-1:]))
-                    
+
+                if labels is None:
+                    lb = k
+                else:
+                    lb = labels[k]
                 plt.plot(data[k]['trainset'],data[k]['accuracy'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
                 color += 1
                 min_x.append(data[k]['trainset'].min())
@@ -189,7 +198,7 @@ class Plotter(object):
                 min_y.append(data[k]['accuracy'].min())
                 max_y.append(data[k]['accuracy'].max())
                 
-        plt.legend(loc=4,ncol=2)
+        plt.legend(loc=4,ncol=2,labels=config.labels)
         plt.xticks(np.arange(min(min_x), max(max_x)+1, xtick))
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
@@ -212,10 +221,13 @@ class Plotter(object):
 
         def parseDirs(path,al_dirs):
             data = {}
-            for d in al_dirs:
-                d_path = "{0}-{1}".format(path,d)
+            for d in range(len(al_dirs)):
+                if isinstance(path,list):
+                    d_path = "{0}-{1}".format(path[d],al_dirs[d])
+                else:
+                    d_path = "{0}-{1}".format(path,al_dirs[d])
                 if os.path.isdir(d_path):
-                    data[d] = self.parseSlurm(d_path)
+                    data[al_dirs[d]] = self.parseSlurm(d_path)
             return data
                     
         if isinstance(path,list):
@@ -529,7 +541,7 @@ if __name__ == "__main__":
         if len(data) == 0:
             print("Something is wrong with your command options. No data to plot")
             sys.exit(1)        
-        p.draw_multiline(data,config.title,config.xtick)
+        p.draw_multiline(data,config.title,config.xtick,config.labels)
                 
     elif config.single:
         p = Plotter(path=config.sdir)
@@ -577,11 +589,12 @@ if __name__ == "__main__":
             c = []
             for i in config.n_exp:
                 if i > 0:
+                    print("Calculating statistics for experiments {}".format(config.ids[idx:idx+i]))
                     c.extend(p.calculate_stats({k:data[k] for k in config.ids[idx:idx+i]},config.auc_only,config.confidence))
                     idx += i
             data = c
         else:
-            data = p.calculate_stats(data,config.auc_only)
+            data = p.calculate_stats(data,config.auc_only,config.confidence)
             
         if len(data) == 0:
             print("Something is wrong with your command options. No data to plot")

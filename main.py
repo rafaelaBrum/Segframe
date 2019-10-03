@@ -296,7 +296,7 @@ if __name__ == "__main__":
         'tcga.pik':os.path.join(config.presrc,'piks','tcga.pik'),
         'metadata.pik':os.path.join(config.cache,'{0}-metadata.pik'.format(config.data)),
         'sampled_metadata.pik':os.path.join(config.cache,'sampled_metadata.pik'),
-        'split_ratio.pik':os.path.join(config.cache,'split_ratio.pik'),
+        'split_ratio.pik':os.path.join(config.cache,'{0}-split_ratio.pik'.format(config.data)),
         'data_dims.pik':os.path.join(config.cache,'data_dims.pik'),
         'tiles.pik':os.path.join(config.predst,'tiles.pik'),
         'test_pred.pik':os.path.join(config.logdir,'test_pred.pik'),
