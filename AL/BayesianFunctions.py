@@ -138,13 +138,26 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
 
     #If debug
     if config.debug:
+        expected = generator.returnLabelsFromIndex()
         for k in range(len(un_clusters)):
             ind = np.asarray(un_clusters[k])
             print("Cluster {}, # of items: {}".format(k,ind.shape[0]))
             posa = np.ndarray(shape=(1,),dtype=np.int32)
             for ii in range(30):
-                posa = np.hstack((posa,np.where(un_indexes == ind[ii])[0]))
+                if ii == 0:
+                    posa[0] = np.where(un_indexes == ind[ii])[0]
+                else:
+                    posa = np.hstack((posa,np.where(un_indexes == ind[ii])[0]))
             print("Cluster {} first 30 items positions in index array: {}".format(k,posa))
+            #Check % of items os each class in cluster k
+            c_labels = expected[ind]
+            unique,count = np.unique(c_labels,return_counts=True)
+            l_count = dict(zip(unique,count))
+            if len(unique) > 2:
+                print("Cluster {} items:".format(k))
+                print("\n".join(["label {0}: {1} items" .format(key,l_count[key]) for key in unique]))
+            else:
+                print("Cluster {3} labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1])),k))            
             
     ac_count = 0
     acquired = []
