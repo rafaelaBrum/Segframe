@@ -143,7 +143,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
             ind = np.asarray(un_clusters[k])
             print("Cluster {}, # of items: {}".format(k,ind.shape[0]))
             posa = np.ndarray(shape=(1,),dtype=np.int32)
-            for ii in range(30):
+            for ii in range(min(ind.shape[0],30)):
                 if ii == 0:
                     posa[0] = np.where(un_indexes == ind[ii])[0]
                 else:
