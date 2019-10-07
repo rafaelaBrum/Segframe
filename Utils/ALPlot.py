@@ -60,6 +60,62 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
 
+    def draw_cluster_distribution(self,data,spread=1.0,title=''):
+        """
+        Data is returned by parseSlurm. 'clusters' key refers to a dictionary with cluster number as keys. Values are lists:
+        [(x,y),(...),...] -> x: number of positive samples; y: number of negative samples
+        """
+        mpl.rcParams['agg.path.chunksize'] = 1000000
+        plots = []
+        pl1,pl2 = None,None
+        clusters = data['cluster']
+        xticks = sorted(list(clusters.keys()))
+        selu = lambda x: x if x[0] > x[1] else None
+        sell = lambda x: x if x[0] < x[1] else None
+        
+        #Compute items total
+        total = 0
+        for c in clusters:
+            citems = np.asarray(clusters[c])
+            total += np.sum(citems)
+
+        xu,yu = [],[]
+        xl,yl = [],[]
+        a1,a2 = [],[]
+        for k in clusters:
+            upper = list(filter(lambda x: not x is None,[selu(x) for x in clusters[k]]))
+            lower = list(filter(lambda x: not x is None,[sell(x) for x in clusters[k]]))
+            a1.extend([50000*((i[0]+i[1])/total) for i in upper])
+            a2.extend([50000*((j[0]+j[1])/total) for j in lower])
+
+            xu.extend(np.random.rand(len(upper))*spread+xticks[k])
+            yu.extend([x[0]/(x[0]+x[1]) for x in upper])
+            xl.extend(np.random.rand(len(lower))*spread+xticks[k])
+            yl.extend([x[1]/(x[0]+x[1]) for x in lower])
+            #pl1 = plt.plot(np.random.rand(len(upper))*spread+xticks[k],[x[0]/(x[0]+x[1]) for x in upper],
+            #                   'ob',markersize=5,alpha=0.5)
+            #pl2 = plt.plot(np.random.rand(len(lower))*spread+xticks[k],[x[1]/(x[0]+x[1]) for x in lower],
+            #                   'or',markersize=5,alpha=0.5)
+            
+        pl1 = plt.scatter(xu,yu,s=a1,c='blue',alpha=0.5,label='Positive')
+        pl2 = plt.scatter(xl,yl,s=a2,c='red',alpha=0.5,label='Negative')
+            
+        #Horizontal line at y=0.5
+        plt.plot(xticks,[0.5]*len(xticks),'g--',markersize=3)
+
+        plt.legend(loc=4,ncol=2)
+        xticks = list(range(5,len(clusters)+5,5))
+        plt.axis([0,xticks[-1]+1,0.4,1.1])
+        plt.xticks(xticks)
+        plt.yticks(np.arange(0.4, 1.1, 0.2))
+        plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
+        plt.xlabel("Cluster #")
+        plt.ylabel("Percentage")
+
+        plt.tight_layout()
+        plt.grid(True)
+        plt.show()
+        
     def draw_stats(self,data,xticks,auc_only,labels=None,spread=1,title=''):
         """
         @param data <list>: a list as returned by calculate_stats
@@ -161,6 +217,8 @@ class Plotter(object):
         max_x = []
         min_y = []
         max_y = []
+        lbcount = 0
+        
         for k in data:
             if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
                 #Repeat last point if needed
@@ -171,7 +229,8 @@ class Plotter(object):
                 if labels is None:
                     lb = k
                 else:
-                    lb = labels[k]
+                    lb = labels[lbcount]
+                    lbcount += 1
                     
                 plt.plot(data[k]['trainset'],data[k]['auc'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
                 color += 1
@@ -190,7 +249,9 @@ class Plotter(object):
                 if labels is None:
                     lb = k
                 else:
-                    lb = labels[k]
+                    lb = labels[lbcount]
+                    lbcount += 1
+                    
                 plt.plot(data[k]['trainset'],data[k]['accuracy'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
                 color += 1
                 min_x.append(data[k]['trainset'].min())
@@ -228,8 +289,10 @@ class Plotter(object):
                     d_path = "{0}-{1}".format(path,al_dirs[d])
                 if os.path.isdir(d_path):
                     data[al_dirs[d]] = self.parseSlurm(d_path)
+                else:
+                    print("Results dir not found: {}".format(d_path))
             return data
-                    
+
         if isinstance(path,list):
             data = {}
             if n_ids is None:
@@ -237,7 +300,7 @@ class Plotter(object):
             li = 0
             for k in range(len(path)):
                 data.update(parseDirs(path[k],al_dirs[li:li+n_ids[k]]))
-                li = n_ids[k]
+                li += n_ids[k]
             return data
         else:
             return parseDirs(path,al_dirs)
@@ -281,17 +344,20 @@ class Plotter(object):
         data = {'time':[],
                 'auc':[],
                 'trainset':[],
-                'accuracy':[]}
+                'accuracy':[],
+                'cluster':{}}
         start_line = 0
         timerex = r'Acquisition step took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
         aucrex = r'AUC: (?P<auc>0.[0-9]+)'
         accrex = r'Accuracy: (?P<acc>0.[0-9]+)'
         trainsetrex = r'Train set: (?P<set>[0-9]+) items'
+        clusterrex = r'Cluster (?P<cln>[0-9]+) labels: (?P<neg>[0-9]+) are 0; (?P<pos>[0-9]+) are 1;'
         
         timerc = re.compile(timerex)
         aucrc = re.compile(aucrex)
         trainrc = re.compile(trainsetrex)
         accrc = re.compile(accrex)
+        clusterrc = re.compile(clusterrex)
 
         with open(slurm_path,'r') as fd:
             lines = fd.readlines()
@@ -303,6 +369,7 @@ class Plotter(object):
             aucmatch = aucrc.fullmatch(lstrip)
             trmatch = trainrc.fullmatch(lstrip)
             accmatch = accrc.fullmatch(lstrip)
+            clustermatch = clusterrc.fullmatch(lstrip)
             if tmatch:
                 td = datetime.timedelta(hours=int(tmatch.group('hours')),minutes=int(tmatch.group('min')),seconds=round(float(tmatch.group('sec'))))
                 data['time'].append(td.total_seconds()/3600.0)
@@ -312,6 +379,17 @@ class Plotter(object):
                 data['trainset'].append(int(trmatch.group('set')))
             if accmatch:
                 data['accuracy'].append(float(accmatch.group('acc')))
+            if clustermatch:
+                cln = int(clustermatch.group('cln'))
+                tot = int(clustermatch.group('pos')) + int(clustermatch.group('neg'))
+                if tot > 5:
+                    if cln in data['cluster']:
+                        data['cluster'][cln].append((int(clustermatch.group('pos')),int(clustermatch.group('neg'))))
+                    else:
+                        data['cluster'][cln] = [(int(clustermatch.group('pos')),int(clustermatch.group('neg')))]
+                else:
+                    print("Cluster {} has only {} items and will be discarded for plotting".format(cln,tot))
+                
 
         #Use NP arrays
         data['time'] = np.asarray(data['time'])
@@ -424,22 +502,24 @@ class Plotter(object):
 
         for k in data:
             if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
-                #Repeat last point if needed
-                if data[k]['trainset'].shape[0] > data[k]['auc'].shape[0]:
-                    data[k]['auc'] = np.concatenate((data[k]['auc'],data[k]['auc'][-1:]),axis=0)
                 if auc_value is None:
                     trainset = data[k]['trainset']
                     shape = (len(data),len(trainset))
                     auc_value = np.ndarray(shape=shape,dtype=np.float32)
+                #Repeat last point if needed
+                if auc_value.shape[1] > data[k]['auc'].shape[0]:
+                    print("Experiment {}: repeating last item for AUC data".format(k))
+                    data[k]['auc'] = np.concatenate((data[k]['auc'],data[k]['auc'][-1:]),axis=0)
                 auc_value[i] = data[k]['auc']
             if not auc_only and 'accuracy' in data[k] and data[k]['accuracy'].shape[0] > 0:
-                #Repeat last point if needed
-                if data[k]['trainset'].shape[0] > data[k]['accuracy'].shape[0]:
-                    data[k]['accuracy'] = np.concatenate((data[k]['accuracy'],data[k]['accuracy'][-1:]),axis=0)
                 if acc_value is None:
                     trainset = data[k]['trainset']
                     shape = (len(data),len(data[k]['trainset']))
                     acc_value = np.ndarray(shape=shape,dtype=np.float32)
+                #Repeat last point if needed
+                if acc_value.shape[1] > data[k]['accuracy'].shape[0]:
+                    print("Repeating last item for ACCURACY data")
+                    data[k]['accuracy'] = np.concatenate((data[k]['accuracy'],data[k]['accuracy'][-1:]),axis=0)
                 acc_value[i] = data[k]['accuracy']
                 
             i += 1
@@ -514,6 +594,8 @@ if __name__ == "__main__":
     ##Plot debugging data
     parser.add_argument('--debug', action='store_true', dest='debug', default=False, 
         help='Plot experiment uncertainties selected acquisitions.')
+    parser.add_argument('-clusters', action='store_true', dest='clusters', default=False, 
+        help='Plot cluster composition.')
     
     config, unparsed = parser.parse_known_args()
 
@@ -569,12 +651,14 @@ if __name__ == "__main__":
         if len(config.tmode) == 1:
             exp_type = os.path.join(config.sdir,config.tmode[0])
         else:
-            exp_type = [os.path.join(config.sdir,tmode) for tmode in config.tmode]
+            exp_type = []
+            for i in range(len(config.n_exp)):
+                exp_type.append(os.path.join(config.sdir,config.tmode[i]))
         
         if config.ids is None:
             print("You should define a set of experiment IDs (-id).")
             sys.exit(1)
-            
+
         data = p.parseResults(exp_type,config.ids,config.n_exp)
 
         if isinstance(config.confidence,list):
@@ -609,7 +693,10 @@ if __name__ == "__main__":
             sys.exit(1)
 
         p = Plotter(path=config.sdir)
-        data = p.generateDataFromPik()
+        if config.clusters:
+            data = p.parseSlurm()
+        else:
+            data = p.generateDataFromPik()
         
         if config.multi:
             #In multi_plot, change the xvalues so that curves reflect the same acquisition
@@ -621,5 +708,8 @@ if __name__ == "__main__":
             mdata = {'AL selected':data,
                     'AL trained':d2}
             p.draw_multiline(mdata,config.title,config.xtick)
+        elif config.clusters:
+            #TODO: implement plotting function
+            p.draw_cluster_distribution(data,config.spread,config.title)
         else:
             p.draw_data(data,config.title,'Acquisition #')

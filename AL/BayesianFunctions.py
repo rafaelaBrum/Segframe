@@ -149,7 +149,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
                 else:
                     posa = np.hstack((posa,np.where(un_indexes == ind[ii])[0]))
             print("Cluster {} first items positions in index array (at most 30): {}".format(k,posa))
-            #Check % of items os each class in cluster k
+            #Check % of items of each class in cluster k
             c_labels = expected[ind]
             unique,count = np.unique(c_labels,return_counts=True)
             l_count = dict(zip(unique,count))
