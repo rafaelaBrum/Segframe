@@ -62,12 +62,6 @@ class KNet(GenericModel):
         """
         return self.cache_m.fileLocation(self._mgpu_weightsCache)
 
-    def build_extractor(self,**kwargs):
-        """
-        Builds a feature extractor
-        """
-
-        return self._build(**kwargs)
         
     def build(self,**kwargs):
 
@@ -169,6 +163,13 @@ class BayesKNet(KNet):
     def __init__(self,config,ds):
         super(BayesKNet,self).__init__(config=config,ds=ds,name = "BayesKNet")
 
+    def build_extractor(self,**kwargs):
+        """
+        Builds a feature extractor
+        """
+
+        return self._build(**kwargs)
+    
     def _build_architecture(self,input_shape,training,feature):
         if hasattr(self,'data_size'):
             weight_decay = 2.5/float(self.data_size)
@@ -211,6 +212,13 @@ class GalKNet(KNet):
     """
     def __init__(self,config,ds):
         super(GalKNet,self).__init__(config=config,ds=ds,name = "GalKNet")
+
+    def build_extractor(self,**kwargs):
+        """
+        Builds a feature extractor
+        """
+
+        return self._build(**kwargs)        
 
     def _build_architecture(self,input_shape,training,feature):
 

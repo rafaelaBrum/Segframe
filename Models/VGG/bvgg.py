@@ -59,14 +59,6 @@ class BayesVGG16(GenericModel):
         Returns path to model cache
         """
         return self.cache_m.fileLocation(self._mgpu_weightsCache)
-
-
-    def build_extractor(self,**kwargs):
-        """
-        Builds a feature extractor
-        """
-
-        return self._build(**kwargs)
         
     def build(self,**kwargs):
 
@@ -77,7 +69,13 @@ class BayesVGG16(GenericModel):
         
         return (model,parallel_model)
 
-        
+    def build_extractor(self,**kwargs):
+        """
+        Builds a feature extractor
+        """
+
+        return self._build(**kwargs)
+    
     def _build(self,**kwargs):
         """
         Returns a VGG 16 model instance, final fully-connected layers are substituted by Conv2Ds
@@ -341,6 +339,13 @@ class BayesVGG16A2(BayesVGG16):
         super(BayesVGG16A2,self).__init__(config=config,ds=ds,name = "BVGG16_A2")
 
 
+    def build_extractor(self,**kwargs):
+        """
+        Builds a feature extractor
+        """
+
+        return self._build(**kwargs)
+    
     def _build_architecture(self,input_shape,training,feature):
         original_vgg16 = vgg16.VGG16(weights=self.cache_m.fileLocation('vgg16_weights_notop.h5'),
                                          include_top=False,

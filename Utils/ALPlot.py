@@ -500,27 +500,35 @@ class Plotter(object):
                 a[k] = se * scipy.stats.t.ppf((1 + ci) / 2., n-1)
             return a
 
+        max_samples = np.inf
+        #Check if all experiments had the same number of samples
+        for k in data:
+            if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
+                max_samples = min(max_samples,len(data[k]['trainset']))
+            if not auc_only and 'accuracy' in data[k] and data[k]['accuracy'].shape[0] > 0:
+                max_samples = min(max_samples,len(data[k]['trainset']))
+                
         for k in data:
             if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
                 if auc_value is None:
                     trainset = data[k]['trainset']
-                    shape = (len(data),len(trainset))
+                    shape = (len(data),max_samples)
                     auc_value = np.ndarray(shape=shape,dtype=np.float32)
                 #Repeat last point if needed
                 if auc_value.shape[1] > data[k]['auc'].shape[0]:
                     print("Experiment {}: repeating last item for AUC data".format(k))
                     data[k]['auc'] = np.concatenate((data[k]['auc'],data[k]['auc'][-1:]),axis=0)
-                auc_value[i] = data[k]['auc']
+                auc_value[i] = data[k]['auc'][:max_samples]
             if not auc_only and 'accuracy' in data[k] and data[k]['accuracy'].shape[0] > 0:
                 if acc_value is None:
                     trainset = data[k]['trainset']
-                    shape = (len(data),len(data[k]['trainset']))
+                    shape = (len(data),max_samples)
                     acc_value = np.ndarray(shape=shape,dtype=np.float32)
                 #Repeat last point if needed
                 if acc_value.shape[1] > data[k]['accuracy'].shape[0]:
                     print("Repeating last item for ACCURACY data")
                     data[k]['accuracy'] = np.concatenate((data[k]['accuracy'],data[k]['accuracy'][-1:]),axis=0)
-                acc_value[i] = data[k]['accuracy']
+                acc_value[i] = data[k]['accuracy'][:max_samples]
                 
             i += 1
 
@@ -531,9 +539,9 @@ class Plotter(object):
 
         #Return mean and STD dev
         if auc_only:
-            return [(trainset,np.mean(auc_value.transpose(),axis=1),calc_ci(auc_value.transpose(),ci),"AUC")]
+            return [(trainset[:max_samples],np.mean(auc_value.transpose(),axis=1),calc_ci(auc_value.transpose(),ci),"AUC")]
         else:
-            return [(trainset,np.mean(arr[0].transpose(),axis=1),np.std(arr[0].transpose(),axis=1),arr[1]) for arr in stats]
+            return [(trainset[:max_samples],np.mean(arr[0].transpose(),axis=1),np.std(arr[0].transpose(),axis=1),arr[1]) for arr in stats]
                                                                                                               
     
 if __name__ == "__main__":
