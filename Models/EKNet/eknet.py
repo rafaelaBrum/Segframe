@@ -147,10 +147,10 @@ class EKNet(GenericModel):
         for k in range(4):
             model.add(original_vgg16.layers[k])
             
-        model.add(Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal'))
+        model.add(Convolution2D(2048, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Activation('relu'))
         model.add(Dropout(0.75))
-        model.add(Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
+        model.add(Convolution2D(2048, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
         model.add(Activation('relu'))
         model.add(Dropout(0.75))
         model.add(Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
@@ -241,11 +241,11 @@ class BayesEKNet(EKNet):
         if feature:
             return Model(inp,x)
         
-        x = Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal',
+        x = Convolution2D(2048, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal',
                               kernel_regularizer=regularizers.l2(weight_decay))(x)
         x = Activation('relu')(x)
         x = Dropout(0.5)(x,training=training)
-        x = Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal',
+        x = Convolution2D(2048, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal',
                               kernel_regularizer=regularizers.l2(weight_decay))(x)
         x = Activation('relu')(x)
         x = Dropout(0.5)(x,training=training)
