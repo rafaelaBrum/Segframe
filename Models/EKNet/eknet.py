@@ -202,7 +202,7 @@ class BayesEKNet(EKNet):
                     name='block1_conv1',
                     weights=layer_dict['block1_conv1'].get_weights(),
                     kernel_regularizer=regularizers.l2(weight_decay))(inp)
-        #x = GroupNormalization(groups=4,axis=-1))(x)
+        x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = Dropout(0.1)(x,training=training)
  
@@ -213,7 +213,7 @@ class BayesEKNet(EKNet):
                     name='block1_conv2',
                     weights=layer_dict['block1_conv2'].get_weights(),
                     kernel_regularizer=regularizers.l2(weight_decay))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
         x = Dropout(0.1)(x,training=training)
@@ -225,7 +225,7 @@ class BayesEKNet(EKNet):
                     name='block2_conv1',
                     weights=layer_dict['block2_conv1'].get_weights(),
                     kernel_regularizer=regularizers.l2(weight_decay))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = Dropout(0.1)(x,training=training)
  
@@ -236,19 +236,19 @@ class BayesEKNet(EKNet):
                 name='block2_conv2',
                 weights=layer_dict['block2_conv2'].get_weights(),
                 kernel_regularizer=regularizers.l2(weight_decay))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
         x = Dropout(0.1)(x,training=training)
 
-        #Fourth layer
+        #Fifth layer
         x = ZeroPadding2D(padding=1)(x)
         x = Convolution2D(128, (5, 5),strides=2,
                 padding='valid',
                 name='block2_conv3',
                 kernel_initializer='he_normal',
                 kernel_regularizer=regularizers.l2(weight_decay))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
+        x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
         x = Dropout(0.1)(x,training=training)
