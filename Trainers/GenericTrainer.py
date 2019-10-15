@@ -250,9 +250,10 @@ class Trainer(object):
         ### Define special behaviour CALLBACKS
         callbacks = []
         ## ModelCheckpoint
-        callbacks.append(ModelCheckpoint(os.path.join(
-            self._config.weights_path, wf_header + "e{epoch:02d}.h5"), 
-            save_weights_only=True, period=5,save_best_only=True,monitor='val_acc'))
+        if self._config.save_w:
+            callbacks.append(ModelCheckpoint(os.path.join(
+                self._config.weights_path, wf_header + "e{epoch:02d}.h5"), 
+                save_weights_only=True, period=5,save_best_only=True,monitor='val_acc'))
         ## ReduceLROnPlateau
         callbacks.append(ReduceLROnPlateau(monitor='loss',factor=0.7,\
                                            patience=5,verbose=self._verbose,\
@@ -283,6 +284,8 @@ class Trainer(object):
             
         #Save weights for single tower model and for multigpu model (if defined)
         cache_m = CacheManager()
+        if self._config.info:
+            print("Saving weights, this could take a while...")
         single.save_weights(model.get_weights_cache())
         single.save(model.get_model_cache())
         if not parallel is None and not model.get_mgpu_weights_cache() is None:
