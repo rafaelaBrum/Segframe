@@ -345,25 +345,26 @@ def InceptionResNetV2(include_top=True,
     model = models.Model(inputs, x, name='inception_resnet_v2')
 
     # Load weights.
-    if weights == 'imagenet':
-        if include_top:
-            fname = 'inception_resnet_v2_weights_tf_dim_ordering_tf_kernels.h5'
-            weights_path = keras_utils.get_file(
-                fname,
-                BASE_WEIGHT_URL + fname,
-                cache_subdir='models',
-                file_hash='e693bd0210a403b3192acc6073ad2e96')
-        else:
-            fname = ('inception_resnet_v2_weights_'
-                     'tf_dim_ordering_tf_kernels_notop.h5')
-            weights_path = keras_utils.get_file(
-                fname,
-                BASE_WEIGHT_URL + fname,
-                cache_subdir='models',
-                file_hash='d19885ff4a710c122648d3b5c3b684e4')
-        model.load_weights(weights_path,by_name=True)
-    elif weights is not None:
-        model.load_weights(weights,by_name=True)
+    if 'preload' in kwargs and kwargs['preload']:
+        if weights == 'imagenet':
+            if include_top:
+                fname = 'inception_resnet_v2_weights_tf_dim_ordering_tf_kernels.h5'
+                weights_path = keras_utils.get_file(
+                    fname,
+                    BASE_WEIGHT_URL + fname,
+                    cache_subdir='models',
+                    file_hash='e693bd0210a403b3192acc6073ad2e96')
+            else:
+                fname = ('inception_resnet_v2_weights_'
+                        'tf_dim_ordering_tf_kernels_notop.h5')
+                weights_path = keras_utils.get_file(
+                    fname,
+                    BASE_WEIGHT_URL + fname,
+                    cache_subdir='models',
+                    file_hash='d19885ff4a710c122648d3b5c3b684e4')
+            model.load_weights(weights_path,by_name=True)
+        elif weights is not None:
+            model.load_weights(weights,by_name=True)
 
     if 'return_tensor' in kwargs and kwargs['return_tensor']:
         return x

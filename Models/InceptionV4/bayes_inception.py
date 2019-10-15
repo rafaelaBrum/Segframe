@@ -87,6 +87,11 @@ class BayesInception(GenericModel):
             feature = kwargs['feature']
         else:
             feature = False
+
+        if 'pre_load_w' in kwargs:
+            preload = kwargs['pre_load_w']
+        else:
+            preload = True
             
         if backend.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
@@ -95,7 +100,7 @@ class BayesInception(GenericModel):
 
         self.cache_m = CacheManager()
         
-        model = self._build_architecture(input_shape,training,feature)
+        model = self._build_architecture(input_shape,training,feature,preload)
         
         #Check if previous training and LR is saved, if so, use it
         lr_cache = "{0}_learning_rate.txt".format(self.name)
@@ -136,12 +141,13 @@ class BayesInception(GenericModel):
 
         return (model,parallel_model)
 
-    def _build_architecture(self,input_shape,training=None,feature=False):
+    def _build_architecture(self,input_shape,training=None,feature=False,preload=True):
         from . import inception_resnet_v2
 
         kwargs = {'training':training,
                     'feature':feature,
                     'return_tensor':True,
+                    'preload':preload,
                     'batch_n':True if self._config.gpu_count <= 1 else False}
         
         inp = Input(shape=input_shape)

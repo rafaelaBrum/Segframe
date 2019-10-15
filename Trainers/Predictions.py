@@ -178,12 +178,12 @@ class Predictor(object):
                 if self._config.info:
                     print("Model loaded from: {0}".format(model.get_model_cache()))
             except ValueError:
-                pred_model,_ = model.build(training=False)
+                pred_model,_ = model.build(training=False,pre_load_w=False)
                 pred_model.load_weights(model.get_weights_cache())
                 if self._config.info:
                     print("Model weights loaded from: {0}".format(model.get_weights_cache()))
         elif os.path.isfile(model.get_weights_cache()):
-                pred_model,_ = model.build(training=False)
+                pred_model,_ = model.build(training=False,pre_load_w=False)
                 pred_model.load_weights(model.get_weights_cache())
                 if self._config.info:
                     print("Model weights loaded from: {0}".format(model.get_weights_cache()))
