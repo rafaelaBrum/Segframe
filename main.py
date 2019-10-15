@@ -171,6 +171,8 @@ if __name__ == "__main__":
         help='Number of epochs (Default: 1).', default=1)
     train_args.add_argument('-tn', action='store_true', dest='new_net',
         help='Do not use older weights file.',default=False)
+    train_args.add_argument('-sw', action='store_true', dest='save_w',
+        help='Save intermediate weights as a callback.',default=True)
     train_args.add_argument('-tnorm', action='store_true', dest='batch_norm',
         help='Applies batch normalization during training.',default=False)
     train_args.add_argument('-aug', action='store_true', dest='augment',
@@ -291,13 +293,12 @@ if __name__ == "__main__":
     
     config, unparsed = parser.parse_known_args()
     
-    #Setup CacheManager - TODO: fill actual files
     files = {
         'tcga.pik':os.path.join(config.presrc,'piks','tcga.pik'),
         'metadata.pik':os.path.join(config.cache,'{0}-metadata.pik'.format(config.data)),
         'sampled_metadata.pik':os.path.join(config.cache,'sampled_metadata.pik'),
         'split_ratio.pik':os.path.join(config.cache,'{0}-split_ratio.pik'.format(config.data)),
-        'data_dims.pik':os.path.join(config.cache,'data_dims.pik'),
+        'data_dims.pik':os.path.join(config.cache,'{0}-data_dims.pik'.format(config.data)),
         'tiles.pik':os.path.join(config.predst,'tiles.pik'),
         'test_pred.pik':os.path.join(config.logdir,'test_pred.pik'),
         'cae_model.h5':os.path.join(config.model_path,'cae_model.h5'),

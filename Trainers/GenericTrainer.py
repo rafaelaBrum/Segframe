@@ -250,9 +250,10 @@ class Trainer(object):
         ### Define special behaviour CALLBACKS
         callbacks = []
         ## ModelCheckpoint
-        callbacks.append(ModelCheckpoint(os.path.join(
-            self._config.weights_path, wf_header + "e{epoch:02d}.h5"), 
-            save_weights_only=True, period=1,save_best_only=True,monitor='val_acc'))
+        if self._config.save_w:
+            callbacks.append(ModelCheckpoint(os.path.join(
+                self._config.weights_path, wf_header + "e{epoch:02d}.h5"), 
+                save_weights_only=True, period=1,save_best_only=True,monitor='val_acc'))
         ## ReduceLROnPlateau
         callbacks.append(ReduceLROnPlateau(monitor='loss',factor=0.7,\
                                            patience=5,verbose=self._verbose,\
