@@ -172,7 +172,7 @@ if __name__ == "__main__":
     train_args.add_argument('-tn', action='store_true', dest='new_net',
         help='Do not use older weights file.',default=False)
     train_args.add_argument('-sw', action='store_true', dest='save_w',
-        help='Save intermediate weights as a callback.',default=True)
+        help='Save intermediate weights as a callback.',default=False)
     train_args.add_argument('-tnorm', action='store_true', dest='batch_norm',
         help='Applies batch normalization during training.',default=False)
     train_args.add_argument('-aug', action='store_true', dest='augment',
