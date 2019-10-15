@@ -94,7 +94,8 @@ class BayesInception(GenericModel):
             input_shape = (height, width, channels)
 
         self.cache_m = CacheManager()
-        
+        #TODO: REMOVE
+        print("Training flag: {}".format(training)) 
         model = self._build_architecture(input_shape,training,feature)
         
         #Check if previous training and LR is saved, if so, use it
