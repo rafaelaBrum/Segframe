@@ -80,8 +80,8 @@ def run_all(config,cr):
     check_data_split(dataset)
 
     #Test metadata random sampling
-    print("Testing metadata sampling")
-    dataset = cr.split_metadata(split=config.split,data=cr.sample_metadata(100))
+    print("***********\nTesting metadata sampling")
+    dataset = cr.split_metadata(split=config.split,data=cr.sample_metadata(0.5))
     
     print("Train set: {0} items, {1} labels".format(len(dataset[0][0]),len(dataset[0][1])))
     unique,count = np.unique(dataset[0][1],return_counts=True)
