@@ -161,11 +161,20 @@ class BayesInception(GenericModel):
                                                                 pooling=None,
                                                                 classes=self._ds.nclasses,
                                                                 **kwargs)
-
-        x = Convolution2D(2048, (3, 3),strides=1,padding='valid',kernel_initializer='he_normal')(inception_body)
+        
+        if hasattr(self,'data_size'):
+            weight_decay = 2.5/float(self.data_size)
+            if self._config.verbose > 1:
+                print("Setting weight decay to: {0}".format(weight_decay))
+        else:
+            weight_decay = 0.01
+            
+        x = Convolution2D(2048, (3, 3),strides=1,padding='valid',kernel_initializer='he_normal',
+                              kernel_regularizer=regularizers.l2(weight_decay))(inception_body)
         x = Activation('relu')(x)
         x = Dropout(0.5)(x,training=training)
-        x = Convolution2D(2048, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal')(x)
+        x = Convolution2D(2048, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal',
+                              kernel_regularizer=regularizers.l2(weight_decay))(x)
         x = Activation('relu')(x)
         x = Dropout(0.5)(x,training=training)
         x = Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal')(x)
