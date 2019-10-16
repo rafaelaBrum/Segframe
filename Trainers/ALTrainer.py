@@ -97,6 +97,10 @@ class ActiveLearningTrainer(Trainer):
         """
         X,Y = self._ds.load_metadata()
 
+        #Use a sample of the metadata if so instructed
+        if self._config.sample < 1.0:
+            X,Y = self._ds.sample_metadata(self._config.sample)
+
         if self._config.balance:
             X,Y = self._balance_classes(X,Y)
             if self._config.info:
