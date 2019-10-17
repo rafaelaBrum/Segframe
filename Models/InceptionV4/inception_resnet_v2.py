@@ -324,15 +324,24 @@ def InceptionResNetV2(include_top=True,
     # Final convolution block: 8 x 8 x 1536
     x = conv2d_bn(x, 1536, 1, name='conv_7b', use_bn=use_bn)
 
+    last_tensor = None
     if include_top:
         # Classification block
         x = layers.GlobalAveragePooling2D(name='avg_pool')(x)
+        last_tensor = x
         x = layers.Dense(classes, activation='softmax', name='predictions')(x)
+    elif 'custom_top' in kwargs and kwargs['custom_top']:
+        #Create a custom new classification here if needed
+        x = layers.GlobalAveragePooling2D()(x)
+        last_tensor = x
+        x = layers.Dense(classes)(x)
+        x = layers.Activation('softmax')(x)
     else:
         if pooling == 'avg':
             x = layers.GlobalAveragePooling2D()(x)
         elif pooling == 'max':
             x = layers.GlobalMaxPooling2D()(x)
+        last_tensor = x
 
     # Ensure that the model takes into account
     # any potential predecessors of `input_tensor`.
@@ -366,7 +375,7 @@ def InceptionResNetV2(include_top=True,
         elif weights is not None:
             model.load_weights(weights,by_name=True)
 
-    if 'return_tensor' in kwargs and kwargs['return_tensor']:
-        return x
+    if 'feature' in kwargs and kwargs['feature']:
+        return last_tensor
     else:
         return model

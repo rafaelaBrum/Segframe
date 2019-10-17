@@ -9,12 +9,10 @@ import tensorflow as tf
 
 #Network
 from keras.models import Sequential,Model
-from keras.layers import Input,Activation,Convolution2D
-from keras.layers import Dense, Dropout, Flatten
+from keras.layers import Input
 from keras import backend, optimizers
 from keras.utils import multi_gpu_model
 from keras import backend as K
-from keras import regularizers
 
 #Locals
 from Utils import CacheManager
@@ -113,8 +111,8 @@ class BayesInception(GenericModel):
                 print("Found previous learning rate: {0}".format(l_rate))
         
         #opt = optimizers.SGD(lr=l_rate, decay=1.5e-4, momentum=0.9, nesterov=True)
-        opt = optimizers.Adam(learning_rate = l_rate)
-        #opt = optimizers.Adadelta(learning_rate=l_rate)
+        opt = optimizers.Adam(lr = l_rate)
+        #opt = optimizers.Adadelta(lr=l_rate)
 
         #Return parallel model if multiple GPUs are available
         parallel_model = None
@@ -147,7 +145,7 @@ class BayesInception(GenericModel):
 
         kwargs = {'training':training,
                     'feature':feature,
-                    'return_tensor':True,
+                    'custom_top':True,
                     'preload':preload,
                     'batch_n':True if self._config.gpu_count <= 1 else False}
         
@@ -161,26 +159,6 @@ class BayesInception(GenericModel):
                                                                 classes=self._ds.nclasses,
                                                                 **kwargs)
         
-        if hasattr(self,'data_size'):
-            weight_decay = 2.5/float(self.data_size)
-            if self._config.verbose > 1:
-                print("Setting weight decay to: {0}".format(weight_decay))
-        else:
-            weight_decay = 0.01
-           
-        x = inception_body
- 
-        #x = Convolution2D(2048, (3, 3),strides=1,padding='valid',kernel_initializer='he_normal',
-        #                      kernel_regularizer=regularizers.l2(weight_decay))(inception_body)
-        #x = Activation('relu')(x)
-        #x = Dropout(0.5)(x,training=training)
-        #x = Convolution2D(2048, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal',
-        #                      kernel_regularizer=regularizers.l2(weight_decay))(x)
-        #x = Activation('relu')(x)
-        #x = Dropout(0.5)(x,training=training)
-        #x = Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal')(x)
-        x = Dense(self._ds.nclasses)(x)
-        output = Activation('softmax')(x)
 
-        return Model(inp,output)
+        return inception_body
                                 
