@@ -14,6 +14,7 @@ from keras.layers import Dense, Dropout, Flatten
 from keras import backend, optimizers
 from keras.utils import multi_gpu_model
 from keras import backend as K
+from keras import regularizers
 
 #Locals
 from Utils import CacheManager
@@ -156,7 +157,7 @@ class BayesInception(GenericModel):
                                                                 weights='imagenet',
                                                                 input_tensor=inp,
                                                                 input_shape=input_shape,
-                                                                pooling=None,
+                                                                pooling='avg',
                                                                 classes=self._ds.nclasses,
                                                                 **kwargs)
         
@@ -166,17 +167,18 @@ class BayesInception(GenericModel):
                 print("Setting weight decay to: {0}".format(weight_decay))
         else:
             weight_decay = 0.01
-            
-        x = Convolution2D(2048, (3, 3),strides=1,padding='valid',kernel_initializer='he_normal',
-                              kernel_regularizer=regularizers.l2(weight_decay))(inception_body)
-        x = Activation('relu')(x)
-        x = Dropout(0.5)(x,training=training)
-        x = Convolution2D(2048, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal',
-                              kernel_regularizer=regularizers.l2(weight_decay))(x)
-        x = Activation('relu')(x)
-        x = Dropout(0.5)(x,training=training)
-        x = Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal')(x)
-        x = Flatten()(x)
+           
+        x = inception_body
+ 
+        #x = Convolution2D(2048, (3, 3),strides=1,padding='valid',kernel_initializer='he_normal',
+        #                      kernel_regularizer=regularizers.l2(weight_decay))(inception_body)
+        #x = Activation('relu')(x)
+        #x = Dropout(0.5)(x,training=training)
+        #x = Convolution2D(2048, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal',
+        #                      kernel_regularizer=regularizers.l2(weight_decay))(x)
+        #x = Activation('relu')(x)
+        #x = Dropout(0.5)(x,training=training)
+        #x = Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal')(x)
         x = Dense(self._ds.nclasses)(x)
         output = Activation('softmax')(x)
 
