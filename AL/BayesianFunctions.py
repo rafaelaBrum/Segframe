@@ -74,19 +74,20 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     if 'model' in kwargs:
         model = kwargs['model']
     else:
-        print("[km_varratios] GenericModel is needed by km_varratios. Set model kw argument")
+        print("[km_uncert] GenericModel is needed by km_varratios. Set model kw argument")
         return None
 
-    if os.path.isfile(model.get_weights_cache()):
-        if hasattr(model,'build_extractor'):
-            single_m,parallel_m = model.build_extractor(training=False,feature=True)
-        else:
-            if config.info:
-                print("Model is not prepared to produce features. No feature extractor")
-            return None
+
+    if hasattr(model,'build_extractor'):
+        single_m,parallel_m = model.build_extractor(training=False,feature=True)
     else:
         if config.info:
-            print("No trained model or weights file found")
+            print("[km_uncert] Model is not prepared to produce features. No feature extractor")
+        return None
+    
+    if not os.path.isfile(model.get_weights_cache()) and not os.path.isfile(model.get_mgpu_weights_cache()):
+        if config.info:
+            print("[km_uncert] No trained model or weights file found")
         return None
 
     if gpu_count > 1 and not parallel_m is None:

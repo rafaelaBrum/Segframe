@@ -378,6 +378,6 @@ def InceptionResNetV2(include_top=True,
             model.load_weights(weights,by_name=True)
 
     if 'feature' in kwargs and kwargs['feature']:
-        return last_tensor
+        return models.Model(inputs,last_tensor,name='inception_resnet_features')
     else:
         return model
