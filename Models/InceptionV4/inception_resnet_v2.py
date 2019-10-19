@@ -81,7 +81,7 @@ def conv2d_bn(x,
                                       name=bn_name)(x)
     else:
         bn_name = None if name is None else name + '_gn'
-        x = GroupNormalization(groups=4,axis=-1,name=bn_name)(x)
+        x = GroupNormalization(groups=16,axis=-1,name=bn_name)(x)
         
     if activation is not None:
         ac_name = None if name is None else name + '_ac'
@@ -334,6 +334,8 @@ def InceptionResNetV2(include_top=True,
         #Create a custom new classification here if needed
         x = layers.GlobalAveragePooling2D()(x)
         last_tensor = x
+        x = layers.Dense(512)(x)
+        x = layers.Dense(128)(x)
         x = layers.Dense(classes)(x)
         x = layers.Activation('softmax')(x)
     else:
