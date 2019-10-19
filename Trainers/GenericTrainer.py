@@ -32,8 +32,15 @@ def run_training(config,locations=None):
     trainer.run()
 
 def _reduce_lr_on_epoch(epoch,lr):
+    #First 10 epochs, use a smaller LR, than raise to initially defined value
+    if epoch == 1:
+        lr /= 10
+
+    if epoch == 10:
+        lr *= 10
+        
     #Reduces LR by a factor of 10 every 30 epochs
-    if epoch > 0 and not (epoch%30):
+    if epoch > 10 and not (epoch%30):
         lr /= 10
     return lr
 

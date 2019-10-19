@@ -66,6 +66,17 @@ class BayesInception(GenericModel):
         self.parallel = parallel_model
         
         return (model,parallel_model)
+
+    def build_extractor(self,**kwargs):
+        """
+        Builds a feature extractor.
+        
+        Weights should be loaded by caller!
+        """
+        #Weight loading for the feature extraction is done latter by requesting party
+        kwargs['preload_w'] = False
+        
+        return self._build(**kwargs)
     
     def _build(self,**kwargs):
         """
@@ -87,8 +98,8 @@ class BayesInception(GenericModel):
         else:
             feature = False
 
-        if 'pre_load_w' in kwargs:
-            preload = kwargs['pre_load_w']
+        if 'preload_w' in kwargs:
+            preload = kwargs['preload_w']
         else:
             preload = True
             
