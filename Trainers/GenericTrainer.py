@@ -5,6 +5,7 @@ import importlib
 import os,sys
 import re
 import numpy as np
+import threading
 
 from Datasources.CellRep import CellRep
 from Utils import SaveLRCallback,CalculateF1Score
@@ -96,8 +97,9 @@ class Trainer(object):
         self._ds.load_metadata()
 
         self._rex = self._rex.format(net_model.name)
-        
-        return self.train_model(net_model)
+
+        sw_thread = self.train_model(net_model)
+        return sw_thread.join()
 
     def _choose_generator(self,train_data,val_data):
         """
@@ -288,7 +290,13 @@ class Trainer(object):
 
         if self._config.verbose > 1:
             print("Done training model: {0}".format(hex(id(training_model))))
-            
+
+
+        sw_thread = threading.Thread(target=self._save_weights,name='save_weights',args=(model,single,parallel))
+        sw_thread.start()
+        return sw_thread
+        
+    def _save_weights(self,model,single,parallel):
         #Save weights for single tower model and for multigpu model (if defined)
         cache_m = CacheManager()
         if self._config.info:
