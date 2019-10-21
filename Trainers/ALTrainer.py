@@ -183,6 +183,9 @@ class ActiveLearningTrainer(Trainer):
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are in order")
+                #Some models may take too long to save weights
+                if not sw_thread is None:
+                    sw_thread.join()
                     
             #Set load_full to false so dropout is disabled
             predictor.run(self.test_x,self.test_y,load_full=False)
