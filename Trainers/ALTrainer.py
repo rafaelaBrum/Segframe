@@ -173,19 +173,18 @@ class ActiveLearningTrainer(Trainer):
             fid = 'al-metadata-{1}-r{0}.pik'.format(r,model.name)
             cache_m.registerFile(os.path.join(self._config.logdir,fid),fid)
             cache_m.dump(((self.train_x,self.train_y),(self.val_x,self.val_y),(self.test_x,self.test_y)),fid)
-
-            #Some models may take too long to save weights
-            if not sw_thread is None:
-                sw_thread.join()
                 
             sw_thread = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))            
             
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are in order")
-                #Some models may take too long to save weights
-                if not sw_thread is None:
-                    sw_thread.join()
+                    
+            #Some models may take too long to save weights
+            if not sw_thread is None:
+                if self._config.info:
+                    print("[ALTrainer] Waiting for model weights...")
+                sw_thread.join()
                     
             #Set load_full to false so dropout is disabled
             predictor.run(self.test_x,self.test_y,load_full=False)
