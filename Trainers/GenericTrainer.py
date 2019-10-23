@@ -5,6 +5,7 @@ import importlib
 import os,sys
 import re
 import numpy as np
+import threading
 
 from Datasources.CellRep import CellRep
 from Utils import SaveLRCallback,CalculateF1Score
@@ -33,14 +34,14 @@ def run_training(config,locations=None):
 
 def _reduce_lr_on_epoch(epoch,lr):
     #First 10 epochs, use a smaller LR, than raise to initially defined value
-    if epoch == 1:
+    if epoch == 0:
         lr /= 10
 
-    if epoch == 10:
+    if epoch == 9:
         lr *= 10
         
     #Reduces LR by a factor of 10 every 30 epochs
-    if epoch > 10 and not (epoch%30):
+    if epoch > 9 and not (epoch%30):
         lr /= 10
     return lr
 
@@ -96,8 +97,9 @@ class Trainer(object):
         self._ds.load_metadata()
 
         self._rex = self._rex.format(net_model.name)
-        
-        return self.train_model(net_model)
+
+        sw_thread = self.train_model(net_model)
+        return sw_thread.join()
 
     def _choose_generator(self,train_data,val_data):
         """
@@ -263,7 +265,7 @@ class Trainer(object):
                 save_weights_only=True, period=5,save_best_only=True,monitor='val_acc'))
         ## ReduceLROnPlateau
         callbacks.append(ReduceLROnPlateau(monitor='loss',factor=0.7,\
-                                           patience=5,verbose=self._verbose,\
+                                           patience=10,verbose=self._verbose,\
                                            mode='auto',min_lr=1e-7))
         callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=1))
         ## CalculateF1Score
@@ -288,7 +290,13 @@ class Trainer(object):
 
         if self._config.verbose > 1:
             print("Done training model: {0}".format(hex(id(training_model))))
-            
+
+
+        sw_thread = threading.Thread(target=self._save_weights,name='save_weights',args=(model,single,parallel))
+        sw_thread.start()
+        return sw_thread
+        
+    def _save_weights(self,model,single,parallel):
         #Save weights for single tower model and for multigpu model (if defined)
         cache_m = CacheManager()
         if self._config.info:

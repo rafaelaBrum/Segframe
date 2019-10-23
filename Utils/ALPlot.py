@@ -131,11 +131,13 @@ class Plotter(object):
             c = plt.plot(x_data, y_data, lw = 1, color = palette(color), alpha = 1)
             plots.append(c)
             # Shade the confidence interval
-            low_ci = y_data - ci
-            upper_ci = y_data + ci
+            if not np.isnan(ci).any():
+                low_ci = y_data - ci
+                upper_ci = y_data + ci
             ym = np.max(upper_ci)+0.05
             up = ym if ym > up else up
-            plt.fill_between(x_data, low_ci, upper_ci, color = palette(color), alpha = 0.4)
+            if not np.isnan(ci).any():
+                plt.fill_between(x_data, low_ci, upper_ci, color = palette(color), alpha = 0.4)
             color += 1
             plt.xlabel("Trainset size")
             plt.ylabel(y_label)

@@ -53,6 +53,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     gpu_count <int>: number of gpus available
     verbose <int>: verbosity level
     pbar <boolean>: user progress bars
+    sw_threads <thread Object>: if a thread object is passed, you must wait its conclusion before loading weights
     """
     from sklearn.cluster import KMeans
     import importlib
@@ -77,6 +78,13 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         print("[km_uncert] GenericModel is needed by km_varratios. Set model kw argument")
         return None
 
+    ## UNCERTAINTY CALCULATION FIRST 
+    #Any uncertainty function could be used
+    n_config = copy.copy(config)
+    n_config.acquire = data_size
+    kwargs['config'] = n_config
+    un_function = getattr(importlib.import_module('AL'),config.un_function)
+    un_indexes = un_function(bayesian_model,generator,data_size,**kwargs)    
 
     if hasattr(model,'build_extractor'):
         single_m,parallel_m = model.build_extractor(training=False,feature=True)
@@ -90,6 +98,13 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
             print("[km_uncert] No trained model or weights file found")
         return None
 
+    #Models that take to long to save weights might not have finished
+    if 'sw_thread' in kwargs:
+        if kwargs['sw_thread'].is_alive():
+            if config.info:
+                print("[km_uncert] Waiting for model weights to become available")
+            kwargs['sw_threads'].join()
+            
     if gpu_count > 1 and not parallel_m is None:
         pred_model = parallel_m
         pred_model.load_weights(model.get_mgpu_weights_cache(),by_name=True)
@@ -123,13 +138,6 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         etime = time.time()
         td = timedelta(seconds=(etime-stime))
         print("KMeans took {}".format(td))
-        
-    #Any uncertainty function could be used
-    n_config = copy.copy(config)
-    n_config.acquire = data_size
-    kwargs['config'] = n_config
-    un_function = getattr(importlib.import_module('AL'),config.un_function)
-    un_indexes = un_function(bayesian_model,generator,data_size,**kwargs)
 
     un_clusters = {k:[] for k in range(config.clusters)}
 
