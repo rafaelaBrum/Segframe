@@ -210,7 +210,7 @@ if __name__ == "__main__":
     al_args.add_argument('-bal', action='store_true', dest='balance',
         help='Balance dataset samples between classes.',default=False)
     al_args.add_argument('-sv', action='store_true', dest='save_var',
-        help='Save aquisition variations/probability arrays and selected items indexes.',default=False)
+        help='Save aquisition variations/probability/clusters arrays and selected items indexes.',default=False)
     al_args.add_argument('-clusters', dest='clusters', type=int, 
         help='Number of clusters to form in similarity selections (Default 0).', default=0)
     

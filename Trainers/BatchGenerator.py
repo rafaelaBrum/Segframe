@@ -106,6 +106,12 @@ class GenericIterator(Iterator):
         if isinstance(idx,int) or isinstance(idx,np.ndarray):
             return Y[idx]
 
+    def returnDataAsArray(self):
+        """
+        Return all data as a tuple of ndarrays: (X,Y)
+        """
+
+        return (np.asarray(self.data[0]),np.asarray(self.data[1]))
 
 class SingleGenerator(GenericIterator):
     """

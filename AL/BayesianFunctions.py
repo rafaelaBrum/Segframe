@@ -75,7 +75,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     if 'model' in kwargs:
         model = kwargs['model']
     else:
-        print("[km_uncert] GenericModel is needed by km_varratios. Set model kw argument")
+        print("[km_uncert] GenericModel is needed by km_uncert. Set model kw argument")
         return None
 
     ## UNCERTAINTY CALCULATION FIRST 
@@ -133,7 +133,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         stime = time.time()
         
     km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=int(cpu_count/2)).fit(features)
-
+        
     if config.verbose > 0:
         etime = time.time()
         td = timedelta(seconds=(etime-stime))
@@ -145,6 +145,19 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     for iid in un_indexes:
         un_clusters[km.labels_[iid]].append(iid)
 
+    #Save clusters
+    if config.save_var:
+        from Utils import CacheManager
+        cache_m = CacheManager()
+        if 'acquisition' in kwargs:
+            r = kwargs['acquisition']
+        else:
+            r = config.acquisition_steps
+        fid = 'al-clustermetadata-{1}-r{0}.pik'.format(r,model.name)
+        cache_m.registerFile(os.path.join(config.logdir,fid),fid)
+        cache_m.dump((generator.returnDataAsArray(),un_clusters,un_indexes),fid)
+        del cache_m
+        
     #If debug
     if config.debug:
         expected = generator.returnLabelsFromIndex()
@@ -174,11 +187,14 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     acquired = []
     j = 0
     while ac_count < query:
-        q = un_clusters[(ac_count+j) % clusters]
+        cln = (ac_count+j) % clusters
+        q = un_clusters[cln]
         if len(q) > 0:
             acquired.append(q.pop(0))
             ac_count += 1
         else:
+            if verbose > 0:
+                print("[km_uncert] Cluster {} exausted, will try to acquire image from cluster {}".format(cln,(cln+1)%clusters))
             j += 1
             continue
 

@@ -181,7 +181,7 @@ class ActiveLearningTrainer(Trainer):
                     print("[ALTrainer] No more acquisitions are in order")
                     
             #Some models may take too long to save weights
-            if not sw_thread is None:
+            if not sw_thread is None and sw_thread.is_alive():
                 if self._config.info:
                     print("[ALTrainer] Waiting for model weights...")
                 sw_thread.join()
