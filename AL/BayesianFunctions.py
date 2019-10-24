@@ -60,6 +60,9 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     import copy
     import time
     from datetime import timedelta
+    from Utils import CacheManager
+
+    cache_m = CacheManager()
     
     if 'config' in kwargs:
         config = kwargs['config']
@@ -71,7 +74,12 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         clusters = config.clusters
     else:
         return None
-
+    
+    if 'acquisition' in kwargs:
+        r = kwargs['acquisition']
+    else:
+        r = config.acquisition_steps
+        
     if 'model' in kwargs:
         model = kwargs['model']
     else:
@@ -104,40 +112,60 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
             if config.info:
                 print("[km_uncert] Waiting for model weights to become available")
             kwargs['sw_threads'].join()
-            
+
+    #Model can be loaded from previous acquisition train of from a fixed final model
     if gpu_count > 1 and not parallel_m is None:
         pred_model = parallel_m
-        pred_model.load_weights(model.get_mgpu_weights_cache(),by_name=True)
-        if config.info:
-            print("Model weights loaded from: {0}".format(model.get_mgpu_weights_cache()))
+        if not config.ffeat is None and os.path.isfile(config.ffeat):
+            pred_model.load_weights(config.ffeat,by_name=True)
+            if config.info:
+                print("Model weights loaded from: {0}".format(config.ffeat))
+        else:
+            pred_model.load_weights(model.get_mgpu_weights_cache(),by_name=True)
+            if config.info:
+                print("Model weights loaded from: {0}".format(model.get_mgpu_weights_cache()))
     else:
         pred_model = single_m
-        pred_model.load_weights(model.get_weights_cache(),by_name=True)
-        if config.info:
-            print("Model weights loaded from: {0}".format(model.get_weights_cache()))
+        if not config.ffeat is None and os.path.isfile(config.ffeat):
+            pred_model.load_weights(config.ffeat,by_name=True)
+            if config.info:
+                print("Model weights loaded from: {0}".format(config.ffeat))
+        else:
+            pred_model.load_weights(model.get_weights_cache(),by_name=True)
+            if config.info:
+                print("Model weights loaded from: {0}".format(model.get_weights_cache()))
 
     if config.info:
         print("Starting feature extraction ({} batches)...".format(len(generator)))
-        
-    #Extract features for all images in the pool
-    features = pred_model.predict_generator(generator,
-                                             workers=4*cpu_count,
-                                             max_queue_size=100*gpu_count,
-                                             verbose=0)
-    features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
 
-    stime = None
-    etime = None
-    if config.verbose > 0:
-        print("Done extraction...starting KMeans")
-        stime = time.time()
+    if config.recluster > 0 and acq > 0 and (acq % config.recluster) != 0:
+        km,acquired = cache_m.load('clusters.pik')
+        if config.info:
+            print("[km_uncert] Loaded clusters from previous acquisition")
+            #TODO: REMOVE
+            print("Previous cluster size: {};\nAcquired: {}".format(km.labels_.shape,acquired.shape))
+        km.labels_ = np.delete(km.labels_,acquired)
         
-    km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=int(cpu_count/2)).fit(features)
+    else:
+        #Extract features for all images in the pool
+        features = pred_model.predict_generator(generator,
+                                                workers=4*cpu_count,
+                                                max_queue_size=100*gpu_count,
+                                                verbose=0)
+        features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
+
+        stime = None
+        etime = None
+        if config.verbose > 0:
+            print("Done extraction...starting KMeans")
+            stime = time.time()
         
-    if config.verbose > 0:
-        etime = time.time()
-        td = timedelta(seconds=(etime-stime))
-        print("KMeans took {}".format(td))
+        km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=int(cpu_count/2)).fit(features)
+        
+        if config.verbose > 0:
+            etime = time.time()
+            td = timedelta(seconds=(etime-stime))
+            print("KMeans took {}".format(td))
 
     un_clusters = {k:[] for k in range(config.clusters)}
 
@@ -147,16 +175,9 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
 
     #Save clusters
     if config.save_var:
-        from Utils import CacheManager
-        cache_m = CacheManager()
-        if 'acquisition' in kwargs:
-            r = kwargs['acquisition']
-        else:
-            r = config.acquisition_steps
-        fid = 'al-clustermetadata-{1}-r{0}.pik'.format(r,model.name)
+        fid = 'al-clustermetadata-{1}-r{0}.pik'.format(acq,model.name)
         cache_m.registerFile(os.path.join(config.logdir,fid),fid)
         cache_m.dump((generator.returnDataAsArray(),un_clusters,un_indexes),fid)
-        del cache_m
         
     #If debug
     if config.debug:
@@ -198,7 +219,10 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
             j += 1
             continue
 
-    return np.asarray(acquired)
+    acquired = np.asarray(acquired)
+    cache_m.dump((km,acquired),'clusters.pik')
+    
+    return acquired
     
 def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     """

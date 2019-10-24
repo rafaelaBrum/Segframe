@@ -197,10 +197,10 @@ if __name__ == "__main__":
         help='Train model')
     al_args.add_argument('-init_train', dest='init_train', type=int, 
         help='Initial training set size (Default: 1000).', default=1000)
-    al_args.add_argument('-ac_function',dest='ac_function',type=str,help='Acquisition function.\n \
-    Check documentation for available functions.',default=None)
-    al_args.add_argument('-un_function',dest='un_function',type=str,help='Uncertaint function to be used with KM.\n \
-    Check documentation for available functions.',default='bayesian_varratios')
+    al_args.add_argument('-ac_function',dest='ac_function',type=str,
+       help='Acquisition function. Check documentation for available functions.',default=None)
+    al_args.add_argument('-un_function',dest='un_function',type=str,
+       help='Uncertaint function to be used with KM. Check documentation for available functions.',default='bayesian_varratios')
     al_args.add_argument('-ac_steps', dest='acquisition_steps', type=int, 
         help='Run active learning for this many cycles (Default: 10).', default=10)
     al_args.add_argument('-acquire', dest='acquire', type=int, 
@@ -213,6 +213,10 @@ if __name__ == "__main__":
         help='Save aquisition variations/probability/clusters arrays and selected items indexes.',default=False)
     al_args.add_argument('-clusters', dest='clusters', type=int, 
         help='Number of clusters to form in similarity selections (Default 0).', default=0)
+    al_args.add_argument('-recluster', dest='recluster', nargs=1, type=int, 
+        help='Re-cluster data every X acquisitions (Default:all).',default=0)
+    al_args.add_argument('-ffeat', dest='ffeat', nargs=1, type=str,
+        help='Use a fixed pre-trained model to extract features.',default=None)
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')
@@ -298,6 +302,7 @@ if __name__ == "__main__":
         'metadata.pik':os.path.join(config.cache,'{0}-metadata.pik'.format(config.data)),
         'sampled_metadata.pik':os.path.join(config.cache,'sampled_metadata.pik'),
         'split_ratio.pik':os.path.join(config.cache,'{0}-split_ratio.pik'.format(config.data)),
+        'clusters.pik':os.path.join(config.cache,'{0}-clusters.pik'.format(config.data)),
         'data_dims.pik':os.path.join(config.cache,'{0}-data_dims.pik'.format(config.data)),
         'tiles.pik':os.path.join(config.predst,'tiles.pik'),
         'test_pred.pik':os.path.join(config.logdir,'test_pred.pik'),
