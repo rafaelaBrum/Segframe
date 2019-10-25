@@ -213,9 +213,9 @@ if __name__ == "__main__":
         help='Save aquisition variations/probability/clusters arrays and selected items indexes.',default=False)
     al_args.add_argument('-clusters', dest='clusters', type=int, 
         help='Number of clusters to form in similarity selections (Default 0).', default=0)
-    al_args.add_argument('-recluster', dest='recluster', nargs=1, type=int, 
+    al_args.add_argument('-recluster', dest='recluster', type=int, 
         help='Re-cluster data every X acquisitions (Default:all).',default=0)
-    al_args.add_argument('-ffeat', dest='ffeat', nargs=1, type=str,
+    al_args.add_argument('-ffeat', dest='ffeat', type=str,
         help='Use a fixed pre-trained model to extract features.',default=None)
     
     ##Postprocessing options

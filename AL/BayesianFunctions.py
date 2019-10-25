@@ -76,9 +76,9 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         return None
     
     if 'acquisition' in kwargs:
-        r = kwargs['acquisition']
+        acq = kwargs['acquisition']
     else:
-        r = config.acquisition_steps
+        acq = config.acquisition_steps
         
     if 'model' in kwargs:
         model = kwargs['model']
@@ -101,7 +101,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
                 print("[km_uncert] Waiting for model weights to become available...")
             kwargs['sw_thread'].join()
     elif config.info:
-        print("Weights thread not available...trying to load weights")
+        print("[km_uncert] Weights thread not available...trying to load weights")
 
     if not os.path.isfile(model.get_weights_cache()) and not os.path.isfile(model.get_mgpu_weights_cache()):
         if config.info:
