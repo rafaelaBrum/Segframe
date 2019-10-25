@@ -76,9 +76,9 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         return None
     
     if 'acquisition' in kwargs:
-        r = kwargs['acquisition']
+        acq = kwargs['acquisition']
     else:
-        r = config.acquisition_steps
+        acq = config.acquisition_steps
         
     if 'model' in kwargs:
         model = kwargs['model']
