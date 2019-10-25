@@ -111,7 +111,9 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         if kwargs['sw_thread'].is_alive():
             if config.info:
                 print("[km_uncert] Waiting for model weights to become available")
-            kwargs['sw_threads'].join()
+            kwargs['sw_thread'].join()
+    elif config.info:
+        print("Weights thread not available...trying to load weights")
 
     #Model can be loaded from previous acquisition train of from a fixed final model
     if gpu_count > 1 and not parallel_m is None:
