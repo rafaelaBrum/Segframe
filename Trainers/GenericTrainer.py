@@ -302,13 +302,10 @@ class Trainer(object):
         if self._config.info:
             print("Saving weights, this could take a while...")
         single.save_weights(model.get_weights_cache())
-        single.save(model.get_model_cache())
         if not parallel is None and not model.get_mgpu_weights_cache() is None:
             parallel.save_weights(model.get_mgpu_weights_cache())
+        single.save(model.get_model_cache())
         cache_m.dump(tuple(self._config.split),'split_ratio.pik')
 
-        #session.close()
-        #session = None
-        
         return Exitcodes.ALL_GOOD
         

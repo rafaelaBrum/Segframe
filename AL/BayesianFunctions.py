@@ -94,26 +94,26 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     un_function = getattr(importlib.import_module('AL'),config.un_function)
     un_indexes = un_function(bayesian_model,generator,data_size,**kwargs)    
 
+    #Models that take to long to save weights might not have finished
+    if 'sw_thread' in kwargs:
+        if kwargs['sw_thread'].is_alive():
+            if config.info:
+                print("[km_uncert] Waiting for model weights to become available...")
+            kwargs['sw_thread'].join()
+    elif config.info:
+        print("Weights thread not available...trying to load weights")
+
+    if not os.path.isfile(model.get_weights_cache()) and not os.path.isfile(model.get_mgpu_weights_cache()):
+        if config.info:
+            print("[km_uncert] No trained model or weights file found")
+        return None
+    
     if hasattr(model,'build_extractor'):
         single_m,parallel_m = model.build_extractor(training=False,feature=True)
     else:
         if config.info:
             print("[km_uncert] Model is not prepared to produce features. No feature extractor")
         return None
-    
-    if not os.path.isfile(model.get_weights_cache()) and not os.path.isfile(model.get_mgpu_weights_cache()):
-        if config.info:
-            print("[km_uncert] No trained model or weights file found")
-        return None
-
-    #Models that take to long to save weights might not have finished
-    if 'sw_thread' in kwargs:
-        if kwargs['sw_thread'].is_alive():
-            if config.info:
-                print("[km_uncert] Waiting for model weights to become available")
-            kwargs['sw_thread'].join()
-    elif config.info:
-        print("Weights thread not available...trying to load weights")
 
     #Model can be loaded from previous acquisition train of from a fixed final model
     if gpu_count > 1 and not parallel_m is None:
@@ -222,7 +222,8 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
             continue
 
     acquired = np.asarray(acquired)
-    cache_m.dump((km,acquired),'clusters.pik')
+    if config.recluster > 0:
+        cache_m.dump((km,acquired),'clusters.pik')
     
     return acquired
     
