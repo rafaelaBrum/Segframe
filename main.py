@@ -217,6 +217,8 @@ if __name__ == "__main__":
         help='Re-cluster data every X acquisitions (Default:all).',default=0)
     al_args.add_argument('-ffeat', dest='ffeat', type=str,
         help='Use a fixed pre-trained model to extract features.',default=None)
+    al_args.add_argument('-pca', dest='pca', type=int, 
+        help='Apply PCA to extracted features before clustering (Default: 0 (not used)).',default=0)
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')
