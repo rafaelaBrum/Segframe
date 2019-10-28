@@ -56,6 +56,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     sw_threads <thread Object>: if a thread object is passed, you must wait its conclusion before loading weights
     """
     from sklearn.cluster import KMeans
+    from sklearn.decomposition import PCA
     import importlib
     import copy
     import time
@@ -107,38 +108,6 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         if config.info:
             print("[km_uncert] No trained model or weights file found")
         return None
-    
-    if hasattr(model,'build_extractor'):
-        single_m,parallel_m = model.build_extractor(training=False,feature=True)
-    else:
-        if config.info:
-            print("[km_uncert] Model is not prepared to produce features. No feature extractor")
-        return None
-
-    #Model can be loaded from previous acquisition train of from a fixed final model
-    if gpu_count > 1 and not parallel_m is None:
-        pred_model = parallel_m
-        if not config.ffeat is None and os.path.isfile(config.ffeat):
-            pred_model.load_weights(config.ffeat,by_name=True)
-            if config.info:
-                print("Model weights loaded from: {0}".format(config.ffeat))
-        else:
-            pred_model.load_weights(model.get_mgpu_weights_cache(),by_name=True)
-            if config.info:
-                print("Model weights loaded from: {0}".format(model.get_mgpu_weights_cache()))
-    else:
-        pred_model = single_m
-        if not config.ffeat is None and os.path.isfile(config.ffeat):
-            pred_model.load_weights(config.ffeat,by_name=True)
-            if config.info:
-                print("Model weights loaded from: {0}".format(config.ffeat))
-        else:
-            pred_model.load_weights(model.get_weights_cache(),by_name=True)
-            if config.info:
-                print("Model weights loaded from: {0}".format(model.get_weights_cache()))
-
-    if config.info:
-        print("Starting feature extraction ({} batches)...".format(len(generator)))
 
     if config.recluster > 0 and acq > 0 and (acq % config.recluster) != 0:
         km,acquired = cache_m.load('clusters.pik')
@@ -147,15 +116,53 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
             #TODO: REMOVE
             print("Previous cluster size: {};\nAcquired: {}".format(km.labels_.shape,acquired.shape))
         km.labels_ = np.delete(km.labels_,acquired)
-        
     else:
+        #Run feature extraction and clustering
+        if hasattr(model,'build_extractor'):
+            single_m,parallel_m = model.build_extractor(training=False,feature=True)
+        else:
+            if config.info:
+                print("[km_uncert] Model is not prepared to produce features. No feature extractor")
+            return None
+
+        #Model can be loaded from previous acquisition train or from a fixed final model
+        if gpu_count > 1 and not parallel_m is None:
+            pred_model = parallel_m
+            if not config.ffeat is None and os.path.isfile(config.ffeat):
+                pred_model.load_weights(config.ffeat,by_name=True)
+                if config.info:
+                    print("Model weights loaded from: {0}".format(config.ffeat))
+            else:
+                pred_model.load_weights(model.get_mgpu_weights_cache(),by_name=True)
+                if config.info:
+                    print("Model weights loaded from: {0}".format(model.get_mgpu_weights_cache()))
+        else:
+            pred_model = single_m
+            if not config.ffeat is None and os.path.isfile(config.ffeat):
+                pred_model.load_weights(config.ffeat,by_name=True)
+                if config.info:
+                    print("Model weights loaded from: {0}".format(config.ffeat))
+            else:
+                pred_model.load_weights(model.get_weights_cache(),by_name=True)
+                if config.info:
+                    print("Model weights loaded from: {0}".format(model.get_weights_cache()))
+                    
         #Extract features for all images in the pool
+        if config.info:
+            print("Starting feature extraction ({} batches)...".format(len(generator)))        
         features = pred_model.predict_generator(generator,
                                                 workers=4*cpu_count,
                                                 max_queue_size=100*gpu_count,
                                                 verbose=0)
         features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
 
+        if config.pca > 0:
+            if config.info:
+                print("Starting PCA decomposition...")
+
+            pca = PCA(n_components = config.pca)
+            features = pca.fit_transform(features)
+            
         stime = None
         etime = None
         if config.verbose > 0:
