@@ -22,9 +22,12 @@ class GenericIterator(Iterator):
         data: tuple (X,Y) where X are samples, Y are corresponding labels to use for random transformations and normalization.
         classes: number of classes
         batch_size: Integer, size of a batch.
+        image_generator: Keras ImageGenerator for data augmentation
+        extra_aug: Do more data augmentation/normalizations here
         shuffle: Boolean, whether to shuffle the data between epochs.
         seed: Random seed for data shuffling.
-        data_format: String, one of `channels_first`, `channels_last`.
+        data_mean: float, dataset mean for zero centering
+        verbose: verbosity level.
     """
 
     def __init__(self,
@@ -33,19 +36,19 @@ class GenericIterator(Iterator):
                      dim=None,
                      batch_size=8,
                      image_generator=None,
+                     extra_aug=False,
                      shuffle=True,
                      seed=173,
-                     black_region=None,
                      data_mean=0.0,
                      verbose=0):
 
         self.data = data
         self.classes = classes
         self.dim = dim
-        self.black_region = black_region
         self.mean = data_mean
         self.image_generator = None
         self.verbose = verbose
+        self.extra_aug = extra_aug
 
         #Keep information of example shape as soon as the information is available
         self.shape = None
@@ -123,9 +126,9 @@ class SingleGenerator(GenericIterator):
                      dim=None,
                      batch_size=8,
                      image_generator=None,
+                     extra_aug=False,
                      shuffle=True,
                      seed=173,
-                     black_region=None,
                      data_mean=0.0,
                      verbose=0,
                      variable_shape=False):
@@ -138,9 +141,9 @@ class SingleGenerator(GenericIterator):
                                                 dim=dim,
                                                 batch_size=batch_size,
                                                 image_generator=image_generator,
+                                                extra_aug=extra_aug,
                                                 shuffle=shuffle,
                                                 seed=seed,
-                                                black_region=black_region,
                                                 data_mean=data_mean,
                                                 verbose=verbose)
 
@@ -210,9 +213,9 @@ class ThreadedGenerator(GenericIterator):
                      dim=None,
                      batch_size=8,
                      image_generator=None,
+                     extra_aug=False,
                      shuffle=True,
                      seed=173,
-                     black_region=None,
                      data_mean=0.0,
                      verbose=0,
                      variable_shape=False):
@@ -227,9 +230,9 @@ class ThreadedGenerator(GenericIterator):
                                                 dim=dim,
                                                 batch_size=batch_size,
                                                 image_generator=image_generator,
+                                                extra_aug=extra_aug,
                                                 shuffle=shuffle,
                                                 seed=seed,
-                                                black_region=black_region,
                                                 data_mean=data_mean,
                                                 verbose=verbose)
 
@@ -249,7 +252,7 @@ class ThreadedGenerator(GenericIterator):
             self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
 
         #Additional data augmentation
-        if self._aug is None:
+        if self.extra_aug and self._aug is None:
             self._aug = iaa.Sometimes(0.5,
                 iaa.ContrastNormalization((0.75,1.5))
                 )
@@ -285,9 +288,11 @@ class ThreadedGenerator(GenericIterator):
             batch_x[i] = example
             y[i] = t_y
 
+        #Always normalize
         batch_x = self.image_generator.standardize(batch_x)
         #Apply extra augmentation
-        batch_x = self._aug(images=batch_x)
+        if self.extra_aug:
+            batch_x = self._aug(images=batch_x)
         
         del(futures)
         #Center data
