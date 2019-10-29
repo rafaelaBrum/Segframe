@@ -197,8 +197,7 @@ class Predictor(object):
         stp = round((len(X) / bsize) + 0.5)
 
         image_generator = ImageDataGenerator(samplewise_center=self._config.batch_norm, 
-                                            samplewise_std_normalization=self._config.batch_norm,
-                                            brightness_range=(-20.0,20.0))
+                                            samplewise_std_normalization=self._config.batch_norm)
         test_generator = image_generator.flow(x=X,
                                             y=Y,
                                             batch_size=bsize,

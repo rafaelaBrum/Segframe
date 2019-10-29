@@ -128,12 +128,10 @@ class Trainer(object):
         else:
             train_prep = ImageDataGenerator(
                 samplewise_center=self._config.batch_norm,
-                samplewise_std_normalization=self._config.batch_norm,
-                brightness_range=(-20.0,20.0))
+                samplewise_std_normalization=self._config.batch_norm)
             val_prep = ImageDataGenerator(
                 samplewise_center=self._config.batch_norm,
-                samplewise_std_normalization=self._config.batch_norm,
-                brightness_range=(-20.0,20.0))
+                samplewise_std_normalization=self._config.batch_norm)
         
         if not self._config.tdim is None:
             fix_dim = self._config.tdim
