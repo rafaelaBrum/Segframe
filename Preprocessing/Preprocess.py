@@ -7,6 +7,7 @@ import numpy as np
 import multiprocessing
 import tqdm
 import concurrent.futures
+import skimage
 from skimage import io
 
 from WSIParse import TCGAMerger,GenericData
@@ -31,7 +32,7 @@ def preprocess_data(config,img_types):
         os.makedirs(config.predst)
 
     #If SRC dir has already been scanned, no need to redo:
-    cache_m = CacheManager.CacheManager(verbose=config.verbose)
+    cache_m = CacheManager(verbose=config.verbose)
     datatree = None
     if config.tcga:
         datatree = cache_m.load('tcga.pik')
@@ -39,10 +40,14 @@ def preprocess_data(config,img_types):
             datatree = TCGAMerger.Merger(config.presrc,config.verbose)
             cache_m.dump(datatree,'tcga.pik')
     else:
-        datatree = cache_m.load('datatree.pik')
+        if cache_m.checkFileExistence('datatree.pik'):
+            imglist,lablist,path = cache_m.load('datatree.pik')
+            if path == config.presrc:
+                datatree = GenericData.ImageSource((imglist,lablist),config.presrc,img_types)
+                
         if datatree is None:
-            datatree = GenericData.GenericData(config.presrc,img_types)
-            cache_dump(datatree,'datatree.pik')
+            datatree = GenericData.ImageSource(None,config.presrc,img_types)
+            cache_m.dump((datatree.getData(),datatree.getLabelsList(),config.presrc),'datatree.pik')
 
     #Produce tiles from input images
     #TODO: implement parallel tiling, choose between multiprocess tiling (multiple images processed in parallel) or single process (one image
@@ -53,6 +58,8 @@ def preprocess_data(config,img_types):
             #make_multiprocesstiling(datatree,config)
         else:
             make_singleprocesstiling(datatree,config)
+    elif not config.normalize is None:
+        make_singleprocessnorm(datatree,config)
 
 
 def make_multiprocesstiling(data,config):
@@ -75,6 +82,46 @@ def make_singleprocesstiling(data,config):
             os.makedirs(tiles_dir)
         thread_pool_tiler(img,config.tdim,config.progressbar,normalizer,config.verbose)
 
+
+def make_singleprocessnorm(data,config):
+    """
+    Single process but multithreaded normalization
+    """
+    import shutil
+    
+    executor = concurrent.futures.ThreadPoolExecutor(max_workers=config.cpu_count)
+    pool_result = []
+    futures = []
+
+    pimgs = data.getImgList()
+    labels = data.getLabelsList()
+    del data
+    
+    normalizer = ReinhardNormalizer(config.normalize)
+
+    if config.progressbar:
+        l = tqdm.tqdm(desc="Normalizing tiles...",total=len(pimgs),position=0)
+        
+    for img in pimgs:
+        futures.append(executor.submit(save_normalize_tile,img,None,normalizer,config.predst,config.verbose))
+        
+    #for future in concurrent.futures.as_completed(futures):
+    for future in futures:
+        pool_result.append(future.result())
+        if config.progressbar:
+            l.update(1)
+        elif config.info:
+            print('.',endl='')
+            
+    if config.progressbar:
+        l.close()
+
+    #When normalizing, we need to duplicate the source directory, including labels files
+    for lb in labels:
+        subdir = os.path.split(os.path.dirname(lb))[1]
+        shutil.copy(lb,os.path.join(config.predst,subdir))
+                        
+    return pool_result    
 
 def thread_pool_tiler(img,tsize,progress_bar,normalizer,verbose):
     """
@@ -139,25 +186,41 @@ def save_normalize_tile(img,dimensions,normalizer,outdir,verbose):
     Check if tile is background or not, normalize if needed and save to file.
 
     @param img <SegImage>: any object that implements SegImage
-    @param dimensions: tuple (x,y,dx,dy) -> (x,y) point; dw,dy: width,height
+    @param dimensions: tuple (x,y,dx,dy) -> (x,y) point; dw,dy: width,height. If dimensions is None, use x,y = 0,0 and dx,dy = img size
     @param outdir <str>: path to output dir (save tiles here)
     @param verbose <int>: verbosity level
     """
-    x,y,dx,dy = dimensions
-    tile = img.readImageRegion(x,y,dx,dy)
+    if dimensions is None:
+        keep_structure = True
+        tile = img.readImage(keepImg=False,toFloat=False)
+        x,y = 0,0
+        dx,dy = tile.shape[:2]
+        dimensions = (x,y,dx,dy)
+    else:
+        keep_structure = False
+        x,y,dx,dy = dimensions
+        tile = img.readImageRegion(x,y,dx,dy)
 
     #Discard background tiles
     if background(tile):
+        if verbose > 0:
+            print("Background: {}".format(img))
         return None
 
     #Normalize if whiteness proportion is below 25%:
-    if white_ratio(tile) < 0.25:
-        tile = normalizer.normalize(tile)
-
+    #if white_ratio(tile) < 0.05:
+    tile = normalizer.normalize(tile)
+    
     #TODO: CHECK TILE SIZES AND PAD IF NECESSARY!
     
     #Save tile to disk
-    io.imsave(os.path.join(outdir,img.getImgName(),"{0}-{1}_{2}x{3}.png".format(x,y,dx,dy)),tile)
+    if keep_structure:
+        subdir = os.path.join(outdir,os.path.split(os.path.dirname(img.getPath()))[1])
+        if not os.path.isdir(subdir):
+            os.mkdir(subdir)
+        io.imsave(os.path.join(subdir,"{}.png".format(img.getImgName())),tile,check_contrast=True)
+    else:
+        io.imsave(os.path.join(outdir,img.getImgName(),"{0}-{1}_{2}x{3}.png".format(x,y,dx,dy)),tile)
     
     return dimensions
 
@@ -196,6 +259,7 @@ def background(pat):
     @param pat <np.array>: tile as a numpy array.
     """
     whiteness = (np.std(pat[:,:,0]) + np.std(pat[:,:,1]) + np.std(pat[:,:,2])) / 3.0
+    
     if whiteness < 18:
         return True
     else:

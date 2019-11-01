@@ -39,7 +39,7 @@ class PImage(SegImage):
         # Hashes current dir and file name
         return hash((self._path.split(os.path.sep)[-2],os.path.basename(self._path)))
     
-    def readImage(self,keepImg=None,size=None,verbose=None):
+    def readImage(self,keepImg=None,size=None,verbose=None,toFloat=True):
         
         data = None
 
@@ -58,7 +58,8 @@ class PImage(SegImage):
             data = io.imread(self._path);
 
             #Convert data to float and also normalizes between [0,1]
-            data = skimage.img_as_float32(data)
+            if toFloat:
+                data = skimage.img_as_float32(data)
             
             if(data.shape[2] > 3): # remove the alpha
                 data = data[:,:,0:3];

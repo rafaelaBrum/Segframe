@@ -7,3 +7,4 @@ from .GenericTrainer import Trainer
 from .ALTrainer import ActiveLearningTrainer
 from .BatchGenerator import SingleGenerator,ThreadedGenerator
 from .Predictions import Predictor
+

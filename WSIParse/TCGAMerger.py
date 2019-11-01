@@ -7,12 +7,12 @@ import pickle
 if __name__ == "__main__":
     from TCGAParser import TCGABarcode
     from BCRParser import BCRParser
-    from ImageSource import ImageSource
+    from GenericData import ImageSource
     #from ..Utils import CacheManager
 else:
     from .TCGAParser import TCGABarcode
     from .BCRParser import BCRParser
-    from .ImageSource import ImageSource
+    from .GenericData import ImageSource
     from Utils import CacheManager
 
 class Merger(ImageSource):
