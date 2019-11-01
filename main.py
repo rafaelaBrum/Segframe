@@ -13,7 +13,7 @@ from Preprocessing import Preprocess
 from Utils import Exitcodes,CacheManager
 from Testing import TrainTest,DatasourcesTest,PredictionTest,ActiveLearningTest
 from Trainers import GenericTrainer,Predictions,ALTrainer
-
+    
 #Supported image types
 img_types = ['svs', 'dicom', 'nii','tif','tiff', 'png']
 
@@ -39,8 +39,13 @@ def main_exec(config):
         os.mkdir(config.logdir)
         
     if config.preprocess:
+        if config.img_type is None:
+            imgt = img_types
+        else:
+            imgt = config.img_type
+            
         if config.multiprocess:
-            proc = Process(target=Preprocess.preprocess_data, args=(config,img_types))
+            proc = Process(target=Preprocess.preprocess_data, args=(config,imgt))
             proc.start()
             proc.join()
 
@@ -48,7 +53,7 @@ def main_exec(config):
                 print("System did not end well. Check logs or enhace verbosity level.")
                 sys.exit(proc.exitcode)
         else:
-            Preprocess.preprocess_data(config,img_types)
+            Preprocess.preprocess_data(config,imgt)
         
     if config.train:
         if not os.path.isdir(config.weights_path):
@@ -142,16 +147,15 @@ if __name__ == "__main__":
         help='Input image or directory of images (runs recursively)',required=False)
     pre_args.add_argument('-predst', dest='predst', type=str,default='tiles', 
         help='Output tiles go to this directory')
-    pre_args.add_argument('-img_type', dest='img_type', type=str, 
-        help='Input image type: svs, dicom, nii (Default: \'svs\').',
-        choices=img_types, default='svs')
+    pre_args.add_argument('-img_type', dest='img_type', nargs='+', type=str, 
+        help='Input image types to consider (list): svs, dicom, nii.', default=None)
     pre_args.add_argument('-mag', dest='magnification', type=int, 
         help='For SVS images only, use specific magnification level.',
         choices=[2,4,8,10,20,40],default=40)
     pre_args.add_argument('-tdim', dest='tdim', nargs='+', type=int, 
         help='Tile width and heigth, optionally inform the number of channels (Use: 200 200 for SVS 50 um).', 
         default=None, metavar=('Width', 'Height'))
-    pre_args.add_argument('-norm', dest='normalize', type=str,default='Preprocessing/target_40X.png', 
+    pre_args.add_argument('-norm', dest='normalize', type=str, nargs='?', default=None, const='Preprocessing/target_40X.png',
         help='Normalize tiles based on reference image (given)')
     
 
@@ -300,7 +304,8 @@ if __name__ == "__main__":
     config, unparsed = parser.parse_known_args()
     
     files = {
-        'tcga.pik':os.path.join(config.presrc,'piks','tcga.pik'),
+        'datatree.pik':os.path.join(config.cache,'{}-datatree.pik'.format(config.data)),
+        'tcga.pik':os.path.join(config.cache,'tcga.pik'),
         'metadata.pik':os.path.join(config.cache,'{0}-metadata.pik'.format(config.data)),
         'sampled_metadata.pik':os.path.join(config.cache,'sampled_metadata.pik'),
         'split_ratio.pik':os.path.join(config.cache,'{0}-split_ratio.pik'.format(config.data)),

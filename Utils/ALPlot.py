@@ -134,7 +134,9 @@ class Plotter(object):
             if not np.isnan(ci).any():
                 low_ci = y_data - ci
                 upper_ci = y_data + ci
-            ym = np.max(upper_ci)+0.05
+                ym = np.max(upper_ci)+0.05
+            else:
+                ym = np.max(x_data)
             up = ym if ym > up else up
             if not np.isnan(ci).any():
                 plt.fill_between(x_data, low_ci, upper_ci, color = palette(color), alpha = 0.4)
