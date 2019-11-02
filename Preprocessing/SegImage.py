@@ -12,11 +12,8 @@ class SegImage(ABC):
     @param keepImg <bool>: keep image data in memory until ordered to release it
     """
     def __init__(self,path,keepImg=False,verbose=0):
-        if isinstance(path,str) and os.path.isfile(path):
-            self._path = path
-        else:
-            raise ValueError("[GenericImage] Path does not correspond to a file ({0}).".format(path))
-
+        
+        self._path = path
         self._verbose = verbose
         self._keep = keepImg
         self._data = None
