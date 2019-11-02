@@ -64,13 +64,18 @@ def process_al_metadata(config):
     print("Acquired images copied to output dir.")
 
 def process_cluster_metadata(config):
-    def _copy_img(dst_dir,acq,cln,img,img_in):
+    def _copy_img(dst_dir,acq,cln,img,img_in,orig=None):
         ac_path = os.path.join(dst_dir,str(acq),str(cln))
         if not os.path.isdir(ac_path):
             os.makedirs(ac_path)
         img_name = os.path.basename(img.getPath())
-        shutil.copy(img.getPath(),os.path.join(ac_path,'{}.{}'.format(img_in,img_name.split('.')[1])))
-        
+        if orig is None:
+            shutil.copy(img.getPath(),os.path.join(ac_path,'{}.{}'.format(img_in,img_name.split('.')[1])))
+        else:
+            subdir = os.path.split(os.path.dirname(img.getPath()))[1]
+            orig_img = os.path.join(orig,subdir,os.path.basename(img.getPath()))
+            shutil.copy(orig_img,os.path.join(ac_path,'{}.{}'.format(img_in,img_name.split('.')[1])))
+            
     if not os.path.isdir(config.out_dir):
         os.mkdir(config.out_dir)
 
@@ -91,7 +96,7 @@ def process_cluster_metadata(config):
         if not k in acfiles:
             print("Requested acquisition ({}) is not present".format(k))
             return None
-        
+
         with open(acfiles[k],'rb') as fd:
             pool,un_clusters,un_indexes = pickle.load(fd)
     
@@ -105,7 +110,7 @@ def process_cluster_metadata(config):
                 else:
                     posa = np.hstack((posa,np.where(un_indexes == ind[ii])[0]))
                 #Copy image
-                _copy_img(config.out_dir,k,cln,pool[0][ind[ii]],posa[ii])
+                _copy_img(config.out_dir,k,cln,pool[0][ind[ii]],posa[ii],config.cp_orig)
             print("Cluster {} first items positions in index array (at most {}): {}".format(cln,config.n,posa))
     
     
@@ -130,7 +135,9 @@ if __name__ == "__main__":
         help='Save selected images to this directory.')
     parser.add_argument('-n', dest='n', type=int, 
         help='Grab this many images. If cluster, grab this many images per cluster', default=200,required=False)
-
+    parser.add_argument('-orig', dest='cp_orig', type=str, nargs='?', default=None, const='../data/lym_cnn_training_data',
+        help='Copy original images instead of the normalized ones. Define location of the originals.')
+    
     config, unparsed = parser.parse_known_args()
 
     if config.meta:
