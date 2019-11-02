@@ -10,6 +10,9 @@ import concurrent.futures
 import skimage
 from skimage import io
 
+import warnings
+warnings.filterwarnings("ignore", category=UserWarning)
+
 from WSIParse import TCGAMerger,GenericData
 from Utils import Exitcodes
 from Utils import CacheManager
@@ -103,6 +106,9 @@ def make_singleprocessnorm(data,config):
         l = tqdm.tqdm(desc="Normalizing tiles...",total=len(pimgs),position=0)
         
     for img in pimgs:
+        subdir = os.path.join(config.predst,os.path.split(os.path.dirname(img.getPath()))[1])
+        if not os.path.isdir(subdir):
+            os.mkdir(subdir)
         futures.append(executor.submit(save_normalize_tile,img,None,normalizer,config.predst,config.verbose))
         
     #for future in concurrent.futures.as_completed(futures):
@@ -216,8 +222,6 @@ def save_normalize_tile(img,dimensions,normalizer,outdir,verbose):
     #Save tile to disk
     if keep_structure:
         subdir = os.path.join(outdir,os.path.split(os.path.dirname(img.getPath()))[1])
-        if not os.path.isdir(subdir):
-            os.mkdir(subdir)
         io.imsave(os.path.join(subdir,"{}.png".format(img.getImgName())),tile,check_contrast=True)
     else:
         io.imsave(os.path.join(outdir,img.getImgName(),"{0}-{1}_{2}x{3}.png".format(x,y,dx,dy)),tile)
