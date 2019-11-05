@@ -325,8 +325,10 @@ class GenericDS(ABC):
             return None
         
         if reload_data:
-            if isinstance(k,float):
+            if k <= 1.0:
                 k = int(k*len(self.X))
+            else:
+                k = int(k)
             
             samples = np.random.choice(range(len(self.X)),k,replace=False)
             
