@@ -307,8 +307,10 @@ class GenericDS(ABC):
                 reload_data = True
 
             #Check if we have the desired number of items
-            if isinstance(k,float):
+            if k <= 1.0:
                 k = int(k*len(self.X))
+            else:
+                k = int(k)
             if k != len(s_x):
                 if self._config.info:
                     print("Saved samples are different from requested ({} x {}). Resampling...".format(k,len(s_x)))

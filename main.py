@@ -307,7 +307,7 @@ if __name__ == "__main__":
         'datatree.pik':os.path.join(config.cache,'{}-datatree.pik'.format(config.data)),
         'tcga.pik':os.path.join(config.cache,'tcga.pik'),
         'metadata.pik':os.path.join(config.cache,'{0}-metadata.pik'.format(config.data)),
-        'sampled_metadata.pik':os.path.join(config.cache,'sampled_metadata.pik'),
+        'sampled_metadata.pik':os.path.join(config.cache,'{0}-sampled_metadata.pik'.format(config.data)),
         'split_ratio.pik':os.path.join(config.cache,'{0}-split_ratio.pik'.format(config.data)),
         'clusters.pik':os.path.join(config.cache,'{0}-clusters.pik'.format(config.data)),
         'data_dims.pik':os.path.join(config.cache,'{0}-data_dims.pik'.format(config.data)),
