@@ -119,7 +119,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     else:
         #Run feature extraction and clustering
         if hasattr(model,'build_extractor'):
-            single_m,parallel_m = model.build_extractor(training=False,feature=True)
+            single_m,parallel_m = model.build_extractor(training=False,feature=True,parallel=False)
         else:
             if config.info:
                 print("[km_uncert] Model is not prepared to produce features. No feature extractor")
@@ -290,14 +290,12 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
         all_probs = np.zeros(shape=(mc_dp,data_size,generator.classes))
         
     for d in l:
-        if pbar:
-            print("\n")
-        elif config.info:
+        if not pbar and config.info:
             print("Step {0}/{1}".format(d+1,mc_dp))
            
         #Keep verbosity in 0 to gain speed 
         proba = pred_model.predict_generator(generator,
-                                                workers=4*cpu_count,
+                                                workers=5*cpu_count,
                                                 max_queue_size=100*gpu_count,
                                                 verbose=0)
 
@@ -385,13 +383,11 @@ def bayesian_bald(pred_model,generator,data_size,**kwargs):
         l = range(mc_dp)
                 
     for d in l:
-        if pbar:
-            print("\n")
-        elif config.info:
+        if not pbar and config.info:
             print("Step {0}/{1}".format(d+1,mc_dp))
 
         dropout_score = pred_model.predict_generator(generator,
-                                                        workers=4*cpu_count,
+                                                        workers=5*cpu_count,
                                                         max_queue_size=100*gpu_count,
                                                         verbose=0)
         #computing G_X

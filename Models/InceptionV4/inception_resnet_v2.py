@@ -335,7 +335,9 @@ def InceptionResNetV2(include_top=True,
         x = layers.GlobalAveragePooling2D()(x)
         last_tensor = x
         x = layers.Dense(512)(x)
+        x = layers.Dropout(0.3)(x,training=kwargs['training'])
         x = layers.Dense(128)(x)
+        x = layers.Dropout(0.3)(x,training=kwargs['training'])
         x = layers.Dense(classes)(x)
         x = layers.Activation('softmax')(x)
     else:
