@@ -38,6 +38,19 @@ class GenericDS(ABC):
     def _load_metadata_from_dir(self,d):
         pass
 
+    @abstractmethod
+    def change_root(self,s,d):
+        """
+        Given a file path 's' of this dataset, return the path of the same file, but located inside 'd'
+        """
+        pass
+    @abstractmethod
+    def change_root(self,imgv,path):
+        """
+        Check if SegImage instances in imgv are placed in the same base dir as path. If not, change paths.
+        """
+        pass
+    
     def get_dataset_dimensions(self,X = None):
         """
         Returns the dimensions of the images in the dataset. It's possible to have different image dimensions.

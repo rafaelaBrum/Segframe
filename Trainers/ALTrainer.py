@@ -100,6 +100,7 @@ class ActiveLearningTrainer(Trainer):
         #Use a sample of the metadata if so instructed
         if self._config.sample != 1.0:
             X,Y = self._ds.sample_metadata(self._config.sample)
+            self._ds.check_paths(X,self._config.predst)
 
         if self._config.balance:
             X,Y = self._balance_classes(X,Y)

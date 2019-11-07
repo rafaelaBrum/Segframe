@@ -74,3 +74,18 @@ class MNIST(gd.GenericDS):
 
         return t_x,t_y
             
+
+    def check_paths(self,imgv,path):
+
+        for s in imgv:
+            s.setPath(self.change_root(s.getPath(),path))
+            
+    def change_root(self,s,d):
+        """
+        s -> original path
+        d -> change location to d
+        """
+        components = tuple(s.split(os.path.sep)[-2:])
+        relative_path = os.path.join(*components)
+
+        return os.path.join(d,relative_path)

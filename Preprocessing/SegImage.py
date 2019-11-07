@@ -78,3 +78,6 @@ class SegImage(ABC):
 
     def getPath(self):
         return self._path
+
+    def setPath(self,new_path):
+        self._path = new_path
