@@ -180,6 +180,7 @@ class ActiveLearningTrainer(Trainer):
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are in order")
+                return None
                     
             #Some models may take too long to save weights
             if not sw_thread is None and sw_thread.is_alive():

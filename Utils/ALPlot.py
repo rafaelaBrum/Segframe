@@ -625,9 +625,9 @@ if __name__ == "__main__":
             sys.exit(1)
 
         if len(config.tmode) == 1:
-            exp_type = os.path.join(config.sdir,config.tmode[0])
+            exp_type = os.path.join(config.sdir,config.tmode[0],config.tmode[0])
         else:
-            exp_type = [os.path.join(config.sdir,tmode) for tmode in config.tmode]
+            exp_type = [os.path.join(config.sdir,tmode,tmode) for tmode in config.tmode]
             
         p = Plotter()
         
@@ -661,11 +661,11 @@ if __name__ == "__main__":
             sys.exit(1)
 
         if len(config.tmode) == 1:
-            exp_type = os.path.join(config.sdir,config.tmode[0])
+            exp_type = os.path.join(config.sdir,config.tmode[0],config.tmode[0])
         else:
             exp_type = []
             for i in range(len(config.n_exp)):
-                exp_type.append(os.path.join(config.sdir,config.tmode[i]))
+                exp_type.append(os.path.join(config.sdir,config.tmode[i],config.tmode[i]))
         
         if config.ids is None:
             print("You should define a set of experiment IDs (-id).")
