@@ -165,6 +165,7 @@ class ActiveLearningTrainer(Trainer):
         stime = None
         etime = None
         sw_thread = None
+        end_train = False
         for r in range(self._config.acquisition_steps):
             if self._config.info:
                 print("[ALTrainer] Starting acquisition step {0}/{1}".format(r+1,self._config.acquisition_steps))
@@ -180,7 +181,7 @@ class ActiveLearningTrainer(Trainer):
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are in order")
-                return None
+                end_train = True
                     
             #Some models may take too long to save weights
             if not sw_thread is None and sw_thread.is_alive():
@@ -198,6 +199,9 @@ class ActiveLearningTrainer(Trainer):
                 etime = time.time()
                 td = timedelta(seconds=(etime-stime))
                 print("Acquisition step took: {0}".format(td))
+                
+            if end_train:
+                return None
 
     def acquire(self,function,model,**kwargs):
         """
