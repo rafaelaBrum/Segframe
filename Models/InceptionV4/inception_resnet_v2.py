@@ -332,28 +332,13 @@ def InceptionResNetV2(include_top=True,
         x = layers.Dense(classes, activation='softmax', name='predictions')(x)
     elif 'custom_top' in kwargs and kwargs['custom_top']:
         #Create a custom new classification here if needed
-        x = layers.Conv2D(192,
-                      (3,3),
-                      strides=3,
-                      padding='valid',
-                      kernel_initializer='he_normal',
-                      use_bias=True,
-                      name='class_1')(x)
-        
-        x = layers.Activation('relu', name='class1_ac')(x)
-        x = layers.Dropout(0.3)(x,training=kwargs['training'])
-        x = layers.Conv2D(192,
-                      (1,1),
-                      strides=1,
-                      padding='valid',
-                      kernel_initializer='he_normal',
-                      use_bias=True,
-                      name='class_2')(x)
-        x = layers.Activation('relu', name='class2_ac')(x)
-        x = layers.Dropout(0.3)(x,training=kwargs['training'])
         x = layers.GlobalAveragePooling2D()(x)
-        last_tensor = x        
-        #x = layers.Flatten()(x)
+        last_tensor = x
+
+        x = layers.Dense(512)(x)
+        x = layers.Dropout(0.3)(x,training=kwargs['training'])
+        x = layers.Dense(128)(x)
+        x = layers.Dropout(0.3)(x,training=kwargs['training'])
         x = layers.Dense(classes)(x)
         x = layers.Activation('softmax')(x)
     else:
