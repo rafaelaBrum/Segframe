@@ -339,6 +339,7 @@ def InceptionResNetV2(include_top=True,
                       kernel_initializer='he_normal',
                       use_bias=True,
                       name='class_1')(x)
+        
         x = layers.Activation('relu', name='class1_ac')(x)
         x = layers.Dropout(0.3)(x,training=kwargs['training'])
         x = layers.Conv2D(192,
