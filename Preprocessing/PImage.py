@@ -114,3 +114,11 @@ class PImage(SegImage):
 
         self._dim = (w,h,c)
         return self._dim
+
+    def getOrigin(self):
+        return self._origin
+
+    def getCoord(self):
+        return self._coord
+
+    

@@ -9,11 +9,11 @@ import sys
 import argparse
 import pickle
 
-def process_al_metadata(config):
-    if not os.path.isdir(config.out_dir):
-        os.mkdir(config.out_dir)
-
-    if not os.path.isdir(config.sdir):
+def _process_al_metadata(config):
+    """
+    Returns the images acquired in each acquisition, as stored in al-metadata files
+    """
+    if config.sdir is None or not os.path.isdir(config.sdir):
         print("Directory not found: {}".format(config.sdir))
         sys.exit(1)
 
@@ -23,8 +23,11 @@ def process_al_metadata(config):
     for f in files:
         if f.startswith('al-metadata'):
             ac_id = int(f.split('.')[0].split('-')[3][1:])
-            acfiles[ac_id] = os.path.join(config.sdir,f)
+            net = f.split('.')[0].split('-')[2]
+            if (not config.net is None and config.net == net) or config.net is None:
+                acfiles[ac_id] = os.path.join(config.sdir,f)
 
+    print(acfiles)
     ordered_k = list(acfiles.keys())
     ordered_k.sort()
     initial_set = None
@@ -40,8 +43,47 @@ def process_al_metadata(config):
             imgs = np.setdiff1d(list(train[0]),initial_set,True)
             print("Acquired {} images in acquisition {}".format(imgs.shape[0],k-1))
             ac_imgs[k-1] = imgs
-            initial_set = list(train)
-            
+            initial_set = list(train)    
+
+    return ac_imgs
+
+def process_wsi_metadata(config):
+    """
+    Metadata should contain information about the WSI that originated the patch
+    """
+    ac_imgs = _process_al_metadata(config)
+    
+    wsis = {}
+    for k in config.ac_n:
+        print("In acquisition {}:\n".format(k)) 
+        wsis[k] = {}
+        
+        if not k in ac_imgs:
+            continue
+        for img in ac_imgs[k]:
+            if hasattr(img,'getOrigin'):
+                origin = img.getOrigin()
+            elif hasattr(img,'_origin'):
+                origin = img._origin
+            else:
+                print("Image has no origin information: {}".format(img.getPath()))
+                continue
+            if origin in wsis[k]:
+                wsis[k][origin].append(img)
+            else:
+                wsis[k][origin] = [img]
+
+        for w in wsis[k]:
+            coords = [str(p._coord) for p in wsis[k][w]]
+            print(' '*3 + '**{} ({} patches):{}'.format(w,len(coords),''.join(coords)))
+    
+    
+def process_al_metadata(config):
+    if not os.path.isdir(config.out_dir):
+        os.mkdir(config.out_dir)
+
+    ac_imgs = _process_al_metadata(config)
+    
     acquisitions = [ac_imgs[k][:config.n] for k in config.ac_n]
 
     print("# of acquisitions obtained: {} -> ".format(len(acquisitions)),end='')
@@ -126,7 +168,9 @@ if __name__ == "__main__":
         help='Acquire from ALTrainer metadata.', default=False)
     parser.add_argument('--cluster', dest='cluster', action='store_true', 
         help='Acquire from KM clustering metadata.', default=False)
-    
+    parser.add_argument('--wsi', dest='wsi', action='store_true', 
+        help='Identify the patches of each WSI in the acquisitions.', default=False)
+        
     parser.add_argument('-ac', dest='ac_n', nargs='+', type=int, 
         help='Acquisitions to obtain images.', default=None,required=True)
     parser.add_argument('-sd', dest='sdir', type=str,default=None, 
@@ -137,6 +181,8 @@ if __name__ == "__main__":
         help='Grab this many images. If cluster, grab this many images per cluster', default=200,required=False)
     parser.add_argument('-orig', dest='cp_orig', type=str, nargs='?', default=None, const='../data/lym_cnn_training_data',
         help='Copy original images instead of the normalized ones. Define location of the originals.')
+    parser.add_argument('-net', dest='net', type=str,default=None, 
+        help='Network name for metadata analysis.')
     
     config, unparsed = parser.parse_known_args()
 
@@ -144,5 +190,7 @@ if __name__ == "__main__":
         process_al_metadata(config)
     elif config.cluster:
         process_cluster_metadata(config)
+    elif config.wsi:
+        process_wsi_metadata(config)
     else:
-        print("You should choose between ALTrainer metadata (--meta) of KM metadat (--cluster)")
+        print("You should choose between ALTrainer metadata (--meta), KM metadat (--cluster) or WSI metadata (--wsi)")
