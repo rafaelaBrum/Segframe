@@ -336,7 +336,7 @@ def InceptionResNetV2(include_top=True,
         last_tensor = x
 
         x = layers.Dense(512)(x)
-        x = layers.Activation('relu', name='class2_ac')(x)
+        x = layers.Activation('relu', name='class1_ac')(x)
         x = layers.Dropout(0.3)(x,training=kwargs['training'])
         x = layers.Dense(128)(x)
         x = layers.Activation('relu', name='class2_ac')(x)
