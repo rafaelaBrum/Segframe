@@ -68,11 +68,6 @@ class CellRep(gd.GenericDS):
         self.X = None
         self.Y = None
 
-
-    def check_paths(self,imgv,path):
-
-        for s in imgv:
-            s.setPath(self.change_root(s.getPath(),path))
             
     def change_root(self,s,d):
         """

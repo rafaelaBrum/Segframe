@@ -223,6 +223,8 @@ if __name__ == "__main__":
         help='Use a fixed pre-trained model to extract features.',default=None)
     al_args.add_argument('-pca', dest='pca', type=int, 
         help='Apply PCA to extracted features before clustering (Default: 0 (not used)).',default=0)
+    al_args.add_argument('-load_train', dest='load_train', action='store_true', default=False,
+        help='Use the same initial training set as produced by a previous experiment.')    
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')
@@ -308,6 +310,7 @@ if __name__ == "__main__":
         'tcga.pik':os.path.join(config.cache,'tcga.pik'),
         'metadata.pik':os.path.join(config.cache,'{0}-metadata.pik'.format(config.data)),
         'sampled_metadata.pik':os.path.join(config.cache,'{0}-sampled_metadata.pik'.format(config.data)),
+        'initial_train.pik':os.path.join(config.cache,'{0}-inittrain.pik'.format(config.data)),
         'split_ratio.pik':os.path.join(config.cache,'{0}-split_ratio.pik'.format(config.data)),
         'clusters.pik':os.path.join(config.cache,'{0}-clusters.pik'.format(config.data)),
         'data_dims.pik':os.path.join(config.cache,'{0}-data_dims.pik'.format(config.data)),

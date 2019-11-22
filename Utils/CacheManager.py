@@ -113,6 +113,17 @@ class _CacheManager(object):
                 print("[CacheManager-LOAD] No such file or ID not registered: {0}".format(fid))
             return None
 
+    def load_file(self,f):
+        if os.path.isfile(f):
+            fd = open(f,'rb')
+            data = pickle.load(fd)
+            fd.close()
+            return data
+        else:
+            if self._verbose > 0:
+                print("[CacheManager-LOAD] No such file or ID not registered: {0}".format(fid))
+            return None
+        
     def multi_load(self,fid):
         """
         Keeps file descriptor opened until end of file is reached. Use with attention.

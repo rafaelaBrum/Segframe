@@ -155,6 +155,25 @@ def process_cluster_metadata(config):
                 _copy_img(config.out_dir,k,cln,pool[0][ind[ii]],posa[ii],config.cp_orig)
             print("Cluster {} first items positions in index array (at most {}): {}".format(cln,config.n,posa))
     
+
+def process_train_set(config):
+
+    trainsets = {}
+    for f in config.trainset:
+        if not os.path.isfile(f):
+            print("File not found: {}".format(f))
+            return None
+        with open(f,'rb') as fd:
+            train,_,_ = pickle.load(fd)
+        for i in train:
+            if i in trainsets:
+                trainsets[i] += 1
+            else:
+                trainsets[i] = 1
+
+    for j in trainsets:
+        if trainsets[j] == 1:
+            print("Image {} occurs in only one of the sets".format(j))
     
 if __name__ == "__main__":
 
@@ -170,6 +189,8 @@ if __name__ == "__main__":
         help='Acquire from KM clustering metadata.', default=False)
     parser.add_argument('--wsi', dest='wsi', action='store_true', 
         help='Identify the patches of each WSI in the acquisitions.', default=False)
+    parser.add_argument('--train_set', dest='trainset', type=str, nargs=2,
+        help='Check if the training sets of two experiments are the same.', default=None)
         
     parser.add_argument('-ac', dest='ac_n', nargs='+', type=int, 
         help='Acquisitions to obtain images.', default=None,required=True)
@@ -192,5 +213,7 @@ if __name__ == "__main__":
         process_cluster_metadata(config)
     elif config.wsi:
         process_wsi_metadata(config)
+    elif not config.trainset is None:
+        process_train_set(config)
     else:
         print("You should choose between ALTrainer metadata (--meta), KM metadat (--cluster) or WSI metadata (--wsi)")

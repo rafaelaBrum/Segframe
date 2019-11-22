@@ -118,7 +118,19 @@ class ActiveLearningTrainer(Trainer):
         self.pool_y = Y[:-t_idx]
 
         #Initial training set will be choosen at random from pool
-        train_idx = np.random.choice(len(self.pool_x),self._config.init_train,replace=False)
+        cache_m = CacheManager()
+        if self._config.load_train and not self._config.balance:
+            train_idx = cache_m.load('initial_train.pik')
+            if not train_idx is None and self._config.info:
+                print("[ALTrainer] Using initial training set from {}. This is DANGEROUS. Use the metadata correspondent to the initial set.".format(initial_train))
+            
+        else:
+            if not self._config.load_train and self._config.balance and self._config.info:
+                print("[ALTrainer] Dataset balancing and initial train set loading not possible at the same time.")
+                
+            train_idx = np.random.choice(len(self.pool_x),self._config.init_train,replace=False)
+            cache_m.dump(train_idx,'initial_train.pik')
+            
         pool_ar_x = np.asarray(self.pool_x)
         pool_ar_y = np.asarray(self.pool_y)
         self.train_x = pool_ar_x[train_idx]
