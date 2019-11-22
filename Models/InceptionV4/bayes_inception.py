@@ -164,7 +164,7 @@ class BayesInception(GenericModel):
 
         kwargs = {'training':training,
                     'feature':feature,
-                    'custom_top':True,
+                    'custom_top':False,
                     'preload':preload,
                     'batch_n':True if self._config.gpu_count <= 1 else False}
         

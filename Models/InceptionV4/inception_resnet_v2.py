@@ -349,7 +349,8 @@ def InceptionResNetV2(include_top=True,
         elif pooling == 'max':
             x = layers.GlobalMaxPooling2D()(x)
         last_tensor = x
-
+        x = layers.Dense(classes, activation='softmax', name='predictions')(x)
+        
     # Ensure that the model takes into account
     # any potential predecessors of `input_tensor`.
     if input_tensor is not None:

@@ -165,15 +165,23 @@ def process_train_set(config):
             return None
         with open(f,'rb') as fd:
             train,_,_ = pickle.load(fd)
-        for i in train:
+        for i in train[0]:
             if i in trainsets:
                 trainsets[i] += 1
             else:
                 trainsets[i] = 1
 
+    miss_count = 0
+    hit_count = 0
     for j in trainsets:
         if trainsets[j] == 1:
             print("Image {} occurs in only one of the sets".format(j))
+            miss_count += 1
+        elif trainsets[j] == 2:
+            hit_count += 1
+
+    print("{} patches were found in only one set.".format(miss_count))
+    print("{} patches were in both sets".format(hit_count))
     
 if __name__ == "__main__":
 
