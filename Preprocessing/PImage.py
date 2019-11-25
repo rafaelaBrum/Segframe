@@ -119,6 +119,11 @@ class PImage(SegImage):
         return self._origin
 
     def getCoord(self):
-        return (int(self._coord[0]),int(self._coord[1]))
+        if self._coord[0].isdigit() and self._coord[1].isdigit():
+            return (int(self._coord[0]),int(self._coord[1]))
+        else:
+            if self._verbose > 0:
+                print("[PImage] Image has incompatible coordinates: {}".format(self._coord))
+            return (0,0)
 
     
