@@ -3,12 +3,13 @@
 #Author: André L. S. Meirelles (andre.meirelles@aluno.unb.br)
 
 import numpy as np
-import os
+import os,sys
 import shutil
-import sys
+import math
 import argparse
 import pickle
-
+from sklearn.cluster import KMeans
+    
 def _process_al_metadata(config):
     """
     Returns the images acquired in each acquisition, as stored in al-metadata files
@@ -47,6 +48,32 @@ def _process_al_metadata(config):
 
     return ac_imgs
 
+def _process_wsi_cluster(km,s,members,config):
+    """
+    Generate statistics for each cluster.
+    km -> KMeans instance
+    s -> WSI name
+    members -> cluster members
+    config -> configurations
+    """
+    distances = {}
+    wrad = 0
+    print("******   {}   *******".format(s))
+    for c in range(config.nc):
+        print("Cluster {} center: {}".format(c,km.cluster_centers_[c]))
+        idx = np.where(km.labels_ == c)[0]
+        count_m = 0
+        for p in idx:
+            x1 = members[p].getCoord()
+            x2 = km.cluster_centers_[c]
+            dist = math.sqrt((x2[0] - x1[0])**2 + (x2[1] - x1[1])**2)
+            if dist < config.radius:
+                distances[members[p]] = dist
+                count_m += 1
+        print("    - {} patches are within {} pixels from cluster center".format(count_m,config.radius))
+        wrad += count_m
+        print("{:2.2f} % of cluster patches are within range".format(100*wrad/len(members)))
+
 def process_wsi_metadata(config):
     """
     Metadata should contain information about the WSI that originated the patch
@@ -54,13 +81,23 @@ def process_wsi_metadata(config):
     ac_imgs = _process_al_metadata(config)
     
     wsis = {}
+    acquisitions = {}
+    total_patches = 0
+    
+    if config.ac_n[0] == -1:
+        #Use all data if specific acquisitions waere not defined
+        config.ac_n = list(ac_imgs.keys())
+        config.ac_n.sort()
+        
     for k in config.ac_n:
         print("In acquisition {}:\n".format(k)) 
-        wsis[k] = {}
+        acquisitions[k] = {}
         
         if not k in ac_imgs:
             continue
         for img in ac_imgs[k]:
+            total_patches += 1
+            
             if hasattr(img,'getOrigin'):
                 origin = img.getOrigin()
             elif hasattr(img,'_origin'):
@@ -68,15 +105,28 @@ def process_wsi_metadata(config):
             else:
                 print("Image has no origin information: {}".format(img.getPath()))
                 continue
-            if origin in wsis[k]:
-                wsis[k][origin].append(img)
+            if origin in wsis:
+                wsis[origin].append(img)
             else:
-                wsis[k][origin] = [img]
+                wsis[origin] = [img]
+                
+            if origin in acquisitions[k]:
+                acquisitions[k][origin].append(img)
+            else:
+                acquisitions[k][origin] = [img]
 
-        for w in wsis[k]:
-            coords = [str(p._coord) for p in wsis[k][w]]
+        for w in acquisitions[k]:
+            coords = [str(p.getCoord()) for p in acquisitions[k][w]]
             print(' '*3 + '**{} ({} patches):{}'.format(w,len(coords),''.join(coords)))
-    
+
+    for s in wsis:
+        n_patches = len(wsis[s])
+        if n_patches > config.minp:
+            features = np.zeros((n_patches,2))
+            for p in range(n_patches):
+                features[p] = np.asarray(wsis[s][p].getCoord())
+            km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
+            _process_wsi_cluster(km,s,wsis[s],config)
     
 def process_al_metadata(config):
     if not os.path.isdir(config.out_dir):
@@ -200,8 +250,8 @@ if __name__ == "__main__":
     parser.add_argument('--train_set', dest='trainset', type=str, nargs=2,
         help='Check if the training sets of two experiments are the same.', default=None)
         
-    parser.add_argument('-ac', dest='ac_n', nargs='+', type=int, 
-        help='Acquisitions to obtain images.', default=None,required=True)
+    parser.add_argument('-ac', dest='ac_n', nargs='?', type=int, const=[-1],
+        help='Acquisitions to obtain images.', default=None, required=True)
     parser.add_argument('-sd', dest='sdir', type=str,default=None, 
         help='Experiment result path.')
     parser.add_argument('-od', dest='out_dir', type=str,default='img_grab', 
@@ -212,6 +262,12 @@ if __name__ == "__main__":
         help='Copy original images instead of the normalized ones. Define location of the originals.')
     parser.add_argument('-net', dest='net', type=str,default=None, 
         help='Network name for metadata analysis.')
+    parser.add_argument('-minp', dest='minp', type=int, 
+        help='Cluster patches if WSI had this number of selected patches', default=10,required=False)
+    parser.add_argument('-nc', dest='nc', type=int, 
+        help='Number of clusters to group patches of each WSI', default=3,required=False)
+    parser.add_argument('-radius', dest='radius', type=int, 
+        help='Radius in pixels to group patches in each cluster.', default=300,required=False)    
     
     config, unparsed = parser.parse_known_args()
 

@@ -119,6 +119,6 @@ class PImage(SegImage):
         return self._origin
 
     def getCoord(self):
-        return self._coord
+        return (int(self._coord[0]),int(self._coord[1]))
 
     
