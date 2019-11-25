@@ -83,6 +83,7 @@ def process_wsi_metadata(config):
     wsis = {}
     acquisitions = {}
     total_patches = 0
+    discarded = 0
     
     if config.ac_n[0] == -1:
         #Use all data if specific acquisitions waere not defined
@@ -105,6 +106,11 @@ def process_wsi_metadata(config):
             else:
                 print("Image has no origin information: {}".format(img.getPath()))
                 continue
+            
+            if img.getCoord() is None:
+                discarded += 1
+                continue
+            
             if origin in wsis:
                 wsis[origin].append(img)
             else:
@@ -119,6 +125,8 @@ def process_wsi_metadata(config):
             coords = [str(p.getCoord()) for p in acquisitions[k][w]]
             print(' '*3 + '**{} ({} patches):{}'.format(w,len(coords),''.join(coords)))
 
+    print("{} patches were diregarded for not having coordinate data".format(discarded))
+    
     for s in wsis:
         n_patches = len(wsis[s])
         if n_patches > config.minp:
