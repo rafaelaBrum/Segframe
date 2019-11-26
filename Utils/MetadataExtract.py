@@ -28,7 +28,6 @@ def _process_al_metadata(config):
             if (not config.net is None and config.net == net) or config.net is None:
                 acfiles[ac_id] = os.path.join(config.sdir,f)
 
-    print(acfiles)
     ordered_k = list(acfiles.keys())
     ordered_k.sort()
     initial_set = None
@@ -72,7 +71,7 @@ def _process_wsi_cluster(km,s,members,config):
                 count_m += 1
         print("    - {} patches are within {} pixels from cluster center".format(count_m,config.radius))
         wrad += count_m
-        print("{:2.2f} % of cluster patches are within range".format(100*wrad/len(members)))
+        print("    - {:2.2f} % of cluster patches are within range".format(100*wrad/len(members)))
 
 def process_wsi_metadata(config):
     """
@@ -125,7 +124,7 @@ def process_wsi_metadata(config):
             coords = [str(p.getCoord()) for p in acquisitions[k][w]]
             print(' '*3 + '**{} ({} patches):{}'.format(w,len(coords),''.join(coords)))
 
-    print("{} patches were diregarded for not having coordinate data".format(discarded))
+    print("{} patches were disregarded for not having coordinate data".format(discarded))
     
     for s in wsis:
         n_patches = len(wsis[s])
