@@ -57,7 +57,7 @@ def _process_wsi_cluster(km,s,members,config):
     """
     distances = {}
     wrad = 0
-    print("******   {}   *******".format(s))
+    print("******   {} ({} total patches)  *******".format(s,len(members)))
     for c in range(config.nc):
         print("Cluster {} center: {}".format(c,km.cluster_centers_[c]))
         idx = np.where(km.labels_ == c)[0]
