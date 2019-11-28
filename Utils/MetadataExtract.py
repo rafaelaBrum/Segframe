@@ -42,7 +42,7 @@ def _process_al_metadata(config):
         else:
             imgs = np.setdiff1d(list(train[0]),initial_set,True)
             print("Acquired {} images in acquisition {}".format(imgs.shape[0],k-1))
-            ac_imgs[k-1] = imgs
+            ac_imgs[k-1] = (imgs,train[1])
             initial_set = list(train)    
 
     return ac_imgs
@@ -52,16 +52,15 @@ def _process_wsi_cluster(km,s,members,config):
     Generate statistics for each cluster.
     km -> KMeans instance
     s -> WSI name
-    members -> cluster members
+    members -> cluster members (img,label)
     config -> configurations
     """
     distances = {}
     wrad = 0
-    print("******   {} ({} total patches)  *******".format(s,len(members)))
     for c in range(config.nc):
-        print("Cluster {} center: {}".format(c,km.cluster_centers_[c]))
         idx = np.where(km.labels_ == c)[0]
         count_m = 0
+        print("Cluster {} center: {}".format(c,km.cluster_centers_[c]))
         for p in idx:
             x1 = members[p].getCoord()
             x2 = km.cluster_centers_[c]
@@ -69,9 +68,11 @@ def _process_wsi_cluster(km,s,members,config):
             if dist < config.radius:
                 distances[members[p]] = dist
                 count_m += 1
+        print("    - patches in cluster: {}".format(idx.shape[0]))
         print("    - {} patches are within {} pixels from cluster center".format(count_m,config.radius))
         wrad += count_m
-        print("    - {:2.2f} % of cluster patches are within range".format(100*wrad/len(members)))
+        print("    - {:2.2f} % of cluster patches are within range".format(100*count_m/idx.shape[0]))
+    print("{:2.2f}% of all WSI patches are within cluster center ranges".format(100*wrad/len(members)))
 
 def process_wsi_metadata(config):
     """
@@ -82,10 +83,11 @@ def process_wsi_metadata(config):
     wsis = {}
     acquisitions = {}
     total_patches = 0
+    total_pos = 0
     discarded = 0
     
     if config.ac_n[0] == -1:
-        #Use all data if specific acquisitions waere not defined
+        #Use all data if specific acquisitions were not defined
         config.ac_n = list(ac_imgs.keys())
         config.ac_n.sort()
         
@@ -95,8 +97,12 @@ def process_wsi_metadata(config):
         
         if not k in ac_imgs:
             continue
-        for img in ac_imgs[k]:
-            total_patches += 1
+
+        ac_patches = len(ac_imgs[k][0])
+        total_patches += ac_patches
+        for ic in range(ac_patches):
+            img = ac_imgs[k][0][ic]
+            label = ac_imgs[k][1][ic]
             
             if hasattr(img,'getOrigin'):
                 origin = img.getOrigin()
@@ -111,9 +117,10 @@ def process_wsi_metadata(config):
                 continue
             
             if origin in wsis:
-                wsis[origin].append(img)
+                wsis[origin][0].append(img)
+                wsis[origin][1].append(label)
             else:
-                wsis[origin] = [img]
+                wsis[origin] = ([img],[label])
                 
             if origin in acquisitions[k]:
                 acquisitions[k][origin].append(img)
@@ -125,23 +132,44 @@ def process_wsi_metadata(config):
             print(' '*3 + '**{} ({} patches):{}'.format(w,len(coords),''.join(coords)))
 
     print("{} patches were disregarded for not having coordinate data".format(discarded))
-    
+
+    print("\n"+" "*10+"ACQUIRED PATCHES STATISTICS")
+    #This dict will store, for each WSI, [#positive patches acquired, #total of positive patches]
+    pos_patches = {}
     for s in wsis:
-        n_patches = len(wsis[s])
-        if n_patches > config.minp:
+        n_patches = len(wsis[s][0])
+        labels = np.asarray(wsis[s][1])
+        
+        #Count positive patches:
+        unique,count = np.unique(labels,return_counts=True)
+        l_count = dict(zip(unique,count))
+        if 1 in l_count:
+            pos_patches[s] = [l_count[1]]
+            total_pos += l_count[1]
+        else:
+            pos_patches[s] = [0]
+            
+        print("******   {} ({} total patches)  *******".format(s,n_patches))
+        print("Positive patches acquired: {} ({:2.2f}%)".format(pos_patches[s][0],100*pos_patches[s][0]/n_patches))
+        if config.nc > 0 and n_patches > config.minp:
             features = np.zeros((n_patches,2))
             for p in range(n_patches):
-                features[p] = np.asarray(wsis[s][p].getCoord())
+                features[p] = np.asarray(wsis[s][0][p].getCoord())
             km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
-            _process_wsi_cluster(km,s,wsis[s],config)
-    
+            _process_wsi_cluster(km,s,wsis[s][0],config)    
+
+    print("-----------------------------------------------------")
+    print("Total of acquired patches: {}".format(total_patches))
+    print("Total of positive patches acquired: {} ({:2.2f}%)".format(total_pos,100*total_pos/total_patches))
+    print("WSIs used in acquisitions: {}".format(len(wsis)))
+
 def process_al_metadata(config):
     if not os.path.isdir(config.out_dir):
         os.mkdir(config.out_dir)
 
     ac_imgs = _process_al_metadata(config)
     
-    acquisitions = [ac_imgs[k][:config.n] for k in config.ac_n]
+    acquisitions = [ac_imgs[k][0][:config.n] for k in config.ac_n]
 
     print("# of acquisitions obtained: {} -> ".format(len(acquisitions)),end='')
     print(" ".join([str(len(d)) for d in acquisitions]))
@@ -272,9 +300,11 @@ if __name__ == "__main__":
     parser.add_argument('-minp', dest='minp', type=int, 
         help='Cluster patches if WSI had this number of selected patches', default=10,required=False)
     parser.add_argument('-nc', dest='nc', type=int, 
-        help='Number of clusters to group patches of each WSI', default=3,required=False)
+        help='Number of clusters to group patches of each WSI', default=0,required=False)
     parser.add_argument('-radius', dest='radius', type=int, 
-        help='Radius in pixels to group patches in each cluster.', default=300,required=False)    
+        help='Radius in pixels to group patches in each cluster.', default=300,required=False)
+    parser.add_argument('-cache_file', dest='cache_file', type=str,default='CellRep-metadata.pik', 
+        help='Dataset metadata for WSI statistics.')
     
     config, unparsed = parser.parse_known_args()
 
