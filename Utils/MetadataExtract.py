@@ -114,7 +114,7 @@ def process_wsi_metadata(config):
             
             if img.getCoord() is None:
                 discarded += 1
-                continue
+                #continue
             
             if origin in wsis:
                 wsis[origin][0].append(img)
