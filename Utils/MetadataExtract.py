@@ -195,8 +195,11 @@ def process_wsi_metadata(config):
             
             if img.getCoord() is None:
                 discarded += 1
-                continue
-            
+                #continue
+                
+            if origin.startswith('log.'):
+                origin = origin.split('.')[1]
+                
             if origin in ds_wsis:
                 ds_wsis[origin][0].append(img)
                 ds_wsis[origin][1].append(label)
@@ -225,12 +228,15 @@ def process_wsi_metadata(config):
             
             print("******   {} ({} total patches)  *******".format(s,n_patches))
             print("Positive patches: {} ({:2.2f}%)".format(pos_patches[s][1],100*pos_patches[s][1]/n_patches))
-            if config.nc > 0 and n_patches > config.minp:
-                features = np.zeros((n_patches,2))
+            if config.nc > 0:
+                features = []
                 for p in range(n_patches):
-                    features[p] = np.asarray(ds_wsis[s][0][p].getCoord())
-                km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
-                _process_wsi_cluster(km,s,ds_wsis[s][0],config)
+                    if not ds_wsis[s][0][p].getCoord() is None:
+                        features.append(ds_wsis[s][0][p].getCoord())
+                features = np.asarray(features)
+                if features.shape[0] > config.minp:
+                    km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
+                    _process_wsi_cluster(km,s,ds_wsis[s][0],config)
         print("-----------------------------------------------------")
         print("Total patches in dataset: {}".format(ac_patches))
         print("Total of positive patches in dataset: {} ({:2.2f}%)".format(total_pos,100*total_pos/ac_patches))
