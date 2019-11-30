@@ -156,7 +156,8 @@ def process_wsi_metadata(config):
         if config.nc > 0 and n_patches > config.minp:
             features = np.zeros((n_patches,2))
             for p in range(n_patches):
-                features[p] = np.asarray(wsis[s][0][p].getCoord())
+                if not wsis[s][0][p].getCoord() is None:
+                    features[p] = np.asarray(wsis[s][0][p].getCoord())
             km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
             _process_wsi_cluster(km,s,wsis[s][0],config)    
 
