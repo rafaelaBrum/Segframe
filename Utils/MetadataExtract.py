@@ -63,6 +63,8 @@ def _process_wsi_cluster(km,s,members,config):
         print("Cluster {} center: {}".format(c,km.cluster_centers_[c]))
         for p in idx:
             x1 = members[p].getCoord()
+            if x1 is None:
+                continue
             x2 = km.cluster_centers_[c]
             dist = math.sqrt((x2[0] - x1[0])**2 + (x2[1] - x1[1])**2)
             if dist < config.radius:
