@@ -163,6 +163,71 @@ def process_wsi_metadata(config):
     print("Total of positive patches acquired: {} ({:2.2f}%)".format(total_pos,100*total_pos/total_patches))
     print("WSIs used in acquisitions: {}".format(len(wsis)))
 
+    #Generate dataset stats
+    total_patches = 0
+    discarded = 0
+    total_pos = 0
+    ds_wsis = {}
+    print("\n"+" "*10+"DATASET PATCHES STATISTICS")
+    if not config.cache_file is None:
+        with open(config.cache_file,'rb') as fd:
+            X,Y,_ = pickle.load(fd)
+        ac_patches = len(X)
+        for ic in range(ac_patches):
+            img = X[ic]
+            label = Y[ic]
+            
+            if hasattr(img,'getOrigin'):
+                origin = img.getOrigin()
+            elif hasattr(img,'_origin'):
+                origin = img._origin
+            else:
+                print("Image has no origin information: {}".format(img.getPath()))
+                continue
+            
+            if img.getCoord() is None:
+                discarded += 1
+                continue
+            
+            if origin in ds_wsis:
+                ds_wsis[origin][0].append(img)
+                ds_wsis[origin][1].append(label)
+            else:
+                ds_wsis[origin] = ([img],[label])
+        
+
+        for s in ds_wsis:
+            n_patches = len(ds_wsis[s][0])
+            labels = np.asarray(ds_wsis[s][1])
+        
+            #Count positive patches:
+            unique,count = np.unique(labels,return_counts=True)
+            l_count = dict(zip(unique,count))
+            if 1 in l_count:
+                if s in pos_patches:
+                    pos_patches[s].append(l_count[1])
+                    total_pos += l_count[1]
+                else:
+                    pos_patches[s] = [0,l_count[1]]
+            else:
+                if s in pos_patches:
+                    pos_patches[s].append(0)
+                else:
+                    pos_patches[s] = [0,0]
+            
+            print("******   {} ({} total patches)  *******".format(s,n_patches))
+            print("Positive patches: {} ({:2.2f}%)".format(pos_patches[s][1],100*pos_patches[s][1]/n_patches))
+            if config.nc > 0 and n_patches > config.minp:
+                features = np.zeros((n_patches,2))
+                for p in range(n_patches):
+                    features[p] = np.asarray(ds_wsis[s][0][p].getCoord())
+                km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
+                _process_wsi_cluster(km,s,ds_wsis[s][0],config)
+        print("-----------------------------------------------------")
+        print("Total patches in dataset: {}".format(ac_patches))
+        print("Total of positive patches in dataset: {} ({:2.2f}%)".format(total_pos,100*total_pos/ac_patches))
+        print("WSIs in dataset: {}".format(len(ds_wsis)))
+        
 def process_al_metadata(config):
     if not os.path.isdir(config.out_dir):
         os.mkdir(config.out_dir)
@@ -303,7 +368,7 @@ if __name__ == "__main__":
         help='Number of clusters to group patches of each WSI', default=0,required=False)
     parser.add_argument('-radius', dest='radius', type=int, 
         help='Radius in pixels to group patches in each cluster.', default=300,required=False)
-    parser.add_argument('-cache_file', dest='cache_file', type=str,default='CellRep-metadata.pik', 
+    parser.add_argument('-cache_file', dest='cache_file', type=str,default=None, 
         help='Dataset metadata for WSI statistics.')
     
     config, unparsed = parser.parse_known_args()
