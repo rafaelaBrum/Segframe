@@ -122,7 +122,7 @@ class PImage(SegImage):
         if not self._coord is None and self._coord[0].isdigit() and self._coord[1].isdigit():
             return (int(self._coord[0]),int(self._coord[1]))
         else:
-            if self._verbose > 0:
+            if self._verbose > 1:
                 print("[PImage] Image has incompatible coordinates: {}".format(self._coord))
             return None
 

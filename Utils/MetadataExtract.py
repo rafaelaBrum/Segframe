@@ -63,6 +63,8 @@ def _process_wsi_cluster(km,s,members,config):
         print("Cluster {} center: {}".format(c,km.cluster_centers_[c]))
         for p in idx:
             x1 = members[p].getCoord()
+            if x1 is None:
+                continue
             x2 = km.cluster_centers_[c]
             dist = math.sqrt((x2[0] - x1[0])**2 + (x2[1] - x1[1])**2)
             if dist < config.radius:
@@ -154,7 +156,8 @@ def process_wsi_metadata(config):
         if config.nc > 0 and n_patches > config.minp:
             features = np.zeros((n_patches,2))
             for p in range(n_patches):
-                features[p] = np.asarray(wsis[s][0][p].getCoord())
+                if not wsis[s][0][p].getCoord() is None:
+                    features[p] = np.asarray(wsis[s][0][p].getCoord())
             km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
             _process_wsi_cluster(km,s,wsis[s][0],config)    
 
