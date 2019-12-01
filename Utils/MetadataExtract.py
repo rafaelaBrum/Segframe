@@ -230,6 +230,7 @@ def process_wsi_metadata(config):
             
             print("******   {} ({} total patches)  *******".format(s,n_patches))
             print("Positive patches: {} ({:2.2f}%)".format(pos_patches[s][1],100*pos_patches[s][1]/n_patches))
+            print("Positive patches acquired from this WSI: {} ({:2.2f}%)".format(pos_patches[s][0],100*pos_patches[s][0]/n_patches))
             if config.nc > 0:
                 features = []
                 for p in range(n_patches):
