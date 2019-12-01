@@ -40,10 +40,12 @@ def _process_al_metadata(config):
             #Acquisitions are obtained from keys k and k-1
             initial_set = list(train[0])
         else:
-            imgs = np.setdiff1d(list(train[0]),initial_set,True)
+            mask = np.isin(list(train[0]),initial_set,assume_unique=True,invert=True)
+            imgs = train[0][mask]
+            labels = train[1][mask]
             print("Acquired {} images in acquisition {}".format(imgs.shape[0],k-1))
-            ac_imgs[k-1] = (imgs,train[1])
-            initial_set = list(train)    
+            ac_imgs[k-1] = (imgs,labels)
+            initial_set = list(train[0])    
 
     return ac_imgs
 
@@ -138,7 +140,7 @@ def process_wsi_metadata(config):
 
     print("{} patches were disregarded for not having coordinate data".format(discarded))
 
-    print("\n"+" "*10+"ACQUIRED PATCHES STATISTICS")
+    print("\n"+" "*10+"ACQUIRED PATCHES STATISTICS\n\n")
     #This dict will store, for each WSI, [#positive patches acquired, #total of positive patches]
     pos_patches = {}
     for s in wsis:
