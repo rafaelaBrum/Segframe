@@ -59,24 +59,36 @@ def _process_wsi_cluster(km,s,members,config):
     """
     distances = {}
     wrad = 0
+    wsi_mean = 0.0
     for c in range(config.nc):
         idx = np.where(km.labels_ == c)[0]
         count_m = 0
+        c_count = 0
+        mean_d = 0.0
         print("Cluster {} center: {}".format(c,km.cluster_centers_[c]))
+        x2 = km.cluster_centers_[c]
         for p in idx:
             x1 = members[p].getCoord()
             if x1 is None:
                 continue
-            x2 = km.cluster_centers_[c]
+            c_count += 1
             dist = math.sqrt((x2[0] - x1[0])**2 + (x2[1] - x1[1])**2)
+            mean_d += dist
             if dist < config.radius:
                 distances[members[p]] = dist
                 count_m += 1
+        mean_d = mean_d / c_count
+        wsi_mean += mean_d
         print("    - patches in cluster: {}".format(idx.shape[0]))
         print("    - {} patches are within {} pixels from cluster center".format(count_m,config.radius))
         wrad += count_m
-        print("    - {:2.2f} % of cluster patches are within range".format(100*count_m/idx.shape[0]))
+        print("    - {:2.2f} % of cluster patches are within range".format(100*count_m/c_count))
+        print("    - Mean distance from cluster center: {:.1f}".format(mean_d))
+    wsi_mean = wsi_mean/len(members)
     print("{:2.2f}% of all WSI patches are within cluster center ranges".format(100*wrad/len(members)))
+    print("Mean distance of clusterd patches to centers: {:.1f}".format(wsi_mean))
+
+    return wsi_mean
 
 def process_wsi_metadata(config):
     """
@@ -143,6 +155,7 @@ def process_wsi_metadata(config):
     print("\n"+" "*10+"ACQUIRED PATCHES STATISTICS\n\n")
     #This dict will store, for each WSI, [#positive patches acquired, #total of positive patches]
     pos_patches = {}
+    wsi_means = []
     for s in wsis:
         n_patches = len(wsis[s][0])
         labels = np.asarray(wsis[s][1])
@@ -166,12 +179,14 @@ def process_wsi_metadata(config):
             features = np.asarray(features)
             if features.shape[0] > config.minp:
                 km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
-                _process_wsi_cluster(km,s,wsis[s][0],config)    
+                wsi_means.append(_process_wsi_cluster(km,s,wsis[s][0],config))
 
     print("-----------------------------------------------------")
     print("Total of acquired patches: {}".format(total_patches))
     print("Total of positive patches acquired: {} ({:2.2f}%)".format(total_pos,100*total_pos/total_patches))
     print("WSIs used in acquisitions: {}".format(len(wsis)))
+    if config.nc > 0:
+        print("Acquired patches dispersion around cluster means: {:.1f}".format(np.mean(wsi_means)))
 
     #Generate dataset stats
     total_patches = 0
@@ -230,7 +245,10 @@ def process_wsi_metadata(config):
             
             print("******   {} ({} total patches)  *******".format(s,n_patches))
             print("Positive patches: {} ({:2.2f}%)".format(pos_patches[s][1],100*pos_patches[s][1]/n_patches))
-            print("Positive patches acquired from this WSI: {} ({:2.2f}%)".format(pos_patches[s][0],100*pos_patches[s][0]/n_patches))
+            if pos_patches[s][1] > 0:
+                print("Positive patches acquired from this WSI: {} ({:2.2f}%)".format(pos_patches[s][0],100*pos_patches[s][0]/pos_patches[s][1]))
+            else:
+                print("Positive patches acquired from this WSI: {} (0.0%)".format(pos_patches[s][0]))
             if config.nc > 0:
                 features = []
                 for p in range(n_patches):
