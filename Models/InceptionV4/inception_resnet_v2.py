@@ -69,6 +69,7 @@ def conv2d_bn(x,
     """
     x = layers.Conv2D(filters,
                       kernel_size,
+                      kernel_initializer='glorot_normal',
                       strides=strides,
                       padding=padding,
                       use_bias=use_bias,

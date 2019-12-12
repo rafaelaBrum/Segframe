@@ -4,7 +4,7 @@
 import os
 import argparse
 import sys
-
+import importlib
 import multiprocessing as mp
 from multiprocessing import Process
 
@@ -91,7 +91,8 @@ def main_exec(config):
                 print("System did not end well. Check logs or enhace verbosity level.")
                 sys.exit(proc.exitcode)
         else:
-            ALTrainer.run_training(config,None)
+            ts = importlib.import_module('Trainers',config.strategy)
+            getattr(ts,config.strategy).run_training(config,None)
             
     if config.pred:
         if config.multiprocess:
@@ -199,14 +200,18 @@ if __name__ == "__main__":
 
     al_args.add_argument('--al', action='store_true', dest='al', default=False, 
         help='Train model')
+    al_args.add_argument('-strategy',dest='strategy',type=str,
+       help='Which strategy to use: ALTrainer, EnsembleTrainer, etc.',default='ALTrainer')
     al_args.add_argument('-init_train', dest='init_train', type=int, 
         help='Initial training set size (Default: 1000).', default=1000)
     al_args.add_argument('-ac_function',dest='ac_function',type=str,
        help='Acquisition function. Check documentation for available functions.',default=None)
     al_args.add_argument('-un_function',dest='un_function',type=str,
-       help='Uncertaint function to be used with KM. Check documentation for available functions.',default='bayesian_varratios')
+       help='Uncertainty function to be used with KM. Check documentation for available functions.',default='bayesian_varratios')
     al_args.add_argument('-ac_steps', dest='acquisition_steps', type=int, 
         help='Run active learning for this many cycles (Default: 10).', default=10)
+    al_args.add_argument('-emodels', dest='emodels', type=int, 
+        help='Number of ensemble submodels (Default: 3).', default=3)
     al_args.add_argument('-acquire', dest='acquire', type=int, 
         help='Acquire this many samples at each acquisition step (Default: 1000).', default=1000)
     al_args.add_argument('-dropout_steps', dest='dropout_steps', type=int, 

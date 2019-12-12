@@ -148,7 +148,7 @@ class Trainer(object):
                                                 image_generator=train_prep,
                                                 extra_aug=self._config.augment,
                                                 shuffle=True,
-                                                verbose=self._config.verbose)
+                                                verbose=self._verbose)
             
             val_generator = ThreadedGenerator(dps=val_data,
                                                 classes=self._ds.nclasses,
@@ -157,7 +157,7 @@ class Trainer(object):
                                                 image_generator=val_prep,
                                                 extra_aug=self._config.augment,
                                                 shuffle=True,
-                                                verbose=self._config.verbose)
+                                                verbose=self._verbose)
         else:
             #Loads training images and validation images
             x_train,y_train = self._ds.load_data(split=None,keepImg=self._config.keepimg,data=train_data)
@@ -172,25 +172,34 @@ class Trainer(object):
 
         return (train_generator,val_generator)
     
-    def train_model(self,model,train_data=None,val_data=None):
+    def train_model(self,model,train_data=None,val_data=None,**kwargs):
         """
         Generic trainer. Receives a GenericModel and trains it
-
+        @param model <GenericModel>
         @param train_data <list>: Should be a collection of image metadata
         @param val_data <list>: Should be a collection of image metadata
+
+        Optional keyword arguments:
+        @param set_session <boolean>: configure session here
         """
         rcomp = re.compile(self._rex)
-        
+
+        if 'set_session' in kwargs:
+            set_session = kwargs['set_session']
+        else:
+            set_session = True
+            
         # session setup
-        session = K.get_session()
-        ses_config = tf.ConfigProto(
-            device_count={"CPU":self._config.cpu_count,"GPU":self._config.gpu_count},
-            intra_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count, 
-            inter_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count,
-            log_device_placement=True if self._verbose > 1 else False
-            )
-        session.config = ses_config
-        K.set_session(session)
+        if set_session:
+            session = K.get_session()
+            ses_config = tf.ConfigProto(
+                device_count={"CPU":self._config.cpu_count,"GPU":self._config.gpu_count},
+                intra_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count, 
+                inter_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count,
+                log_device_placement=True if self._verbose > 1 else False
+                )
+            session.config = ses_config
+            K.set_session(session)
         
         #Setup of generators, augmentation, preprocessing
         if train_data is None or val_data is None:
@@ -291,7 +300,7 @@ class Trainer(object):
             callbacks=callbacks,
             )
 
-        if self._config.verbose > 1:
+        if self._verbose > 1:
             print("Done training model: {0}".format(hex(id(training_model))))
 
 
