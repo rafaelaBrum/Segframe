@@ -6,6 +6,11 @@ from abc import ABC,abstractmethod
 class GenericModel(ABC):
     """
     Defines common model attributes and methods
+
+    Some models may implement a feature extractor or an ensemble build. If they do, the following methods
+    will be available:
+    - build_extractor
+    - build_ensemble
     """
     def __init__(self,config,ds,name):
         self._config = config

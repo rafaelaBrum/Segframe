@@ -78,14 +78,22 @@ class Predictor(object):
     Class responsible for running the predictions and outputing results
     """
 
-    def __init__(self,config,keepImg=False):
+    def __init__(self,config,keepImg=False,**kwargs):
         """
         @param config <parsed configurations>: configurations
+
+        Optional keyword arguments:
+        @param build_ensemble <boolean>: ask for an ensemble model
         """
         self._config = config
         self._verbose = config.verbose
         self._ds = None
         self._keep = keepImg
+
+        if 'build_ensemble' in kwargs:
+            self._ensemble = kwargs['build_ensemble']
+        else:
+            self._ensemble = False
 
     def run(self,x_test=None,y_test=None,load_full=True):
         """
@@ -171,8 +179,16 @@ class Predictor(object):
         sess.config = ses_config
         K.set_session(sess)
         
-        #During test phase multi-gpu mode is not necessary, load full model (multi-gpu would need to load training weights)
-        if load_full and os.path.isfile(model.get_model_cache()):
+        #During test phase multi-gpu mode is not used (maybe done latter)
+        if self._ensemble:
+            #Weights should be loaded during ensemble build
+            if hasattr(model,'build_ensemble'):
+                pred_model = model.build_ensemble(training=False)
+            else:
+                if self._config.info:
+                    print('[Predictor] Model not prepared to build ensembles, implement or choose other model')
+                return None
+        elif load_full and os.path.isfile(model.get_model_cache()):
             try:
                 pred_model = load_model(model.get_model_cache())
                 if self._config.info:
@@ -215,7 +231,7 @@ class Predictor(object):
                 l.update(1)
             elif self._config.info:
                 print("Batch prediction ({0}/{1})".format(i,stp))
-            if self._config.verbose > 0:
+            if self._config.verbose > 1:
                 if not np.array_equal(Y[start_idx:start_idx+bsize],example[1]):
                     print("Datasource label ({0}) and batch label ({1}) differ".format(Y[start_idx:start_idx+bsize],example[1]))
 

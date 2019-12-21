@@ -17,7 +17,14 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-def _load_model_weights(config,single_m,parallel_m):
+def _load_model_weights(config,single_m,parallel_m,sw_threads):
+    #If sw_threads was provided, we should check the availability of model weights
+    if not sw_threads is None:
+        for k in range(len(sw_threads)):
+            if sw_threads[k].is_alive():
+                print("Waiting ensemble model {} weights' to become available...".format(k))
+                sw_threads[k].join()
+    
     #Model can be loaded from previous acquisition train or from a fixed final model
     if gpu_count > 1 and not parallel_m is None:
         pred_model = parallel_m
@@ -79,7 +86,12 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
         model = kwargs['model']
     else:
         print("[ensemble_varratios] GenericModel is needed by ensemble_varratios. Set model kw argument")
-        return None        
+        return None
+
+    if 'sw_thread' in kwargs:
+        sw_thread = kwargs['sw_thread']
+    else:
+        sw_thread = None
 
     fidp = None
     if save_var:
@@ -105,12 +117,12 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
 
     for d in l:
         if not pbar and config.info:
-            print("Step {0}/{1}".format(d+1,mc_dp))
+            print("Step {0}/{1}".format(d+1,emodels))
 
         model.register_ensemble(d)
         single,parallel = model.build(pre_load=False)
         
-        pred_model = _load_model_weights(config,single,parallel)
+        pred_model = _load_model_weights(config,single,parallel,sw_thread)
         
         #Keep verbosity in 0 to gain speed 
         proba = pred_model.predict_generator(generator,

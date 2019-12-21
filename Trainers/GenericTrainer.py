@@ -181,6 +181,9 @@ class Trainer(object):
 
         Optional keyword arguments:
         @param set_session <boolean>: configure session here
+        @param verbose <int>: set verbosity level for training process. If not specified, use default
+        @param summary <boolean>: print model summary
+        @param clear_sess <boolean>: clears session and frees GPU memory
         """
         rcomp = re.compile(self._rex)
 
@@ -188,6 +191,21 @@ class Trainer(object):
             set_session = kwargs['set_session']
         else:
             set_session = True
+
+        if 'verbose' in kwargs:
+            verbose = kwargs['verbose']
+        else:
+            verbose = None
+
+        if 'summary' in kwargs:
+            summary = kwargs['summary']
+        else:
+            summary = True
+
+        if 'clear_sess' in kwargs:
+            clear_sess = kwargs['clear_sess']
+        else:
+            clear_sess = False
             
         # session setup
         if set_session:
@@ -284,7 +302,7 @@ class Trainer(object):
         if self._config.f1period > 0:
             callbacks.append(CalculateF1Score(val_generator,self._config.f1period,self._config.batch_size,self._config.info))
 
-        if self._config.info:
+        if self._config.info and summary:
             print(single.summary())
 
         training_model.fit_generator(
@@ -293,7 +311,7 @@ class Trainer(object):
             epochs = self._config.epochs,
             validation_data = val_generator,
             validation_steps = len(val_generator), #//self._config.batch_size,
-            verbose = 1 if self._verbose > 0 else 0,
+            verbose = verbose if not verbose is None else self._verbose,
             use_multiprocessing = False,
             workers=self._config.cpu_count*2,
             max_queue_size=self._config.batch_size*3,
@@ -304,11 +322,11 @@ class Trainer(object):
             print("Done training model: {0}".format(hex(id(training_model))))
 
 
-        sw_thread = threading.Thread(target=self._save_weights,name='save_weights',args=(model,single,parallel))
+        sw_thread = threading.Thread(target=self._save_weights,name='save_weights',args=(model,single,parallel,clear_sess))
         sw_thread.start()
         return sw_thread
         
-    def _save_weights(self,model,single,parallel):
+    def _save_weights(self,model,single,parallel,clear_sess):
         #Save weights for single tower model and for multigpu model (if defined)
         cache_m = CacheManager()
         if self._config.info:
@@ -319,5 +337,8 @@ class Trainer(object):
         single.save(model.get_model_cache())
         cache_m.dump(tuple(self._config.split),'split_ratio.pik')
 
+        if clear_sess:
+            K.clear_session()
+            
         return Exitcodes.ALL_GOOD
         

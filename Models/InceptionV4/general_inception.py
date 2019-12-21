@@ -9,7 +9,7 @@ import tensorflow as tf
 
 #Network
 from keras.models import Sequential,Model
-from keras.layers import Input
+from keras.layers import Input,Average
 from keras import backend, optimizers
 from keras.utils import multi_gpu_model
 from keras import backend as K
@@ -18,7 +18,7 @@ from keras import backend as K
 from Utils import CacheManager
 from Models.GenericModel import GenericModel
 
-class BayesInception(GenericModel):
+class Inception(GenericModel):
     """
     Implements abstract methods from GenericModel.
     Model is the same as in: https://github.com/keras-team/keras-applications/blob/master/keras_applications/inception_resnet_v2.py
@@ -68,7 +68,10 @@ class BayesInception(GenericModel):
         self.cache_m.registerFile(os.path.join(self._config.model_path,self._modelCache),self._modelCache)
         
     def build(self,**kwargs):
-
+        """
+        @param pre_trained <boolean>: returned model should be pre-trained or not
+        @param data_size <int>: size of the training dataset
+        """
         model,parallel_model = self._build(**kwargs)
         
         self.single = model
@@ -94,12 +97,48 @@ class BayesInception(GenericModel):
             return (s,None)
         else:
             return self._build(**kwargs)
-    
+
+    def build_ensemble(self,**kwargs):
+        """
+        Builds an ensemble of M Inception models.
+
+        Weights are loaded here because of the way ensembles should be built.
+
+        Default build: avareges the output of the corresponding softmaxes
+        """
+
+        s_models = []
+        p_models = []
+        for m in self._config.emodels:
+            self.register_ensemble(m)
+            single,parallel = self._build(**kwargs)
+            
+            if parallel and os.path.isfile(model.get_mgpu_weights_cache()):
+                parallel.load_weights(model.get_mgpu_weights_cache(),by_name=True)
+            else:
+                parallel = None
+
+            if os.path.isfile(model.get_weights_cache()):
+                single.load_weights(model.get_weights_cache(),by_name=True)
+            else:
+                if self._config.info:
+                    print("[Inception] Could not load ensemble weights (model {}): {}".format(model.get_weights_cache()))
+                single = None
+            s_models.append(single)
+            p_models.append(parallel)
+
+        s_inputs = [inp for s in s_models for inp in s.inputs]
+        s_outputs = [out for s in s_models for out in s.outputs]
+        p_models = list(filter(lambda x: not x is None,p_models))
+        if len(p_models) > 0:
+            p_inputs = [inp for p in p_models for inp in p.inputs]
+        else:
+            p_inputs = None
+
+        #Build the ensemble output from individual models
+        
     def _build(self,**kwargs):
-        """
-        @param pre_trained <boolean>: returned model should be pre-trained or not
-        @param data_size <int>: size of the training dataset
-        """
+
         width,height,channels = self._check_input_shape()
 
         if 'data_size' in kwargs:

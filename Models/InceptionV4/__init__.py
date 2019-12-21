@@ -3,4 +3,4 @@
 
 __all__ = ['InceptionV4']
 
-from .bayes_inception import BayesInception
+from .general_inception import Inception
