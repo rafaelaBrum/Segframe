@@ -113,7 +113,7 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
     #Keep probabilities for analysis
     all_probs = None
     if config.debug:
-        all_probs = np.zeros(shape=(mc_dp,data_size,generator.classes))
+        all_probs = np.zeros(shape=(emodels,data_size,generator.classes))
 
     for d in l:
         if not pbar and config.info:
