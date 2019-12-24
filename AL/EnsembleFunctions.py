@@ -17,7 +17,7 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-def _load_model_weights(config,single_m,parallel_m,sw_threads):
+def _load_model_weights(config,single_m,spath,parallel_m,ppath,sw_threads):
     #If sw_threads was provided, we should check the availability of model weights
     if not sw_threads is None:
         for k in range(len(sw_threads)):
@@ -33,9 +33,9 @@ def _load_model_weights(config,single_m,parallel_m,sw_threads):
             if config.info:
                 print("Model weights loaded from: {0}".format(config.ffeat))
         else:
-            pred_model.load_weights(model.get_mgpu_weights_cache(),by_name=True)
+            pred_model.load_weights(ppath,by_name=True)
             if config.info:
-                print("Model weights loaded from: {0}".format(model.get_mgpu_weights_cache()))
+                print("Model weights loaded from: {0}".format(ppath))
     else:
         pred_model = single_m
         if not config.ffeat is None and os.path.isfile(config.ffeat):
@@ -43,9 +43,9 @@ def _load_model_weights(config,single_m,parallel_m,sw_threads):
             if config.info:
                 print("Model weights loaded from: {0}".format(config.ffeat))
         else:
-            pred_model.load_weights(model.get_weights_cache(),by_name=True)
+            pred_model.load_weights(spath,by_name=True)
             if config.info:
-                print("Model weights loaded from: {0}".format(model.get_weights_cache()))
+                print("Model weights loaded from: {0}".format(spath))
 
     return pred_model
 
@@ -122,7 +122,9 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
         model.register_ensemble(d)
         single,parallel = model.build(pre_load=False)
         
-        pred_model = _load_model_weights(config,single,parallel,sw_thread)
+        pred_model = _load_model_weights(config,single,model.get_weights_cache()
+                                             parallel,model.get_mgpu_weights_cache(),
+                                             sw_thread)
         
         #Keep verbosity in 0 to gain speed 
         proba = pred_model.predict_generator(generator,

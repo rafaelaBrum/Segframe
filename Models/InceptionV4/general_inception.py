@@ -27,7 +27,7 @@ class Inception(GenericModel):
     def __init__(self,config,ds,name=None):
         super().__init__(config,ds,name=name)
         if name is None:
-            self.name = "BayesInception"
+            self.name = "Inception"
         self._modelCache = "{0}-model.h5".format(self.name)
         self._weightsCache = "{0}-weights.h5".format(self.name)
         self._mgpu_weightsCache = "{0}-mgpu-weights.h5".format(self.name)
