@@ -175,6 +175,11 @@ class Inception(GenericModel):
             preload = kwargs['preload_w']
         else:
             preload = True
+
+        if 'allocated_gpus' in kwargs:
+            allocated_gpus = kwargs['allocated_gpus']
+        else:
+            allocated_gpus = self._config.gpu_count
             
         if backend.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
@@ -201,13 +206,12 @@ class Inception(GenericModel):
         #Return parallel model if multiple GPUs are available
         parallel_model = None
         
-        if self._config.gpu_count > 1:
+        if allocated_gpus > 1:
             with tf.device('/cpu:0'):
                 model.compile(loss='categorical_crossentropy',
                     optimizer=opt,
                     metrics=['accuracy'])
-            gpus = self._config.gpu_count if (not hasattr(self,'_allocated_gpus') or self._allocated_gpus == 0) else self._allocated_gpus
-            parallel_model = multi_gpu_model(model,gpus=gpus)
+            parallel_model = multi_gpu_model(model,gpus=allocated_gpus)
             parallel_model.compile(loss='categorical_crossentropy',
                                        optimizer=opt,
                                        metrics=['accuracy'],

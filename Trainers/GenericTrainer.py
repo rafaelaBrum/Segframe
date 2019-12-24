@@ -206,6 +206,11 @@ class Trainer(object):
             clear_sess = kwargs['clear_sess']
         else:
             clear_sess = False
+
+        if 'allocated_gpus' in kwargs:
+            allocated_gpus = kwargs['allocated_gpus']
+        else:
+            allocated_gpus = None
             
         # session setup
         if set_session:
@@ -251,7 +256,7 @@ class Trainer(object):
 
         train_generator,val_generator = self._choose_generator(train_data,val_data)
         
-        single,parallel = model.build(data_size=len(train_data[0]))
+        single,parallel = model.build(data_size=len(train_data[0]),allocated_gpus=allocated_gpus)
         if not parallel is None:
             training_model = parallel
         else:
