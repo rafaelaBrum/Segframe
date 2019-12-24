@@ -26,7 +26,7 @@ def _load_model_weights(config,single_m,parallel_m,sw_threads):
                 sw_threads[k].join()
     
     #Model can be loaded from previous acquisition train or from a fixed final model
-    if gpu_count > 1 and not parallel_m is None:
+    if config.gpu_count > 1 and not parallel_m is None:
         pred_model = parallel_m
         if not config.ffeat is None and os.path.isfile(config.ffeat):
             pred_model.load_weights(config.ffeat,by_name=True)

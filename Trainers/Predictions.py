@@ -7,6 +7,7 @@ from tqdm import tqdm
 import numpy as np
 
 from Datasources.CellRep import CellRep
+from .BatchGenerator import SingleGenerator
 from Utils import SaveLRCallback
 from Utils import Exitcodes,CacheManager,PrintConfusionMatrix
 
@@ -17,7 +18,6 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau
 from keras.utils import to_categorical
 from keras.models import load_model
-from keras_contrib.layers import GroupNormalization
 
 #Tensorflow
 import tensorflow as tf
@@ -214,10 +214,26 @@ class Predictor(object):
 
         image_generator = ImageDataGenerator(samplewise_center=self._config.batch_norm, 
                                             samplewise_std_normalization=self._config.batch_norm)
-        test_generator = image_generator.flow(x=X,
-                                            y=Y,
-                                            batch_size=bsize,
-                                            shuffle=False)
+
+        if self._ensemble:
+            if not self._config.tdim is None:
+                fix_dim = self._config.tdim
+            else:
+                fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
+            test_generator = SingleGenerator(dps=(X,Y),
+                                                classes=self._ds.nclasses,
+                                                dim=fix_dim,
+                                                batch_size=self._config.batch_size,
+                                                image_generator=image_generator,
+                                                extra_aug=self._config.augment,
+                                                shuffle=False,
+                                                verbose=self._verbose,
+                                                input_n=self._config.emodels)
+        else:
+            test_generator = image_generator.flow(x=X,
+                                                y=Y,
+                                                batch_size=bsize,
+                                                shuffle=False)
         
         if self._config.progressbar:
             l = tqdm(desc="Making predictions...",total=stp)

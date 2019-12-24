@@ -28,6 +28,7 @@ class GenericIterator(Iterator):
         seed: Random seed for data shuffling.
         data_mean: float, dataset mean for zero centering
         verbose: verbosity level.
+        input_n: number of input sources (for multiple submodels in ensemble)
     """
 
     def __init__(self,
@@ -40,7 +41,8 @@ class GenericIterator(Iterator):
                      shuffle=True,
                      seed=173,
                      data_mean=0.0,
-                     verbose=0):
+                     verbose=0,
+                     input_n=1):
 
         self.data = data
         self.classes = classes
@@ -49,6 +51,7 @@ class GenericIterator(Iterator):
         self.image_generator = None
         self.verbose = verbose
         self.extra_aug = extra_aug
+        self.input_n = input_n
 
         #Keep information of example shape as soon as the information is available
         self.shape = None
@@ -131,7 +134,8 @@ class SingleGenerator(GenericIterator):
                      seed=173,
                      data_mean=0.0,
                      verbose=0,
-                     variable_shape=False):
+                     variable_shape=False,
+                     input_n=1):
         
         #Set True if examples in the same dataset can have variable shapes
         self.variable_shape = variable_shape
@@ -145,7 +149,8 @@ class SingleGenerator(GenericIterator):
                                                 shuffle=shuffle,
                                                 seed=seed,
                                                 data_mean=data_mean,
-                                                verbose=verbose)
+                                                verbose=verbose,
+                                                input_n=input_n)
 
 
     def _get_batches_of_transformed_samples(self,index_array):
@@ -175,8 +180,12 @@ class SingleGenerator(GenericIterator):
         for i,j in enumerate(index_array):
             t_x = X[j]
             t_y = Y[j]
-                
-            example = t_x.readImage(size=self.dim,verbose=self.verbose)
+
+            #If not an ndarray, readimage
+            if not isinstance(t_x,np.ndarray):
+                example = t_x.readImage(size=self.dim,verbose=self.verbose)
+            else:
+                example = t_x
             
             if batch_x is None:
                 self.shape = example.shape
@@ -199,6 +208,9 @@ class SingleGenerator(GenericIterator):
 
         if self.variable_shape:
             self.shape = None
+
+        if self.input_n > 1:
+            batch_x = [batch_x for _ in range(self.input_n)]
             
         output = (batch_x, keras.utils.to_categorical(y, self.classes))
         return output         
@@ -218,7 +230,8 @@ class ThreadedGenerator(GenericIterator):
                      seed=173,
                      data_mean=0.0,
                      verbose=0,
-                     variable_shape=False):
+                     variable_shape=False,
+                     input_n=1):
         
         #Set True if examples in the same dataset can have variable shapes
         self.variable_shape = variable_shape
@@ -234,7 +247,8 @@ class ThreadedGenerator(GenericIterator):
                                                 shuffle=shuffle,
                                                 seed=seed,
                                                 data_mean=data_mean,
-                                                verbose=verbose)
+                                                verbose=verbose,
+                                                input_n=input_n)
 
 
     def _get_batches_of_transformed_samples(self,index_array):
@@ -302,6 +316,9 @@ class ThreadedGenerator(GenericIterator):
 
         if self.variable_shape:
             self.shape = None
+
+        if self.input_n > 1:
+            batch_x = [batch_x for _ in range(self.input_n)]
             
         output = (batch_x, keras.utils.to_categorical(y, self.classes))
         return output

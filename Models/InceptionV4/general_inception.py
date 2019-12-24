@@ -115,11 +115,15 @@ class Inception(GenericModel):
             
             if parallel and os.path.isfile(model.get_mgpu_weights_cache()):
                 parallel.load_weights(model.get_mgpu_weights_cache(),by_name=True)
+                if self._config.info:
+                    print("[Inception] loaded ensemble weights: {}".format(model.get_mgpu_weights_cache()))
             else:
                 parallel = None
 
             if os.path.isfile(model.get_weights_cache()):
                 single.load_weights(model.get_weights_cache(),by_name=True)
+                if self._config.info:
+                    print("[Inception] loaded ensemble weights: {}".format(model.get_weights_cache()))
             else:
                 if self._config.info:
                     print("[Inception] Could not load ensemble weights (model {}): {}".format(model.get_weights_cache()))
@@ -132,11 +136,24 @@ class Inception(GenericModel):
         p_models = list(filter(lambda x: not x is None,p_models))
         if len(p_models) > 0:
             p_inputs = [inp for p in p_models for inp in p.inputs]
+            p_outputs = [out for p in p_models for out in p.outputs]
         else:
             p_inputs = None
+            p_outputs = None
 
         #Build the ensemble output from individual models
-        
+        s_model,p_model = None,None
+        ##Single GPU model
+        x = Average()(s_outputs)
+        s_model = Model(inputs = s_inputs, outputs=x)
+
+        ##Parallel model
+        if not p_inputs is None:
+            x = Average()(p_outputs)
+            p_model = Model(inputs=p_inputs,outputs=x)
+
+        return s_model,p_model
+    
     def _build(self,**kwargs):
 
         width,height,channels = self._check_input_shape()

@@ -236,7 +236,8 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             'batch_size':self._config.gpu_count * self._config.batch_size if self._config.gpu_count > 0 else self._config.batch_size,
             'image_generator':pool_prep,
             'shuffle':False, #DO NOT SET TRUE!
-            'verbose':self._config.verbose}
+            'verbose':self._config.verbose,
+            'input_n':self._config.emodels}
 
         generator = ThreadedGenerator(**generator_params)
 
