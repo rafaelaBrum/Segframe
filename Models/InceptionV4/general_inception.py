@@ -206,8 +206,8 @@ class Inception(GenericModel):
                 model.compile(loss='categorical_crossentropy',
                     optimizer=opt,
                     metrics=['accuracy'])
-
-            parallel_model = multi_gpu_model(model,gpus=self._config.gpu_count)
+            gpus = self._config.gpu_count if (not hasattr(self,'_allocated_gpus') or self._allocated_gpus == 0) else self._allocated_gpus
+            parallel_model = multi_gpu_model(model,gpus=gpus)
             parallel_model.compile(loss='categorical_crossentropy',
                                        optimizer=opt,
                                        metrics=['accuracy'],

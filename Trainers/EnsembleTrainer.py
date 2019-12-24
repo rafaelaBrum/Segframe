@@ -51,8 +51,10 @@ class EnsembleALTrainer(ActiveLearningTrainer):
 
         #initialize tensorflow session
         gpu_options = None
+        self._allocated_gpus = 0
         if not q is None:
             gpus = q.get()
+            self._allocated_gpus = len(gpus)
             print("Allocated GPUs {}".format(gpus))
             gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1.0)
             gpu_options.allow_growth = True
