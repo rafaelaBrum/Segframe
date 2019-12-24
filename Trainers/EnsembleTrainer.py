@@ -55,7 +55,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         if not q is None:
             gpus = q.get()
             self._allocated_gpus = len(gpus)
-            print("Allocated GPUs {}".format(gpus))
+            print("Perprocess gpus: {}".format(self._allocated_gpus))
             gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1.0)
             gpu_options.allow_growth = True
             gpu_options.Experimental.use_unified_memory = False
@@ -78,7 +78,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         else:
             print("Model not ready for ensembling. Implement register_ensemble method")
             raise AttributeError
-        sw_thread = self.train_model(model,train,val,set_session=False,verbose=2,summary=False,clear_sess=True)
+        sw_thread = self.train_model(model,train,val,set_session=False,verbose=2,summary=False,clear_sess=True,allocated_gpus=self._allocated_gpus)
         if sw_thread.is_alive():
             sw_thread.join()
         return True
