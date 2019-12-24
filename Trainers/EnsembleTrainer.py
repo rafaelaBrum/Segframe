@@ -70,7 +70,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         #sess.config = config
         K.set_session(sess)
 
-    def _child_run(self,model,m,train,val):
+    def _child_run(self,model,m,train,val,ppgpus):
 
         if hasattr(model,'register_ensemble'):
             model.register_ensemble(m)
@@ -78,9 +78,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             print("Model not ready for ensembling. Implement register_ensemble method")
             raise AttributeError
 
-        print("Child will train")
-        sw_thread = self.train_model(model,train,val,set_session=False,verbose=2,summary=False,clear_sess=True,allocated_gpus=1)
-        print("Done child train")
+        sw_thread = self.train_model(model,train,val,set_session=False,verbose=2,summary=False,clear_sess=True,allocated_gpus=ppgpus)
         if sw_thread.is_alive():
             sw_thread.join()
         return True
@@ -156,7 +154,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                 if ccount < processes:
                     if self._config.info:
                         print("[EnsembleTrainer] Starting ensemble model {} training..".format(m))
-                    args=(model,m,(self.train_x,self.train_y),(self.val_x,self.val_y))
+                    args=(model,m,(self.train_x,self.train_y),(self.val_x,self.val_y),ppgpus)
                     asr = pool.apply_async(self._child_run,args=args)
                     results.append(asr)
                     allocations[ccount] = asr
@@ -168,7 +166,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                         if allocations[k].ready():
                             if self._config.verbose > 0:
                                 print("[EnsembleTrainer] Ensemble model {}, will begin training.".format(m))
-                            args=(model,m,(self.train_x,self.train_y),(self.val_x,self.val_y))
+                            args=(model,m,(self.train_x,self.train_y),(self.val_x,self.val_y),ppgpus)
                             asr = pool.apply_async(self._child_run,args=args)
                             results.append(asr)
                             allocations[k] = asr

@@ -179,7 +179,7 @@ class Inception(GenericModel):
         if 'allocated_gpus' in kwargs and not kwargs['allocated_gpus'] is None:
             allocated_gpus = kwargs['allocated_gpus']
         else:
-            allocated_gpus = 1 #self._config.gpu_count
+            allocated_gpus = self._config.gpu_count
             
         if backend.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
