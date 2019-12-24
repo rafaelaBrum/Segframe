@@ -179,7 +179,7 @@ class Inception(GenericModel):
         if 'allocated_gpus' in kwargs and not kwargs['allocated_gpus'] is None:
             allocated_gpus = kwargs['allocated_gpus']
         else:
-            allocated_gpus = self._config.gpu_count
+            allocated_gpus = 1 #self._config.gpu_count
             
         if backend.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
@@ -189,7 +189,7 @@ class Inception(GenericModel):
         self.cache_m = CacheManager()
         
         model = self._build_architecture(input_shape,training,feature,preload)
-        
+ 
         #Check if previous training and LR is saved, if so, use it
         lr_cache = "{0}_learning_rate.txt".format(self.name)
         self.cache_m.registerFile(os.path.join(self._config.cache,lr_cache),lr_cache)
