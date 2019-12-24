@@ -205,7 +205,7 @@ class Inception(GenericModel):
 
         #Return parallel model if multiple GPUs are available
         parallel_model = None
-        
+       
         if allocated_gpus > 1:
             with tf.device('/cpu:0'):
                 model.compile(loss='categorical_crossentropy',
