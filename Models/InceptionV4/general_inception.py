@@ -176,7 +176,7 @@ class Inception(GenericModel):
         else:
             preload = True
 
-        if 'allocated_gpus' in kwargs:
+        if 'allocated_gpus' in kwargs and not kwargs['allocated_gpus'] is None:
             allocated_gpus = kwargs['allocated_gpus']
         else:
             allocated_gpus = self._config.gpu_count
