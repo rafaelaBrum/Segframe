@@ -122,7 +122,7 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
         model.register_ensemble(d)
         single,parallel = model.build(pre_load=False)
         
-        pred_model = _load_model_weights(config,single,model.get_weights_cache()
+        pred_model = _load_model_weights(config,single,model.get_weights_cache(),
                                              parallel,model.get_mgpu_weights_cache(),
                                              sw_thread)
         
