@@ -8,7 +8,7 @@ import numpy as np
 import threading
 
 from Datasources.CellRep import CellRep
-from Utils import SaveLRCallback,CalculateF1Score
+from Utils import SaveLRCallback,CalculateF1Score,EnsembleModelCallback
 from Utils import Exitcodes,CacheManager
 
 #Keras
@@ -232,7 +232,7 @@ class Trainer(object):
             else:
                 train_data,val_data,_ = self._ds.split_metadata(self._config.split)
             
-        if self._verbose > 0:
+        if self._verbose > 0 and (verbose is None or verbose > 0):
             unique,count = np.unique(train_data[1],return_counts=True)
             l_count = dict(zip(unique,count))
             if len(unique) > 2:
@@ -302,10 +302,13 @@ class Trainer(object):
         callbacks.append(ReduceLROnPlateau(monitor='loss',factor=0.7,\
                                            patience=10,verbose=self._verbose,\
                                            mode='auto',min_lr=1e-7))
-        callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=1))
+        callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=1 if verbose is None else verbose))
         ## CalculateF1Score
         if self._config.f1period > 0:
             callbacks.append(CalculateF1Score(val_generator,self._config.f1period,self._config.batch_size,self._config.info))
+
+        if self._config.strategy == 'EnsembleTrainer':
+            callbacks.append(EnsembleModelCallback(model.return_model_n()))
 
         if self._config.info and summary:
             print(single.summary())

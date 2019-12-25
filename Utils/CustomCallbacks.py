@@ -28,6 +28,26 @@ class SaveLRCallback(Callback):
         except IOError as e:
             print("[SaveLRCallback] {0}".format(str(e)))
 
+class EnsembleModelCallback(Callback):
+    """
+    Get's the last learining rate value after model training is done and save's 
+    it for future training.
+    """
+    def __init__(self,model_n,keys=[]):
+        self._model_n = model_n
+        if len(keys) > 0:
+            self._keys = keys
+        else:
+            self._keys = ['val_loss','val_acc']
+
+    def on_epoch_end(self,epoch,logs={}):
+        if not self._keys is None:
+            output = "[Model {}] ".format(self._model_n)
+            for k in self._keys:
+                if k in logs:
+                    output += "{}:{:.2f} ".format(k,logs[k])
+            print(output)
+            
 class CalculateF1Score(Callback):
     """
     Calculates F1 score as a callback function. The right way to do it.

@@ -78,10 +78,33 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             print("Model not ready for ensembling. Implement register_ensemble method")
             raise AttributeError
 
-        sw_thread = self.train_model(model,train,val,set_session=False,verbose=2,summary=False,clear_sess=True,allocated_gpus=ppgpus)
+        sw_thread = self.train_model(model,train,val,set_session=False,verbose=0,summary=False,clear_sess=True,allocated_gpus=ppgpus)
         if sw_thread.is_alive():
             sw_thread.join()
         return True
+
+
+    def _print_stats(self,train_data,val_data):
+        unique,count = np.unique(train_data[1],return_counts=True)
+        l_count = dict(zip(unique,count))
+        if len(unique) > 2:
+            print("Training items:")
+            print("\n".join(["label {0}: {1} items" .format(key,l_count[key]) for key in unique]))
+        else:
+            print("Train labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
+            
+        unique,count = np.unique(val_data[1],return_counts=True)
+        l_count = dict(zip(unique,count))
+        if len(unique) > 2:
+            print("Validation items:")
+            print("\n".join(["label {0}: {1} items" .format(key,l_count[key]) for key in unique]))
+        else:            
+            if not 1 in l_count:
+                l_count[1] = 0
+            print("Validation labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
+            
+        print("Train set: {0} items".format(len(train_data[0])))
+        print("Validate set: {0} items".format(len(val_data[0])))
         
     def run(self):
         """
@@ -124,6 +147,9 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             #Define GPU allocations
             device_queue = None
             ppgpus = 0
+            if self._config.verbose > 0:
+                self._print_stats((self.train_x,self.train_y),(self.val_x,self.val_y))
+                
             if self._config.gpu_count > 0:
                 device_queue = Queue()
                 if (self._config.gpu_count == self._config.emodels) or (self._config.gpu_count % self._config.emodels):

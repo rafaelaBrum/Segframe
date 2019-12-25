@@ -59,6 +59,7 @@ class Inception(GenericModel):
         return self.cache_m.fileLocation(self._mgpu_weightsCache)
 
     def register_ensemble(self,m):
+        self._model_n = m
         self._weightsCache = "{0}-EM{1}-weights.h5".format(self.name,m)
         self._mgpu_weightsCache = "{0}-EM{1}-mgpu-weights.h5".format(self.name,m)
         self._modelCache = "{0}-EM{1}-model.h5".format(self.name,m)
@@ -66,6 +67,12 @@ class Inception(GenericModel):
         self.cache_m.registerFile(os.path.join(self._config.weights_path,self._weightsCache),self._weightsCache)
         self.cache_m.registerFile(os.path.join(self._config.weights_path,self._mgpu_weightsCache),self._mgpu_weightsCache)
         self.cache_m.registerFile(os.path.join(self._config.model_path,self._modelCache),self._modelCache)
+
+    def return_model_n(self):
+        if hasattr(self,'_model_n'):
+            return self._model_n
+        else:
+            return -1
         
     def build(self,**kwargs):
         """
