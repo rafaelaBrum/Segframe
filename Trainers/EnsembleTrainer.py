@@ -47,21 +47,18 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         super().__init__(config)
         self.tower = None
 
-    def _initializer(self,q,processes):
+    def _initializer(self,gpus,processes):
 
         #initialize tensorflow session
         gpu_options = None
-        self._allocated_gpus = 0
-        if not q is None:
-            gpus = q.get()
-            self._allocated_gpus = len(gpus)
+        if gpus > 0:
             gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1.0)
             gpu_options.allow_growth = True
             gpu_options.Experimental.use_unified_memory = False
-            gpu_options.visible_device_list = ",".join([str(g) for g in gpus])
+            gpu_options.visible_device_list = ",".join([str(g) for g in range(gpus)])
 
         sess = tf.Session(config=tf.ConfigProto(
-            device_count={"CPU":processes,"GPU":0 if q is None else 1},
+            device_count={"CPU":processes,"GPU":gpus},
             intra_op_parallelism_threads=3, 
             inter_op_parallelism_threads=3,
             log_device_placement=False,
@@ -69,20 +66,6 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             ))
         #sess.config = config
         K.set_session(sess)
-
-    def _child_run(self,model,m,train,val,ppgpus):
-
-        if hasattr(model,'register_ensemble'):
-            model.register_ensemble(m)
-        else:
-            print("Model not ready for ensembling. Implement register_ensemble method")
-            raise AttributeError
-
-        sw_thread = self.train_model(model,train,val,set_session=False,verbose=0,summary=False,clear_sess=True,allocated_gpus=ppgpus)
-        if sw_thread.is_alive():
-            sw_thread.join()
-        return True
-
 
     def _print_stats(self,train_data,val_data):
         unique,count = np.unique(train_data[1],return_counts=True)
@@ -134,6 +117,8 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         stime = None
         etime = None
         end_train = False
+        self._initializer(self._config.gpu_count,self._config.cpu_count)
+        
         for r in range(self._config.acquisition_steps):
             if self._config.info:
                 print("[ALTrainer] Starting acquisition step {0}/{1}".format(r+1,self._config.acquisition_steps))
@@ -144,77 +129,31 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             cache_m.registerFile(os.path.join(self._config.logdir,fid),fid)
             cache_m.dump(((self.train_x,self.train_y),(self.val_x,self.val_y),(self.test_x,self.test_y)),fid)
 
-            #Define GPU allocations
-            device_queue = None
-            ppgpus = 0
-            if self._config.verbose > 0:
-                self._print_stats((self.train_x,self.train_y),(self.val_x,self.val_y))
-                
-            if self._config.gpu_count > 0:
-                device_queue = Queue()
-                if (self._config.gpu_count == self._config.emodels) or (self._config.gpu_count % self._config.emodels):
-                    ppgpus = 1
-                    if self._config.gpu_count > self._config.emodels:
-                        print("{} ensemble models and {} GPUs available is a waste. Choose carefully".format(self._config.emodels,self._config.gpu_count))
-                        sys.exit(1)
-                    for dev in range(self._config.emodels):
-                        slot = (dev%self._config.gpu_count,)
-                        device_queue.put(slot)
-                else:
-                    gi = 0
-                    ppgpus = self._config.gpu_count // self._config.emodels
-                    for dev in range(self._config.emodels):
-                        slot = tuple(range(gi,gi+ppgpus))
-                        device_queue.put(slot)
-                        gi += ppgpus
-
-            processes = self._config.gpu_count if ppgpus == 1 else ppgpus if ppgpus > 1 else self._config.cpu_count
-            pool = Pool(processes=processes,initializer=self._initializer,
-                            initargs=(device_queue,self._config.cpu_count),maxtasksperchild=self._config.emodels)
-
-            #Schedule training for every ensemble model
-            results = []
-            ccount = 0
-            allocations = [None for _ in range(processes)]
             for m in range(self._config.emodels):
-                if ccount < processes:
-                    if self._config.info:
-                        print("[EnsembleTrainer] Starting ensemble model {} training..".format(m))
-                    args=(model,m,(self.train_x,self.train_y),(self.val_x,self.val_y),ppgpus)
-                    asr = pool.apply_async(self._child_run,args=args)
-                    results.append(asr)
-                    allocations[ccount] = asr
-                    ccount += 1
+                if hasattr(model,'register_ensemble'):
+                    model.register_ensemble(m)
                 else:
-                    k = 0
-                    while True:
-                        k = k % len(allocations)
-                        if allocations[k].ready():
-                            if self._config.verbose > 0:
-                                print("[EnsembleTrainer] Ensemble model {}, will begin training.".format(m))
-                            args=(model,m,(self.train_x,self.train_y),(self.val_x,self.val_y),ppgpus)
-                            asr = pool.apply_async(self._child_run,args=args)
-                            results.append(asr)
-                            allocations[k] = asr
-                            break
-                        else:
-                            if self._config.verbose > 1:
-                                print("[EnsembleTrainer] Ensemble model {}, waiting for resources to became available.".format(m))
-                            allocations[k].wait(60)
-                            k += 1
+                    print("Model not ready for ensembling. Implement register_ensemble method")
+                    raise AttributeError
 
-            #This should print any traceback errors if any happend
-            for r in results:
-                r.get()
-                
-            pool.close()
-            pool.join()
+                if self._config.info:
+                    print("Starting model {} training".format(m))
+                    
+                sw_thread = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
+                                                set_session=False,verbose=1,summary=False,
+                                                clear_sess=True)
             
-            if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=None):
+            if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are in order")
                 end_train = True
-                    
+
+            #Some models may take too long to save weights
+            if not sw_thread is None and sw_thread.is_alive():
+                if self._config.info:
+                    print("[ALTrainer] Waiting for model weights...")
+                sw_thread.join()
+                
             #Set load_full to false so dropout is disabled
             predictor.run(self.test_x,self.test_y,load_full=False)
             

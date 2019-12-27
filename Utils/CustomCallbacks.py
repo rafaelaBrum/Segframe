@@ -42,10 +42,10 @@ class EnsembleModelCallback(Callback):
 
     def on_epoch_end(self,epoch,logs={}):
         if not self._keys is None:
-            output = "[Model {}] ".format(self._model_n)
+            output = "[Model {}] Epoch:{}".format(self._model_n,epoch)
             for k in self._keys:
                 if k in logs:
-                    output += "{}:{:.2f} ".format(k,logs[k])
+                    output += "{}:{:.3f} ".format(k,logs[k])
             print(output)
             
 class CalculateF1Score(Callback):
@@ -86,7 +86,7 @@ class CalculateF1Score(Callback):
         Y = np.zeros((data_size,self.val_data.classes),dtype=np.int8)
         stp = round((data_size / self.bsize) + 0.5)
         if self.info:
-            print('Making batch predictions: ',end='')
+            print('[F1CB] Making batch predictions: ',end='')
 
         for i in range(stp):
             start_idx = i*self.bsize
