@@ -307,9 +307,6 @@ class Trainer(object):
         if self._config.f1period > 0:
             callbacks.append(CalculateF1Score(val_generator,self._config.f1period,self._config.batch_size,self._config.info))
 
-        if self._config.strategy == 'EnsembleTrainer':
-            callbacks.append(EnsembleModelCallback(model.return_model_n()))
-
         if self._config.info and summary:
             print(single.summary())
 

@@ -42,7 +42,7 @@ class EnsembleModelCallback(Callback):
 
     def on_epoch_end(self,epoch,logs={}):
         if not self._keys is None:
-            output = "[Model {}] Epoch:{}".format(self._model_n,epoch)
+            output = "[Model {}] Epoch:{} ".format(self._model_n,epoch)
             for k in self._keys:
                 if k in logs:
                     output += "{}:{:.3f} ".format(k,logs[k])

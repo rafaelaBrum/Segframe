@@ -141,6 +141,12 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                 if self._config.info:
                     print("[EnsembleTrainer] Starting model {} training".format(m))
                     
+                #Some models may take too long to save weights
+                if not sw_thread is None and sw_thread.is_alive():
+                    if self._config.info:
+                        print("[EnsembleTrainer] Waiting for model weights...")
+                    sw_thread.join()
+                    
                 sw_thread = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
                                                 set_session=False,stats=False,summary=False,
                                                 clear_sess=True)
@@ -149,12 +155,6 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are in order")
                 end_train = True
-
-            #Some models may take too long to save weights
-            if not sw_thread is None and sw_thread.is_alive():
-                if self._config.info:
-                    print("[ALTrainer] Waiting for model weights...")
-                sw_thread.join()
                 
             #Set load_full to false so dropout is disabled
             predictor.run(self.test_x,self.test_y,load_full=False)
