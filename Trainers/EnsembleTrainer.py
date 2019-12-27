@@ -202,7 +202,11 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                                 print("[EnsembleTrainer] Ensemble model {}, waiting for resources to became available.".format(m))
                             allocations[k].wait(60)
                             k += 1
-                    
+            
+            #This should print any traceback errors if any happend
+            for r in results:
+                r.get()
+        
             pool.close()
             pool.join()
             

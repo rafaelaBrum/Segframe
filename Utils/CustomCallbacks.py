@@ -84,7 +84,10 @@ class CalculateF1Score(Callback):
         data_size = self.val_data.returnDataSize()
         Y_pred = np.zeros((data_size,self.val_data.classes),dtype=np.float32)
         Y = np.zeros((data_size,self.val_data.classes),dtype=np.int8)
-        stp = round((data_size / self.bsize) + 0.5)
+        if data_size % self.bsize:
+            stp = round((data_size / self.bsize) + 0.5)
+        else:
+            stp = data_size // self.bsize
         if self.info:
             print('Making batch predictions: ',end='')
 
