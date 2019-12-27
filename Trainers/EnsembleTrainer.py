@@ -121,7 +121,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         
         for r in range(self._config.acquisition_steps):
             if self._config.info:
-                print("[ALTrainer] Starting acquisition step {0}/{1}".format(r+1,self._config.acquisition_steps))
+                print("[EnsembleTrainer] Starting acquisition step {0}/{1}".format(r+1,self._config.acquisition_steps))
                 stime = time.time()
 
             #Save current dataset and report partial result (requires multi load for reading)
@@ -129,6 +129,8 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             cache_m.registerFile(os.path.join(self._config.logdir,fid),fid)
             cache_m.dump(((self.train_x,self.train_y),(self.val_x,self.val_y),(self.test_x,self.test_y)),fid)
 
+            self._print_stats((self.train_x,self.train_y),(self.val_x,self.val_y))
+            sw_thread = None
             for m in range(self._config.emodels):
                 if hasattr(model,'register_ensemble'):
                     model.register_ensemble(m)
@@ -137,10 +139,10 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                     raise AttributeError
 
                 if self._config.info:
-                    print("Starting model {} training".format(m))
+                    print("[EnsembleTrainer] Starting model {} training".format(m))
                     
                 sw_thread = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
-                                                set_session=False,verbose=1,summary=False,
+                                                set_session=False,stats=False,summary=False,
                                                 clear_sess=True)
             
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):

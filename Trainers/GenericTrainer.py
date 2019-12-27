@@ -192,10 +192,10 @@ class Trainer(object):
         else:
             set_session = True
 
-        if 'verbose' in kwargs:
-            verbose = kwargs['verbose']
+        if 'stats' in kwargs:
+            stats = kwargs['stats']
         else:
-            verbose = None
+            stats = None
 
         if 'summary' in kwargs:
             summary = kwargs['summary']
@@ -232,7 +232,7 @@ class Trainer(object):
             else:
                 train_data,val_data,_ = self._ds.split_metadata(self._config.split)
             
-        if self._verbose > 0 and (verbose is None or verbose > 0):
+        if self._verbose > 0 and (stats is None or stats):
             unique,count = np.unique(train_data[1],return_counts=True)
             l_count = dict(zip(unique,count))
             if len(unique) > 2:
@@ -302,7 +302,7 @@ class Trainer(object):
         callbacks.append(ReduceLROnPlateau(monitor='loss',factor=0.7,\
                                            patience=10,verbose=self._verbose,\
                                            mode='auto',min_lr=1e-7))
-        callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=1 if verbose is None else verbose))
+        callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=self._verbose))
         ## CalculateF1Score
         if self._config.f1period > 0:
             callbacks.append(CalculateF1Score(val_generator,self._config.f1period,self._config.batch_size,self._config.info))
@@ -319,7 +319,7 @@ class Trainer(object):
             epochs = self._config.epochs,
             validation_data = val_generator,
             validation_steps = len(val_generator), #//self._config.batch_size,
-            verbose = verbose if not verbose is None else self._verbose,
+            verbose = self._verbose,
             use_multiprocessing = False,
             workers=self._config.cpu_count*2,
             max_queue_size=self._config.batch_size*3,
