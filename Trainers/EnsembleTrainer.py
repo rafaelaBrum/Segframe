@@ -147,9 +147,13 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                         print("[EnsembleTrainer] Waiting for model weights...")
                     sw_thread.join()
                     
-                sw_thread = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
+                st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
                                                 set_session=False,stats=False,summary=False,
                                                 clear_sess=True)
+                if sw_thread is None:
+                    sw_thread = [st]
+                else:
+                    sw_thread.append(st)
             
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
@@ -223,7 +227,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         pooled_idx = function(None,generator,self.pool_x.shape[0],**kwargs)
         if pooled_idx is None:
             if self._config.info:
-                print("[ALTrainer] No indexes returned. Something is wrong.")
+                print("[EnsembleTrainer] No indexes returned. Something is wrong.")
             sys.exit(1)
         self.train_x = np.concatenate((self.train_x,self.pool_x[pooled_idx]),axis=0)
         self.train_y = np.concatenate((self.train_y,self.pool_y[pooled_idx]),axis=0)
