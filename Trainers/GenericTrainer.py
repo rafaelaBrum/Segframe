@@ -28,6 +28,7 @@ if tf.__version__ >= '1.14.0':
     tf = tf.compat.v1
     from tensorflow.python.util import deprecation
     deprecation._PRINT_DEPRECATION_WARNINGS = False
+    tf.logging.set_verbosity(tf.logging.ERROR)
     #tf.disable_v2_behavior()
 
 def run_training(config,locations=None):

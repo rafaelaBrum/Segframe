@@ -19,7 +19,7 @@ if tf.__version__ >= '1.14.0':
     tf = tf.compat.v1
     from tensorflow.python.util import deprecation
     deprecation._PRINT_DEPRECATION_WARNINGS = False
-    tf.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+    tf.logging.set_verbosity(tf.logging.ERROR)
     #tf.disable_v2_behavior()
     
 #Local
@@ -144,10 +144,19 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             sw_thread = None
             for m in range(self._config.emodels):
                 #Some models may take too long to save weights
-                if not sw_thread is None and sw_thread[-1].is_alive():
+                if not sw_thread is None:
                     if self._config.info:
-                        print("[EnsembleTrainer] Waiting for model weights...")
-                    sw_thread[-1].join()
+                        print("[EnsembleTrainer] Waiting for model weights.", end='')
+                    while True:
+                        pst = '.'
+                        if sw_thread[-1].is_alive():
+                            if self._config.info:
+                                pst = "{}{}".format(pst,'.')
+                                print(pst,end='')
+                            sw_thread[-1].join(60.0)
+                        else:
+                            print('')
+                            break
                     
                 if hasattr(model,'register_ensemble'):
                     model.register_ensemble(m)
@@ -225,7 +234,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             'image_generator':pool_prep,
             'shuffle':False, #DO NOT SET TRUE!
             'verbose':self._config.verbose,
-            'input_n':self._config.emodels}
+            'input_n':1}
 
         generator = ThreadedGenerator(**generator_params)
 
