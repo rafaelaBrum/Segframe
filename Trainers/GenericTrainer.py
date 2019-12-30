@@ -7,6 +7,10 @@ import re
 import numpy as np
 import threading
 
+#Filter warnings
+import warnings
+warnings.filterwarnings('ignore')
+    
 from Datasources.CellRep import CellRep
 from Utils import SaveLRCallback,CalculateF1Score,EnsembleModelCallback
 from Utils import Exitcodes,CacheManager
@@ -18,7 +22,13 @@ from keras.preprocessing.image import ImageDataGenerator
 from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau,LearningRateScheduler
 from keras.utils import to_categorical
 
+#Preparing migration to TF 2.0
 import tensorflow as tf
+if tf.__version__ >= '1.14.0':
+    tf = tf.compat.v1
+    from tensorflow.python.util import deprecation
+    deprecation._PRINT_DEPRECATION_WARNINGS = False
+    #tf.disable_v2_behavior()
 
 def run_training(config,locations=None):
     """
