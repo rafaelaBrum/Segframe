@@ -18,12 +18,6 @@ Returns: numpy array of element indexes
 """
 
 def _load_model_weights(config,single_m,spath,parallel_m,ppath,sw_threads):
-    #If sw_threads was provided, we should check the availability of model weights
-    if not sw_threads is None:
-        for k in range(len(sw_threads)):
-            if sw_threads[k].is_alive():
-                print("Waiting ensemble model {} weights' to become available...".format(k))
-                sw_threads[k].join()
     
     #Model can be loaded from previous acquisition train or from a fixed final model
     if config.gpu_count > 1 and not parallel_m is None:
@@ -103,6 +97,13 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
         
     All_Dropout_Classes = np.zeros(shape=(data_size,1))
 
+    #If sw_thread was provided, we should check the availability of model weights
+    if not sw_thread is None:
+        for k in range(len(sw_thread)):
+            if sw_thread[k].is_alive():
+                print("Waiting ensemble model {} weights' to become available...".format(k))
+                sw_thread[k].join()
+                
     if pbar:
         l = tqdm(range(emodels), desc="Ensemble member predictions",position=0)
     else:

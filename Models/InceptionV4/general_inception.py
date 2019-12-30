@@ -4,8 +4,19 @@
 import importlib
 import os
 
+#Filter warnings
+import warnings
+warnings.filterwarnings('ignore')
+    
 import numpy as np
+
+#Preparing migration to TF 2.0
 import tensorflow as tf
+if tf.__version__ >= '1.14.0':
+    tf = tf.compat.v1
+    from tensorflow.python.util import deprecation
+    deprecation._PRINT_DEPRECATION_WARNINGS = False    
+    #tf.disable_v2_behavior()
 
 #Network
 from keras.models import Sequential,Model

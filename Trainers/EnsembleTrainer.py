@@ -7,10 +7,21 @@ import importlib
 import random
 from multiprocessing import Pool, Queue
 
+#Filter warnings
+import warnings
+warnings.filterwarnings('ignore')
+    
 from keras.preprocessing.image import ImageDataGenerator
 from keras import backend as K
+#Preparing migration to TF 2.0
 import tensorflow as tf
-
+if tf.__version__ >= '1.14.0':
+    tf = tf.compat.v1
+    from tensorflow.python.util import deprecation
+    deprecation._PRINT_DEPRECATION_WARNINGS = False
+    tf.logging.set_verbosity(tf.compat.v1.logging.ERROR)
+    #tf.disable_v2_behavior()
+    
 #Local
 from .ALTrainer import ActiveLearningTrainer
 from .Predictions import Predictor
