@@ -132,6 +132,12 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             self._print_stats((self.train_x,self.train_y),(self.val_x,self.val_y))
             sw_thread = None
             for m in range(self._config.emodels):
+                #Some models may take too long to save weights
+                if not sw_thread is None and sw_thread[-1].is_alive():
+                    if self._config.info:
+                        print("[EnsembleTrainer] Waiting for model weights...")
+                    sw_thread[-1].join()
+                    
                 if hasattr(model,'register_ensemble'):
                     model.register_ensemble(m)
                 else:
@@ -140,12 +146,6 @@ class EnsembleALTrainer(ActiveLearningTrainer):
 
                 if self._config.info:
                     print("[EnsembleTrainer] Starting model {} training".format(m))
-                    
-                #Some models may take too long to save weights
-                if not sw_thread is None and sw_thread[-1].is_alive():
-                    if self._config.info:
-                        print("[EnsembleTrainer] Waiting for model weights...")
-                    sw_thread[-1].join()
                     
                 st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
                                                 set_session=False,stats=False,summary=False,
