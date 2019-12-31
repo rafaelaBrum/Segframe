@@ -165,7 +165,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                     raise AttributeError
 
                 if self._config.info:
-                    print("[EnsembleTrainer] Starting model {} training".format(m))                    
+                    print("[EnsembleTrainer] Starting model {} training".format(m))
                     
                 st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
                                                 set_session=False,stats=False,summary=False,
