@@ -157,7 +157,7 @@ class Inception(GenericModel):
 
         s_models = []
         p_models = []
-        for m in self._config.emodels:
+        for m in range(self._config.emodels):
             self.register_ensemble(m)
             single,parallel = self._build(**kwargs)
             
