@@ -149,10 +149,10 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
 
     for t in range(data_size):
         L = np.array([0])
-        for d_iter in range(mc_dp):
+        for d_iter in range(emodels):
             L = np.append(L, All_Dropout_Classes[t, d_iter+1])
         Predicted_Class, Mode = mode(L[1:])
-        v = np.array(  [1 - Mode/float(mc_dp)])
+        v = np.array(  [1 - Mode/float(emodels)])
         Variation[t] = v
     
     if verbose > 1:
@@ -166,7 +166,7 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
     if config.debug:
         s_expected = generator.returnLabelsFromIndex(x_pool_index)
         #After transposition shape will be (classes,items,mc_dp)
-        s_probs = all_probs[:mc_dp,x_pool_index].T
+        s_probs = all_probs[:emodels,x_pool_index].T
         debug_acquisition(s_expected,s_probs,generator.classes,cache_m,config,fidp)
             
     if save_var:
