@@ -17,7 +17,7 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-def _load_model_weights(config,single_m,spath,parallel_m,ppath,sw_threads):
+def _load_model_weights(config,single_m,spath,parallel_m,ppath,sw_threads,npfile):
     
     #Model can be loaded from previous acquisition train or from a fixed final model
     if config.gpu_count > 1 and not parallel_m is None:
@@ -26,6 +26,10 @@ def _load_model_weights(config,single_m,spath,parallel_m,ppath,sw_threads):
             pred_model.load_weights(config.ffeat,by_name=True)
             if config.info:
                 print("Model weights loaded from: {0}".format(config.ffeat))
+        elif npfile:
+            pred_model.set_weights(np.load(ppath,allow_pickle=True))
+            if config.info:
+                print("Model weights loaded from: {0}".format(ppath))
         else:
             pred_model.load_weights(ppath,by_name=True)
             if config.info:
@@ -36,6 +40,10 @@ def _load_model_weights(config,single_m,spath,parallel_m,ppath,sw_threads):
             pred_model.load_weights(config.ffeat,by_name=True)
             if config.info:
                 print("Model weights loaded from: {0}".format(config.ffeat))
+        elif npfile:
+            pred_model.set_weights(np.load(spath,allow_pickle=True))
+            if config.info:
+                print("Model weights loaded from: {0}".format(spath))                
         else:
             pred_model.load_weights(spath,by_name=True)
             if config.info:
@@ -122,10 +130,23 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
 
         model.register_ensemble(d)
         single,parallel = model.build(pre_load=False)
-        
-        pred_model = _load_model_weights(config,single,model.get_weights_cache(),
-                                             parallel,model.get_mgpu_weights_cache(),
-                                             sw_thread)
+
+        if hasattr(model,'get_npweights_cache'):
+            spath = model.get_npweights_cache(add_ext=True)
+            npfile = True
+        else:
+            spath = model.get_weights_cache()
+            npfile = False
+            
+        if hasattr(model,'get_npmgpu_weights_cache'):
+            ppath = model.get_npmgpu_weights_cache(add_ext=True)
+            npfile = True
+        else:
+            ppath = model.get_mgpu_weights_cache()
+            npfile = False
+            
+        pred_model = _load_model_weights(config,single,spath,parallel,ppath,
+                                             sw_thread,npfile)
         
         #Keep verbosity in 0 to gain speed 
         proba = pred_model.predict_generator(generator,
@@ -164,6 +185,7 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
     x_pool_index = a_1d.argsort()[-query:][::-1]
 
     if config.debug:
+        from .Common import debug_acquisition
         s_expected = generator.returnLabelsFromIndex(x_pool_index)
         #After transposition shape will be (classes,items,mc_dp)
         s_probs = all_probs[:emodels,x_pool_index].T
