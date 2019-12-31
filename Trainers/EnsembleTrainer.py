@@ -169,7 +169,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                     
                 st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
                                                 set_session=False,stats=False,summary=False,
-                                                clear_sess=True)
+                                                clear_sess=True,save_numpy=True)
                 if sw_thread is None:
                     sw_thread = [st]
                 else:
