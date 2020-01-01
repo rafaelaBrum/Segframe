@@ -90,7 +90,7 @@ def conv2d_bn(x,
     return x
 
 
-def inception_resnet_block(x, scale, block_type, block_idx, activation='relu',use_bn=True):
+def inception_resnet_block(x, scale, block_type, block_idx, activation='relu',use_bn=True,model_n=None):
     """Adds a Inception-ResNet block.
 
     This function builds 3 types of Inception-ResNet blocks mentioned
@@ -155,7 +155,7 @@ def inception_resnet_block(x, scale, block_type, block_idx, activation='relu',us
                          'Expects "block35", "block17" or "block8", '
                          'but got: ' + str(block_type))
 
-    block_name = block_type + '_' + str(block_idx)
+    block_name = model_n + block_type + '_' + str(block_idx)
     channel_axis = 1 if backend.image_data_format() == 'channels_first' else 3
     mixed = layers.Concatenate(
         axis=channel_axis, name=block_name + '_mixed')(branches)
@@ -244,6 +244,11 @@ def InceptionResNetV2(include_top=True,
             img_input = input_tensor
 
     use_bn = kwargs['batch_n']
+
+    if 'model_n' in kwargs:
+        model_n = 'EM{}'.format(kwargs['model_n'])
+    else:
+        model_n = ''
     
     # Stem block: 35 x 35 x 192
     x = conv2d_bn(img_input, 32, 3, strides=2, padding='valid', use_bn=use_bn)
@@ -265,7 +270,7 @@ def InceptionResNetV2(include_top=True,
     branch_pool = conv2d_bn(branch_pool, 64, 1, use_bn=use_bn)
     branches = [branch_0, branch_1, branch_2, branch_pool]
     channel_axis = 1 if backend.image_data_format() == 'channels_first' else 3
-    x = layers.Concatenate(axis=channel_axis, name='mixed_5b')(branches)
+    x = layers.Concatenate(axis=channel_axis, name='{}{}'.format(model_n,'mixed_5b'))(branches)
 
     # 10x block35 (Inception-ResNet-A block): 35 x 35 x 320
     for block_idx in range(1, 11):
@@ -273,7 +278,8 @@ def InceptionResNetV2(include_top=True,
                                     scale=0.17,
                                     block_type='block35',
                                     block_idx=block_idx,
-                                    use_bn=use_bn)
+                                    use_bn=use_bn,
+                                    model_n=model_n)
         x = layers.Dropout(0.1)(x,training=kwargs['training'])
 
     # Mixed 6a (Reduction-A block): 17 x 17 x 1088
@@ -283,7 +289,7 @@ def InceptionResNetV2(include_top=True,
     branch_1 = conv2d_bn(branch_1, 384, 3, strides=2, padding='valid', use_bn=use_bn)
     branch_pool = layers.MaxPooling2D(3, strides=2, padding='valid')(x)
     branches = [branch_0, branch_1, branch_pool]
-    x = layers.Concatenate(axis=channel_axis, name='mixed_6a')(branches)
+    x = layers.Concatenate(axis=channel_axis, name='{}{}'.format(model_n,'mixed_6a'))(branches)
 
     # 20x block17 (Inception-ResNet-B block): 17 x 17 x 1088
     for block_idx in range(1, 21):
@@ -291,7 +297,8 @@ def InceptionResNetV2(include_top=True,
                                     scale=0.1,
                                     block_type='block17',
                                     block_idx=block_idx,
-                                    use_bn=use_bn)
+                                    use_bn=use_bn,
+                                    model_n=model_n)
         x = layers.Dropout(0.2)(x,training=kwargs['training'])
 
     # Mixed 7a (Reduction-B block): 8 x 8 x 2080
@@ -304,7 +311,7 @@ def InceptionResNetV2(include_top=True,
     branch_2 = conv2d_bn(branch_2, 320, 3, strides=2, padding='valid', use_bn=use_bn)
     branch_pool = layers.MaxPooling2D(3, strides=2, padding='valid')(x)
     branches = [branch_0, branch_1, branch_2, branch_pool]
-    x = layers.Concatenate(axis=channel_axis, name='mixed_7a')(branches)
+    x = layers.Concatenate(axis=channel_axis, name='{}{}'.format(model_n,'mixed_7a'))(branches)
 
     # 10x block8 (Inception-ResNet-C block): 8 x 8 x 2080
     for block_idx in range(1, 10):
@@ -312,7 +319,8 @@ def InceptionResNetV2(include_top=True,
                                     scale=0.2,
                                     block_type='block8',
                                     block_idx=block_idx,
-                                    use_bn=use_bn)
+                                    use_bn=use_bn,
+                                    model_n=model_n)
         x = layers.Dropout(0.3)(x,training=kwargs['training'])
         
     x = inception_resnet_block(x,
@@ -320,27 +328,28 @@ def InceptionResNetV2(include_top=True,
                                 activation=None,
                                 block_type='block8',
                                 block_idx=10,
-                                use_bn=use_bn)
+                                use_bn=use_bn,
+                                model_n=model_n)
 
     # Final convolution block: 8 x 8 x 1536
-    x = conv2d_bn(x, 1536, 1, name='conv_7b', use_bn=use_bn)
+    x = conv2d_bn(x, 1536, 1, name='{}{}'.format(model_n,'conv_7b'), use_bn=use_bn)
 
     last_tensor = None
     if include_top:
         # Classification block
-        x = layers.GlobalAveragePooling2D(name='avg_pool')(x)
+        x = layers.GlobalAveragePooling2D(name='{}{}'.format(model_n,'avg_pool'))(x)
         last_tensor = x
-        x = layers.Dense(classes, activation='softmax', name='predictions')(x)
+        x = layers.Dense(classes, activation='softmax', name='{}{}'.format(model_n,'predictions'))(x)
     elif 'custom_top' in kwargs and kwargs['custom_top']:
         #Create a custom new classification here if needed
         x = layers.GlobalAveragePooling2D()(x)
         last_tensor = x
 
         x = layers.Dense(512)(x)
-        x = layers.Activation('relu', name='class1_ac')(x)
+        x = layers.Activation('relu', name='{}{}'.format(model_n,'class1_ac'))(x)
         x = layers.Dropout(0.3)(x,training=kwargs['training'])
         x = layers.Dense(128)(x)
-        x = layers.Activation('relu', name='class2_ac')(x)
+        x = layers.Activation('relu', name='{}{}'.format(model_n,'class2_ac'))(x)
         x = layers.Dropout(0.3)(x,training=kwargs['training'])
         x = layers.Dense(classes)(x)
         x = layers.Activation('softmax')(x)
@@ -350,7 +359,7 @@ def InceptionResNetV2(include_top=True,
         elif pooling == 'max':
             x = layers.GlobalMaxPooling2D()(x)
         last_tensor = x
-        x = layers.Dense(classes, activation='softmax', name='predictions')(x)
+        x = layers.Dense(classes, activation='softmax', name='{}{}'.format(model_n,'predictions'))(x)
         
     # Ensure that the model takes into account
     # any potential predecessors of `input_tensor`.

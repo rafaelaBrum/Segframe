@@ -286,11 +286,19 @@ class Inception(GenericModel):
     def _build_architecture(self,input_shape,training=None,feature=False,preload=True):
         from . import inception_resnet_v2
 
-        kwargs = {'training':training,
-                    'feature':feature,
-                    'custom_top':False,
-                    'preload':preload,
-                    'batch_n':True if self._config.gpu_count <= 1 else False}
+        if hasattr(self,'_model_n'):
+            kwargs = {'training':training,
+                        'feature':feature,
+                        'custom_top':False,
+                        'preload':preload,
+                        'model_n':self._model_n,
+                        'batch_n':True if self._config.gpu_count <= 1 else False}
+        else:
+            kwargs = {'training':training,
+                        'feature':feature,
+                        'custom_top':False,
+                        'preload':preload,
+                        'batch_n':True if self._config.gpu_count <= 1 else False}
         
         inp = Input(shape=input_shape)
                 
