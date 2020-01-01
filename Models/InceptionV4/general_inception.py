@@ -163,22 +163,22 @@ class Inception(GenericModel):
             
             if not parallel is None:
                 if npfile:
-                    parallel.set_weights(np.load(self.get_npmgpu_weights_cache(),allow_pickle=True))
+                    parallel.set_weights(np.load(self.get_npmgpu_weights_cache(add_ext=True),allow_pickle=True))
                     if self._config.info:
-                        print("[Inception] loaded ensemble weights: {}".format(self.get_npmgpu_weights_cache()))
-                elif os.path.isfile(self.get_mgpu_weights_cache()):                    
-                    parallel.load_weights(self.get_mgpu_weights_cache(),by_name=True)
+                        print("[Inception] loaded ensemble weights: {}".format(self.get_npmgpu_weights_cache(add_ext=True)))
+                elif os.path.isfile(self.get_mgpu_weights_cache(add_ext=True)):                    
+                    parallel.load_weights(self.get_mgpu_weights_cache(add_ext=True),by_name=True)
                     if self._config.info:
-                        print("[Inception] loaded ensemble weights: {}".format(self.get_mgpu_weights_cache()))
+                        print("[Inception] loaded ensemble weights: {}".format(self.get_mgpu_weights_cache(add_ext=True)))
             else:
                 parallel = None
 
             if npfile:
-                single.set_weights(np.load(self.get_weights_cache(),allow_pickle=True))
+                single.set_weights(np.load(self.get_weights_cache(add_ext=True),allow_pickle=True))
                 if self._config.info:
-                    print("[Inception] loaded ensemble weights: {}".format(self.get_npweights_cache()))
-            elif os.path.isfile(self.get_weights_cache()):
-                single.load_weights(self.get_weights_cache(),by_name=True)
+                    print("[Inception] loaded ensemble weights: {}".format(self.get_npweights_cache(add_ext=True)))
+            elif os.path.isfile(self.get_weights_cache(add_ext=True)):
+                single.load_weights(self.get_weights_cache(add_ext=True),by_name=True)
             else:
                 if self._config.info:
                     print("[Inception] Could not load ensemble weights (model {})".format(m))
