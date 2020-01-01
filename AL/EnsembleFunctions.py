@@ -24,29 +24,29 @@ def _load_model_weights(config,single_m,spath,parallel_m,ppath,sw_threads,npfile
         pred_model = parallel_m
         if not config.ffeat is None and os.path.isfile(config.ffeat):
             pred_model.load_weights(config.ffeat,by_name=True)
-            if config.info:
+            if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(config.ffeat))
         elif npfile:
             pred_model.set_weights(np.load(ppath,allow_pickle=True))
-            if config.info:
+            if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(ppath))
         else:
             pred_model.load_weights(ppath,by_name=True)
-            if config.info:
+            if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(ppath))
     else:
         pred_model = single_m
         if not config.ffeat is None and os.path.isfile(config.ffeat):
             pred_model.load_weights(config.ffeat,by_name=True)
-            if config.info:
+            if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(config.ffeat))
         elif npfile:
             pred_model.set_weights(np.load(spath,allow_pickle=True))
-            if config.info:
+            if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(spath))                
         else:
             pred_model.load_weights(spath,by_name=True)
-            if config.info:
+            if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(spath))
 
     return pred_model
