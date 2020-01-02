@@ -166,7 +166,6 @@ class Predictor(object):
         X,Y = self._ds.load_data(data=(x_test,y_test),keepImg=self._keep)
         if self._config.verbose > 1:
             print("Y original ({1}):\n{0}".format(Y,Y.shape))        
-        Y = to_categorical(Y,self._ds.nclasses)
 
         # session setup
         sess = K.get_session()
@@ -183,7 +182,11 @@ class Predictor(object):
         if self._ensemble:
             #Weights should be loaded during ensemble build
             if hasattr(model,'build_ensemble'):
-                pred_model = model.build_ensemble(training=False,npfile=True)
+                single,parallel = model.build_ensemble(training=False,npfile=True)
+                if parallel:
+                    pred_model = parallel
+                else:
+                    pred_model = single
             else:
                 if self._config.info:
                     print('[Predictor] Model not prepared to build ensembles, implement or choose other model')
@@ -230,6 +233,7 @@ class Predictor(object):
                                                 verbose=self._verbose,
                                                 input_n=self._config.emodels)
         else:
+            Y = to_categorical(Y,self._ds.nclasses)
             test_generator = image_generator.flow(x=X,
                                                 y=Y,
                                                 batch_size=bsize,
@@ -258,7 +262,11 @@ class Predictor(object):
             l.close()
 
         y_pred = np.argmax(Y_pred, axis=1)
-        expected = np.argmax(Y, axis=1)
+        if self._ensemble:
+            expected = np.asarray(Y)
+            del(Y)
+        else:
+            expected = np.argmax(Y, axis=1)
 
         if self._config.verbose > 0:
             if self._config.verbose > 1:
