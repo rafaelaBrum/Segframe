@@ -369,7 +369,7 @@ def InceptionResNetV2(include_top=True,
         inputs = img_input
 
     # Create model.
-    model = models.Model(inputs, x, name='inception_resnet_v2')
+    model = models.Model(inputs, x, name='EM{}-inception_resnet_v2'.format(model_n))
 
     # Load weights.
     if 'preload' in kwargs and kwargs['preload']:
@@ -394,6 +394,6 @@ def InceptionResNetV2(include_top=True,
             model.load_weights(weights,by_name=True)
 
     if 'feature' in kwargs and kwargs['feature']:
-        return models.Model(inputs,last_tensor,name='inception_resnet_features')
+        return models.Model(inputs,last_tensor,name='F{}-inception_resnet_features'.format(model_n))
     else:
         return model
