@@ -248,7 +248,12 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
 
     All_Entropy_Dropout = np.zeros(shape=data_size)
     score_All = np.zeros(shape=(data_size, generator.classes))
-    
+
+    #Keep probabilities for analysis
+    all_probs = None
+    if config.debug:
+        all_probs = np.zeros(shape=(emodels,data_size,generator.classes))
+        
     if pbar:
         l = tqdm(range(emodels), desc="Ensemble member predictions",position=0)
     else:
@@ -280,16 +285,19 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
         pred_model = _load_model_weights(config,single,spath,parallel,ppath,
                                              sw_thread,npfile)
         
-        dropout_score = pred_model.predict_generator(generator,
-                                                        workers=5*cpu_count,
-                                                        max_queue_size=100*gpu_count,
-                                                        verbose=0)
+        proba = pred_model.predict_generator(generator,
+                                                workers=5*cpu_count,
+                                                max_queue_size=100*gpu_count,
+                                                verbose=0)
+        if config.debug:
+            all_probs[d] = proba
+            
         #computing G_X
-        score_All = score_All + dropout_score
+        score_All = score_All + proba
 
         #computing F_X
-        dropout_score_log = np.log2(dropout_score)
-        Entropy_Compute = - np.multiply(dropout_score, dropout_score_log)
+        dropout_score_log = np.log2(proba)
+        Entropy_Compute = - np.multiply(proba, dropout_score_log)
         Entropy_Per_Dropout = np.sum(Entropy_Compute, axis=1)
         
         All_Entropy_Dropout = All_Entropy_Dropout + Entropy_Per_Dropout 
@@ -317,6 +325,13 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
 
     if save_var:
         cache_m.dump((x_pool_index,a_1d),fid)
+
+    if config.debug:
+        from .Common import debug_acquisition
+        s_expected = generator.returnLabelsFromIndex(x_pool_index)
+        #After transposition shape will be (classes,items,mc_dp)
+        s_probs = all_probs[:emodels,x_pool_index].T
+        debug_acquisition(s_expected,s_probs,generator.classes,cache_m,config,fidp)
         
     if verbose > 0:
         #print("Selected item indexes: {0}".format(x_pool_index))

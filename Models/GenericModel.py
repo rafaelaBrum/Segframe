@@ -35,7 +35,10 @@ class GenericModel(ABC):
         _,width,height,channels = dims[0]
 
         return (width,height,channels)
-            
+
+    def is_ensemble(self):
+        return self._config.strategy == 'EnsembleTrainer'
+    
     @abstractmethod
     def build(self,**kwargs):
         """

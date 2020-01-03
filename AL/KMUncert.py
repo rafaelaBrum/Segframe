@@ -82,9 +82,9 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     elif config.info:
         print("[km_uncert] Weights thread not available...trying to load weights")
 
-    if not os.path.isfile(model.get_weights_cache()) and not os.path.isfile(model.get_mgpu_weights_cache()):
+    if not model.is_ensemble() and not (os.path.isfile(model.get_weights_cache()) or not os.path.isfile(model.get_mgpu_weights_cache())):
         if config.info:
-            print("[km_uncert] No trained model or weights file found")
+            print("[km_uncert] No trained model or weights file found (H5).")
         return None
 
     if config.recluster > 0 and acq > 0 and (acq % config.recluster) != 0:
@@ -147,7 +147,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
             print("Done extraction...starting KMeans")
             stime = time.time()
         
-        km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=int(cpu_count/2)).fit(features)
+        km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=min(int(cpu_count/2),1)).fit(features)
         
         if config.verbose > 0:
             etime = time.time()

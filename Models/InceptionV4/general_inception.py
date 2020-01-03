@@ -130,6 +130,14 @@ class Inception(GenericModel):
         preload_w: return model with weights already loaded? True -> Yes
         parallel: return parallel model (overrides gpu_count avaliation)? True -> Yes
         """
+
+        if self.is_ensemble():
+            s,p = self.build_ensemble(kwargs)
+            if 'parallel' in kwargs and not kwargs['parallel']:
+                return (s,None)
+            else:
+                return (s,p)
+            
         #Weight loading for the feature extraction is done latter by requesting party
         kwargs['preload_w'] = False
 
@@ -293,14 +301,16 @@ class Inception(GenericModel):
                         'preload':preload,
                         'model_n':self._model_n,
                         'batch_n':True if self._config.gpu_count <= 1 else False}
+            name = 'input_{}'.format(self._model_n)
         else:
             kwargs = {'training':training,
                         'feature':feature,
                         'custom_top':False,
                         'preload':preload,
                         'batch_n':True if self._config.gpu_count <= 1 else False}
+            name = 'input'
         
-        inp = Input(shape=input_shape)
+        inp = Input(shape=input_shape,name=name)
                 
         inception_body = inception_resnet_v2.InceptionResNetV2(include_top=False,
                                                                 weights='imagenet',
