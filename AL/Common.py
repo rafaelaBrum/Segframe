@@ -7,6 +7,55 @@ import os
 __doc__ = """
 Utility functions for acquisition functions and independent functions
 """
+
+def load_model_weights(config,model,single_m,parallel_m):
+
+    if hasattr(model,'get_npweights_cache'):
+        spath = model.get_npweights_cache(add_ext=True)
+        npfile = True
+    else:
+        spath = model.get_weights_cache()
+        npfile = False
+            
+    if hasattr(model,'get_npmgpu_weights_cache'):
+        ppath = model.get_npmgpu_weights_cache(add_ext=True)
+        npfile = True
+    else:
+        ppath = model.get_mgpu_weights_cache()
+        npfile = False
+            
+    #Model can be loaded from previous acquisition train or from a fixed final model
+    if config.gpu_count > 1 and not parallel_m is None:
+        pred_model = parallel_m
+        if not config.ffeat is None and os.path.isfile(config.ffeat):
+            pred_model.load_weights(config.ffeat,by_name=True)
+            if config.info and not config.progressbar:
+                print("Model weights loaded from: {0}".format(config.ffeat))
+        elif npfile:
+            pred_model.set_weights(np.load(ppath,allow_pickle=True))
+            if config.info and not config.progressbar:
+                print("Model weights loaded from: {0}".format(ppath))
+        else:
+            pred_model.load_weights(ppath,by_name=True)
+            if config.info and not config.progressbar:
+                print("Model weights loaded from: {0}".format(ppath))
+    else:
+        pred_model = single_m
+        if not config.ffeat is None and os.path.isfile(config.ffeat):
+            pred_model.load_weights(config.ffeat,by_name=True)
+            if config.info and not config.progressbar:
+                print("Model weights loaded from: {0}".format(config.ffeat))
+        elif npfile:
+            pred_model.set_weights(np.load(spath,allow_pickle=True))
+            if config.info and not config.progressbar:
+                print("Model weights loaded from: {0}".format(spath))                
+        else:
+            pred_model.load_weights(spath,by_name=True)
+            if config.info and not config.progressbar:
+                print("Model weights loaded from: {0}".format(spath))
+
+    return pred_model
+
 def random_sample(pred_model,generator,data_size,**kwargs):
     """
     Returns a random list of indexes from the given dataset

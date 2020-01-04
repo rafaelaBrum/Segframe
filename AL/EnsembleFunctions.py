@@ -7,6 +7,7 @@ from tqdm import tqdm
 
 from scipy.stats import mode
 
+from .Common import load_model_weights
 __doc__ = """
 All acquisition functions should receive:
 1 - numpy array of items
@@ -17,39 +18,6 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-def _load_model_weights(config,single_m,spath,parallel_m,ppath,sw_threads,npfile):
-    
-    #Model can be loaded from previous acquisition train or from a fixed final model
-    if config.gpu_count > 1 and not parallel_m is None:
-        pred_model = parallel_m
-        if not config.ffeat is None and os.path.isfile(config.ffeat):
-            pred_model.load_weights(config.ffeat,by_name=True)
-            if config.info and not config.progressbar:
-                print("Model weights loaded from: {0}".format(config.ffeat))
-        elif npfile:
-            pred_model.set_weights(np.load(ppath,allow_pickle=True))
-            if config.info and not config.progressbar:
-                print("Model weights loaded from: {0}".format(ppath))
-        else:
-            pred_model.load_weights(ppath,by_name=True)
-            if config.info and not config.progressbar:
-                print("Model weights loaded from: {0}".format(ppath))
-    else:
-        pred_model = single_m
-        if not config.ffeat is None and os.path.isfile(config.ffeat):
-            pred_model.load_weights(config.ffeat,by_name=True)
-            if config.info and not config.progressbar:
-                print("Model weights loaded from: {0}".format(config.ffeat))
-        elif npfile:
-            pred_model.set_weights(np.load(spath,allow_pickle=True))
-            if config.info and not config.progressbar:
-                print("Model weights loaded from: {0}".format(spath))                
-        else:
-            pred_model.load_weights(spath,by_name=True)
-            if config.info and not config.progressbar:
-                print("Model weights loaded from: {0}".format(spath))
-
-    return pred_model
 
 def ensemble_varratios(pred_model,generator,data_size,**kwargs):
     """
@@ -130,23 +98,8 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
 
         model.register_ensemble(d)
         single,parallel = model.build(pre_load=False)
-
-        if hasattr(model,'get_npweights_cache'):
-            spath = model.get_npweights_cache(add_ext=True)
-            npfile = True
-        else:
-            spath = model.get_weights_cache()
-            npfile = False
             
-        if hasattr(model,'get_npmgpu_weights_cache'):
-            ppath = model.get_npmgpu_weights_cache(add_ext=True)
-            npfile = True
-        else:
-            ppath = model.get_mgpu_weights_cache()
-            npfile = False
-            
-        pred_model = _load_model_weights(config,single,spath,parallel,ppath,
-                                             sw_thread,npfile)
+        pred_model = load_model_weights(config,model,single,parallel)
         
         #Keep verbosity in 0 to gain speed 
         proba = pred_model.predict_generator(generator,
@@ -241,11 +194,15 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
             if sw_thread[k].is_alive():
                 print("Waiting ensemble model {} weights' to become available...".format(k))
                 sw_thread[k].join()
-                
+
+    fidp = None
     if save_var:
         fid = 'al-uncertainty-{1}-r{0}.pik'.format(r,config.ac_function)
         cache_m.registerFile(os.path.join(config.logdir,fid),fid)
-
+        if config.debug:
+            fidp = 'al-probs-{1}-r{0}.pik'.format(r,config.ac_function)
+            cache_m.registerFile(os.path.join(config.logdir,fidp),fidp)
+            
     All_Entropy_Dropout = np.zeros(shape=data_size)
     score_All = np.zeros(shape=(data_size, generator.classes))
 
@@ -282,8 +239,7 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
             ppath = model.get_mgpu_weights_cache()
             npfile = False
             
-        pred_model = _load_model_weights(config,single,spath,parallel,ppath,
-                                             sw_thread,npfile)
+        pred_model = load_model_weights(config,model,single,parallel)
         
         proba = pred_model.predict_generator(generator,
                                                 workers=5*cpu_count,
