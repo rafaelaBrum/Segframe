@@ -110,8 +110,10 @@ class Inception(GenericModel):
         
     def build(self,**kwargs):
         """
+        Optional params:
         @param pre_trained <boolean>: returned model should be pre-trained or not
         @param data_size <int>: size of the training dataset
+        @param feature <boolean>: return features instead of softmax classification
         """
         model,parallel_model = self._build(**kwargs)
         
@@ -130,17 +132,17 @@ class Inception(GenericModel):
         preload_w: return model with weights already loaded? True -> Yes
         parallel: return parallel model (overrides gpu_count avaliation)? True -> Yes
         """
+        #Weight loading for the feature extraction is done latter by requesting party
+        kwargs['preload_w'] = False
 
         if self.is_ensemble():
-            s,p = self.build_ensemble(kwargs)
+            kwargs['npfile'] = True
+            s,p = self.build_ensemble(**kwargs)
             if 'parallel' in kwargs and not kwargs['parallel']:
                 return (s,None)
             else:
                 return (s,p)
             
-        #Weight loading for the feature extraction is done latter by requesting party
-        kwargs['preload_w'] = False
-
         if 'parallel' in kwargs and not kwargs['parallel']:
             s,p = self._build(**kwargs)
             return (s,None)
@@ -158,16 +160,46 @@ class Inception(GenericModel):
         @param npfile <boolean>: loads weights from numpy files
         """
 
+        if 'data_size' in kwargs:
+            self.data_size = kwargs['data_size']
+            
+        if 'feature' in kwargs:
+            feature = kwargs['feature']
+        else:
+            feature = False
+
         if 'npfile' in kwargs:
             npfile = kwargs['npfile']
         else:
-            npfile = False
+            npfile = False            
 
+        if 'allocated_gpus' in kwargs and not kwargs['allocated_gpus'] is None:
+            allocated_gpus = kwargs['allocated_gpus']
+        else:
+            allocated_gpus = self._config.gpu_count            
+
+        width,height,channels = self._check_input_shape()
+        if backend.image_data_format() == 'channels_first':
+            input_shape = (channels, height, width)
+        else:
+            input_shape = (height, width, channels)
+        
         s_models = []
         p_models = []
+        inputs = []
         for m in range(self._config.emodels):
             self.register_ensemble(m)
-            single,parallel = self._build(**kwargs)
+            model,inp = self._build_architecture(input_shape=input_shape,training=False,
+                                                      feature=feature,preload=False,
+                                                      ensemble=True)
+
+            inputs.append(inp)
+            
+            #Updates all layer names to avoid repeated name error
+            for layer in model.layers:
+                layer.name = 'EM{}-{}'.format(m,layer.name)
+                
+            single,parallel = self._configure_compile(model,allocated_gpus)
             
             if not parallel is None:
                 if npfile:
@@ -194,26 +226,23 @@ class Inception(GenericModel):
             s_models.append(single)
             p_models.append(parallel)
 
-        s_inputs = [inp for s in s_models for inp in s.inputs]
         s_outputs = [out for s in s_models for out in s.outputs]
         p_models = list(filter(lambda x: not x is None,p_models))
         if len(p_models) > 0:
-            p_inputs = [inp for p in p_models for inp in p.inputs]
             p_outputs = [out for p in p_models for out in p.outputs]
         else:
-            p_inputs = None
             p_outputs = None
 
         #Build the ensemble output from individual models
         s_model,p_model = None,None
         ##Single GPU model
         x = Average()(s_outputs)
-        s_model = Model(inputs = s_inputs, outputs=x)
+        s_model = Model(inputs = inputs, outputs=x)
 
         ##Parallel model
-        if not p_inputs is None:
+        if not p_outputs is None:
             x = Average()(p_outputs)
-            p_model = Model(inputs=p_inputs,outputs=x)
+            p_model = Model(inputs=inputs,outputs=x)
 
         return s_model,p_model
     
@@ -248,11 +277,17 @@ class Inception(GenericModel):
             input_shape = (channels, height, width)
         else:
             input_shape = (height, width, channels)
-
-        self.cache_m = CacheManager()
         
         model = self._build_architecture(input_shape,training,feature,preload)
- 
+
+        return self._configure_compile(model,allocated_gpus)
+
+    def _configure_compile(self,model,allocated_gpus):
+        """
+        Configures, compiles, generates parallel model if needed
+
+        @param model <Keras.Model>
+        """
         #Check if previous training and LR is saved, if so, use it
         lr_cache = "{0}_learning_rate.txt".format(self.name)
         self.cache_m.registerFile(os.path.join(self._config.cache,lr_cache),lr_cache)
@@ -289,28 +324,19 @@ class Inception(GenericModel):
                 #run_metadata=p_mtd
                 )
 
-        return (model,parallel_model)
+        return (model,parallel_model)        
 
-    def _build_architecture(self,input_shape,training=None,feature=False,preload=True):
+
+    def _build_architecture(self,input_shape,training=None,feature=False,preload=True,ensemble=False):
         from . import inception_resnet_v2
 
-        if hasattr(self,'_model_n'):
-            kwargs = {'training':training,
-                        'feature':feature,
-                        'custom_top':False,
-                        'preload':preload,
-                        'model_n':self._model_n,
-                        'batch_n':True if self._config.gpu_count <= 1 else False}
-            name = 'input_{}'.format(self._model_n)
-        else:
-            kwargs = {'training':training,
-                        'feature':feature,
-                        'custom_top':False,
-                        'preload':preload,
-                        'batch_n':True if self._config.gpu_count <= 1 else False}
-            name = 'input'
-        
-        inp = Input(shape=input_shape,name=name)
+        kwargs = {'training':training,
+                    'feature':feature,
+                    'custom_top':False,
+                    'preload':preload,
+                    'batch_n':True if self._config.gpu_count <= 1 else False}
+
+        inp = Input(shape=input_shape)
                 
         inception_body = inception_resnet_v2.InceptionResNetV2(include_top=False,
                                                                 weights='imagenet',
@@ -321,5 +347,8 @@ class Inception(GenericModel):
                                                                 **kwargs)
         
 
-        return inception_body
+        if ensemble:
+            return (inception_body,inp)
+        else:
+            return inception_body
                                 

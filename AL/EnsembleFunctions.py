@@ -97,7 +97,7 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
             print("Step {0}/{1}".format(d+1,emodels))
 
         model.register_ensemble(d)
-        single,parallel = model.build(pre_load=False)
+        single,parallel = model.build(preload_w=False)
             
         pred_model = load_model_weights(config,model,single,parallel)
         
@@ -223,7 +223,7 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
             print("Step {0}/{1}".format(d+1,emodels))
             
         model.register_ensemble(d)
-        single,parallel = model.build(pre_load=False)
+        single,parallel = model.build(preload_w=False)
 
         if hasattr(model,'get_npweights_cache'):
             spath = model.get_npweights_cache(add_ext=True)
