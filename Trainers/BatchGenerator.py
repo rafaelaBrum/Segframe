@@ -123,6 +123,11 @@ class GenericIterator(Iterator):
 
         return (np.asarray(self.data[0]),np.asarray(self.data[1]))
 
+    def set_input_n(self,input_n):
+        input_n = int(input_n)
+        if input_n > 0:
+            self.input_n = input_n
+
 class SingleGenerator(GenericIterator):
     """
     Generates batches of images, applies augmentation, resizing, centering...the whole shebang.

@@ -7,6 +7,8 @@ from tqdm import tqdm
 
 from scipy.stats import mode
 
+from .Common import load_model_weights
+
 __doc__ = """
 All acquisition functions should receive:
 1 - numpy array of items
@@ -103,28 +105,15 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
                 print("[km_uncert] Model is not prepared to produce features. No feature extractor")
             return None
 
-        #Model can be loaded from previous acquisition train or from a fixed final model
-        if gpu_count > 1 and not parallel_m is None:
-            pred_model = parallel_m
-            if not config.ffeat is None and os.path.isfile(config.ffeat):
-                pred_model.load_weights(config.ffeat,by_name=True)
-                if config.info:
-                    print("Model weights loaded from: {0}".format(config.ffeat))
-            else:
-                pred_model.load_weights(model.get_mgpu_weights_cache(),by_name=True)
-                if config.info:
-                    print("Model weights loaded from: {0}".format(model.get_mgpu_weights_cache()))
+        if not model.is_ensemble():
+            pred_model = load_model_weights(config,model)
         else:
-            pred_model = single_m
-            if not config.ffeat is None and os.path.isfile(config.ffeat):
-                pred_model.load_weights(config.ffeat,by_name=True)
-                if config.info:
-                    print("Model weights loaded from: {0}".format(config.ffeat))
+            generator.set_input_n(config.emodels)
+            if not parallel_m is None:
+                pred_model = parallel_m
             else:
-                pred_model.load_weights(model.get_weights_cache(),by_name=True)
-                if config.info:
-                    print("Model weights loaded from: {0}".format(model.get_weights_cache()))
-                    
+                pred_model = single_m
+            
         #Extract features for all images in the pool
         if config.info:
             print("Starting feature extraction ({} batches)...".format(len(generator)))        
@@ -147,7 +136,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
             print("Done extraction...starting KMeans")
             stime = time.time()
         
-        km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=min(int(cpu_count/2),1)).fit(features)
+        km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=max(int(cpu_count/2),1)).fit(features)
         
         if config.verbose > 0:
             etime = time.time()
