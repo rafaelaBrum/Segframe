@@ -202,6 +202,9 @@ class Inception(GenericModel):
             single,parallel = self._configure_compile(model,allocated_gpus)
             
             if not parallel is None:
+                #Updates all layer names to avoid repeated name error
+                for layer in parallel.layers:
+                    layer.name = 'EM{}-{}'.format(m,layer.name)
                 if npfile:
                     parallel.set_weights(np.load(self.get_npmgpu_weights_cache(add_ext=True),allow_pickle=True))
                     if self._config.info:
