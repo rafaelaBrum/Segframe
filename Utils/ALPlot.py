@@ -282,7 +282,7 @@ class Plotter(object):
     def plotFromExec(self,data):
         pass
 
-    def parseResults(self,path,al_dirs,n_ids=None):
+    def parseResults(self,path,al_dirs,n_ids=None,maxx=None):
 
         def parseDirs(path,al_dirs):
             data = {}
@@ -292,7 +292,7 @@ class Plotter(object):
                 else:
                     d_path = "{0}-{1}".format(path,al_dirs[d])
                 if os.path.isdir(d_path):
-                    data[al_dirs[d]] = self.parseSlurm(d_path)
+                    data[al_dirs[d]] = self.parseSlurm(d_path,maxx=maxx)
                 else:
                     print("Results dir not found: {}".format(d_path))
             return data
@@ -324,7 +324,7 @@ class Plotter(object):
         """
         return np.asarray(range(start,(size*step)+start,step))
                               
-    def parseSlurm(self,path=None):
+    def parseSlurm(self,path=None,maxx=None):
 
         if path is None and self.path is None:
             print("No directory found")
@@ -400,6 +400,15 @@ class Plotter(object):
         data['auc'] = np.asarray(data['auc'])
         data['trainset'] = np.asarray(data['trainset'])
         data['accuracy'] = np.asarray(data['accuracy'])
+
+        if not maxx is None:
+            upl = np.where(data['trainset'] == maxx)[0][0]
+            upl += 1
+            
+            data['time'] = data['time'][:upl]
+            data['auc'] = data['auc'][:upl]
+            data['trainset'] = data['trainset'][:upl]
+            data['accuracy'] = data['accuracy'][:upl]
 
         if data['auc'].shape[0] > 0:
             print("Min AUC: {0}; Max AUC: {1}".format(data['auc'].min(),data['auc'].max()))            
@@ -562,14 +571,16 @@ if __name__ == "__main__":
     parser.add_argument('-ids', dest='ids', nargs='+', type=int, 
         help='Experiment IDs to plot.', default=None,required=False)
     parser.add_argument('-xtick', dest='xtick', nargs=1, type=int, 
-        help='xtick interval.', default=200,required=False)    
+        help='xtick interval.', default=200,required=False)
+    parser.add_argument('-maxx', dest='maxx', type=int, 
+        help='Plot maximum X.', default=None,required=False)
     parser.add_argument('-t', dest='title', type=str,default='AL Experiment', 
         help='Figure title.')
     parser.add_argument('-type', dest='tmode', type=str, nargs='+',
         help='Experiment type: \n \
         AL - General active learning experiment; \n \
         MN - MNIST dataset experiment.',
-       choices=['AL','MN','DB','OR','KM'],default='AL')
+       choices=['AL','MN','DB','OR','KM','EN'],default='AL')
     
     ##Single experiment plot
     parser.add_argument('--single', action='store_true', dest='single', default=False, 
@@ -631,7 +642,7 @@ if __name__ == "__main__":
             
         p = Plotter()
         
-        data = p.parseResults(exp_type,config.ids)
+        data = p.parseResults(exp_type,config.ids,maxx=config.maxx)
         if len(data) == 0:
             print("Something is wrong with your command options. No data to plot")
             sys.exit(1)        
@@ -671,7 +682,7 @@ if __name__ == "__main__":
             print("You should define a set of experiment IDs (-id).")
             sys.exit(1)
 
-        data = p.parseResults(exp_type,config.ids,config.n_exp)
+        data = p.parseResults(exp_type,config.ids,config.n_exp,config.maxx)
 
         if isinstance(config.confidence,list):
             config.confidence = config.confidence[0]
