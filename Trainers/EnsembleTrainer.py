@@ -177,9 +177,16 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
-                    print("[ALTrainer] No more acquisitions are in order")
+                    print("[EnsembleTrainer] No more acquisitions are in order")
                 end_train = True
-                
+
+            #If sw_thread was provided, we should check the availability of model weights
+            if not sw_thread is None:
+                for k in range(len(sw_thread)):
+                    if sw_thread[k].is_alive():
+                        print("Waiting ensemble model {} weights' to become available...".format(k))
+                        sw_thread[k].join()
+                        
             #Set load_full to false so dropout is disabled
             predictor.run(self.test_x,self.test_y,load_full=False)
             
