@@ -122,7 +122,7 @@ class ActiveLearningTrainer(Trainer):
         self.pool_x = X[:-t_idx]
         self.pool_y = Y[:-t_idx]
 
-        #Initial training set will be choosen at random from pool
+        #Initial training set will be choosen at random from pool if a default is not provided
         cache_m = CacheManager()
         if self._config.load_train and not self._config.balance:
             train_idx = cache_m.load('initial_train.pik')
