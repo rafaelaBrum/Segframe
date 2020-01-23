@@ -194,7 +194,7 @@ class GenericDS(ABC):
                     self.Y = None
                     
                 if self._config.info:
-                    print("Previous split ratio {} is different from requested one {}. Metadata will be reshuffled.".format(split,self._config.split))
+                    print("[GenericDatasource] Previous split ratio {} is different from requested one {}. Metadata will be reshuffled.".format(split,self._config.split))
                 
         if self._cache.checkFileExistence(metadata_file) and not reload_data:
             try:
@@ -206,7 +206,7 @@ class GenericDS(ABC):
                 reload_data = True
 
             if not reload_data and not reshuffle and self._verbose > 0:
-                print("[GenericDatasource] Loaded split data cache. Used previously defined splitting.")
+                print("[GenericDatasource] Loaded data cache. Previously defined splitting can be used.")
         else:
             reload_data = True
 
@@ -329,7 +329,7 @@ class GenericDS(ABC):
                 reload_data = True
                 
             if not reload_data and self._verbose > 0:
-                print("[GenericDatasource] Loaded split sampled data cache. Used previously defined splitting.")
+                print("[GenericDatasource] Loaded sampled data cache. Previously defined splitting can be used.")
         else:
             reload_data = True
         

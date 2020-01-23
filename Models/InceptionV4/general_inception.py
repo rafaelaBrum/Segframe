@@ -21,7 +21,7 @@ if tf.__version__ >= '1.14.0':
 
 #Network
 from keras.models import Sequential,Model
-from keras.layers import Input,Average
+from keras.layers import Input,Average,Concatenate
 from keras import backend, optimizers
 from keras.utils import multi_gpu_model
 from keras import backend as K
@@ -137,6 +137,7 @@ class Inception(GenericModel):
 
         if self.is_ensemble():
             kwargs['npfile'] = True
+            kwargs['feature'] = True
             s,p = self.build_ensemble(**kwargs)
             if 'parallel' in kwargs and not kwargs['parallel']:
                 return (s,None)
@@ -239,12 +240,18 @@ class Inception(GenericModel):
         #Build the ensemble output from individual models
         s_model,p_model = None,None
         ##Single GPU model
-        x = Average()(s_outputs)
+        if feature:
+            x = Concatenate()(s_outputs)
+        else:
+            x = Average()(s_outputs)
         s_model = Model(inputs = inputs, outputs=x)
 
         ##Parallel model
         if not p_outputs is None:
-            x = Average()(p_outputs)
+            if feature:
+                x = Concatenate()(p_outputs)
+            else:
+                x = Average()(p_outputs)
             p_model = Model(inputs=inputs,outputs=x)
 
         return s_model,p_model

@@ -402,8 +402,12 @@ class Plotter(object):
         data['accuracy'] = np.asarray(data['accuracy'])
 
         if not maxx is None:
-            upl = np.where(data['trainset'] == maxx)[0][0]
-            upl += 1
+            if maxx > np.max(data['trainset']):
+                print("Slurm file ({}) does not have that many samples ({}). Maximum is {}.".format(slurm_path,maxx,np.max(data['trainset'])))
+                sys.exit(1)
+            else:
+                upl = np.where(data['trainset'] == maxx)[0][0]
+                upl += 1
             
             data['time'] = data['time'][:upl]
             data['auc'] = data['auc'][:upl]
