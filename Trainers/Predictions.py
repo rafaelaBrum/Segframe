@@ -95,7 +95,7 @@ class Predictor(object):
         else:
             self._ensemble = False
 
-    def run(self,x_test=None,y_test=None,load_full=True):
+    def run(self,x_test=None,y_test=None,load_full=True,net_model=None):
         """
         Checks configurations, loads correct module, loads data
         Trains!
@@ -104,13 +104,19 @@ class Predictor(object):
         by the Models module.
 
         If provided x_test and y_test data, runs prediction with them.
+
+        @param load_full <boolean>: loads full model with load_model function
+        @param net_model <GenericModel subclass>: performs predictions with this model
         """
         net_name = self._config.network
         if net_name is None or net_name == '':
             print("A network should be specified")
             return Exitcodes.RUNTIME_ERROR
-                
-        if self._config.data:
+
+        #Load DS when a prediction only run is being made
+        if not net_model is None:
+            self._ds = net_model.get_ds()
+        elif self._config.data:
             dsm = importlib.import_module('Datasources',self._config.data)
             if self._config.testdir:
                 self._ds = getattr(dsm,self._config.data)(self._config.testdir,self._config.keepimg,self._config)
@@ -119,11 +125,12 @@ class Predictor(object):
         else:
             self._ds = CellRep(self._config.predst,self._config.keepimg,self._config)
 
-        net_module = importlib.import_module('Models',net_name)
-        net_model = getattr(net_module,net_name)(self._config,self._ds)
-
-        if self._config.testdir is None and (x_test is None or y_test is None):
+        if self._config.testdir is None and (x_test is None or y_test is None) and net_model is None:
             self._ds.load_metadata()
+            
+        if net_model is None:
+            net_module = importlib.import_module('Models',net_name)
+            net_model = getattr(net_module,net_name)(self._config,self._ds)
 
         self.run_test(net_model,x_test,y_test,load_full)
         
@@ -182,7 +189,7 @@ class Predictor(object):
         if self._ensemble:
             #Weights should be loaded during ensemble build
             if hasattr(model,'build_ensemble'):
-                single,parallel = model.build_ensemble(training=False,npfile=True)
+                single,parallel = model.build_ensemble(training=False,npfile=True,new=True)
                 if parallel:
                     pred_model = parallel
                 else:

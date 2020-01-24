@@ -22,7 +22,7 @@ if tf.__version__ >= '1.14.0':
 #Network
 from keras.models import Sequential,Model
 from keras.layers import Input,Average,Concatenate
-from keras import backend, optimizers
+from keras import optimizers
 from keras.utils import multi_gpu_model
 from keras import backend as K
 
@@ -159,6 +159,7 @@ class Inception(GenericModel):
         Default build: avareges the output of the corresponding softmaxes
 
         @param npfile <boolean>: loads weights from numpy files
+        @param new <boolean>: build a new ensemble body or use the last built
         """
 
         if 'data_size' in kwargs:
@@ -174,61 +175,31 @@ class Inception(GenericModel):
         else:
             npfile = False            
 
+        if 'new' in kwargs:
+            new = kwargs['new']
+        else:
+            new = True
+            
         if 'allocated_gpus' in kwargs and not kwargs['allocated_gpus'] is None:
             allocated_gpus = kwargs['allocated_gpus']
         else:
             allocated_gpus = self._config.gpu_count            
 
-        width,height,channels = self._check_input_shape()
-        if backend.image_data_format() == 'channels_first':
-            input_shape = (channels, height, width)
-        else:
-            input_shape = (height, width, channels)
+        inputs = None
+        s_models = None
+        p_models = None
         
-        s_models = []
-        p_models = []
-        inputs = []
-        for m in range(self._config.emodels):
-            self.register_ensemble(m)
-            model,inp = self._build_architecture(input_shape=input_shape,training=False,
-                                                      feature=feature,preload=False,
-                                                      ensemble=True)
-
-            inputs.append(inp)
-            
-            #Updates all layer names to avoid repeated name error
-            for layer in model.layers:
-                layer.name = 'EM{}-{}'.format(m,layer.name)
-                
-            single,parallel = self._configure_compile(model,allocated_gpus)
-            
-            if not parallel is None:
-                #Updates all layer names to avoid repeated name error
-                for layer in parallel.layers:
-                    layer.name = 'EM{}-{}'.format(m,layer.name)
-                if npfile:
-                    parallel.set_weights(np.load(self.get_npmgpu_weights_cache(add_ext=True),allow_pickle=True))
-                    if self._config.info:
-                        print("[Inception] loaded ensemble weights: {}".format(self.get_npmgpu_weights_cache(add_ext=True)))
-                elif os.path.isfile(self.get_mgpu_weights_cache()):                    
-                    parallel.load_weights(self.get_mgpu_weights_cache(),by_name=True)
-                    if self._config.info:
-                        print("[Inception] loaded ensemble weights: {}".format(self.get_mgpu_weights_cache()))
-            else:
-                parallel = None
-
-            if npfile:
-                single.set_weights(np.load(self.get_npweights_cache(add_ext=True),allow_pickle=True))
-                if self._config.info:
-                    print("[Inception] loaded ensemble weights: {}".format(self.get_npweights_cache(add_ext=True)))
-            elif os.path.isfile(self.get_weights_cache()):
-                single.load_weights(self.get_weights_cache(),by_name=True)
-            else:
-                if self._config.info:
-                    print("[Inception] Could not load ensemble weights (model {})".format(m))
-                single = None
-            s_models.append(single)
-            p_models.append(parallel)
+        if new or not (hasattr(self,'_s_models') or hasattr(self,'_p_models')):
+            if self._config.info and not new:
+                print("[Inception] No previous ensemble models stored, building new ones")
+            s_models,p_models,inputs = self._build_ensemble_body(feature,npfile,allocated_gpus)
+            self._s_models = s_models
+            self._p_models = p_models
+            self._en_inputs = inputs
+        else:
+            s_models = self._s_models
+            p_models = self._p_models
+            inputs = self._en_inputs
 
         s_outputs = [out for s in s_models for out in s.outputs]
         p_models = list(filter(lambda x: not x is None,p_models))
@@ -240,6 +211,8 @@ class Inception(GenericModel):
         #Build the ensemble output from individual models
         s_model,p_model = None,None
         ##Single GPU model
+        ## TODO: to enable full model reuse, we should convert feature extractor and classificator
+        ## between one another
         if feature:
             x = Concatenate()(s_outputs)
         else:
@@ -283,7 +256,7 @@ class Inception(GenericModel):
         else:
             allocated_gpus = self._config.gpu_count
             
-        if backend.image_data_format() == 'channels_first':
+        if K.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
         else:
             input_shape = (height, width, channels)
@@ -362,3 +335,63 @@ class Inception(GenericModel):
         else:
             return inception_body
                                 
+    def _build_ensemble_body(self,feature,npfile,allocated_gpus):
+        s_models = []
+        p_models = []
+        inputs = []
+        
+        width,height,channels = self._check_input_shape()
+        if K.image_data_format() == 'channels_first':
+            input_shape = (channels, height, width)
+        else:
+            input_shape = (height, width, channels)
+            
+        for m in range(self._config.emodels):
+            self.register_ensemble(m)
+            model,inp = self._build_architecture(input_shape=input_shape,training=False,
+                                                      feature=feature,preload=False,
+                                                      ensemble=True)
+
+            inputs.append(inp)
+            
+            #Updates all layer names to avoid repeated name error
+            for layer in model.layers:
+                layer.name = 'EM{}-{}'.format(m,layer.name)
+                
+            single,parallel = self._configure_compile(model,allocated_gpus)
+            
+            single,parallel = self._load_weights(single,parallel,npfile,m)
+            
+            s_models.append(single)
+            p_models.append(parallel)        
+
+        return s_models,p_models,inputs
+
+    def _load_weights(self,single,parallel,npfile,m=''):
+        if not parallel is None:
+            #Updates all layer names to avoid repeated name error
+            for layer in parallel.layers:
+                layer.name = 'EM{}-{}'.format(m,layer.name)
+            if npfile:
+                parallel.set_weights(np.load(self.get_npmgpu_weights_cache(add_ext=True),allow_pickle=True))
+                if self._config.info:
+                    print("[Inception] loaded ensemble weights: {}".format(self.get_npmgpu_weights_cache(add_ext=True)))
+            elif os.path.isfile(self.get_mgpu_weights_cache()):                    
+                parallel.load_weights(self.get_mgpu_weights_cache(),by_name=True)
+                if self._config.info:
+                    print("[Inception] loaded ensemble weights: {}".format(self.get_mgpu_weights_cache()))
+        else:
+            parallel = None
+
+        if npfile:
+            single.set_weights(np.load(self.get_npweights_cache(add_ext=True),allow_pickle=True))
+            if self._config.info:
+                print("[Inception] loaded ensemble weights: {}".format(self.get_npweights_cache(add_ext=True)))
+        elif os.path.isfile(self.get_weights_cache()):
+            single.load_weights(self.get_weights_cache(),by_name=True)
+        else:
+            if self._config.info:
+                print("[Inception] Could not load ensemble weights (model {})".format(m))
+            single = None
+
+        return single,parallel

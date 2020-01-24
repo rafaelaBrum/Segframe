@@ -38,6 +38,9 @@ class GenericModel(ABC):
 
     def is_ensemble(self):
         return self._config.strategy == 'EnsembleTrainer'
+
+    def get_ds(self):
+        return self._ds
     
     @abstractmethod
     def build(self,**kwargs):
