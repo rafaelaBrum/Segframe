@@ -217,27 +217,14 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
         if config.info:
             print("Starting ensemble sampling...")
         l = range(emodels)
-                
+
+    single,parallel = model.build(preload_w=False)
+    
     for d in l:
         if not pbar and config.info:
             print("Step {0}/{1}".format(d+1,emodels))
             
         model.register_ensemble(d)
-        single,parallel = model.build(preload_w=False)
-
-        if hasattr(model,'get_npweights_cache'):
-            spath = model.get_npweights_cache(add_ext=True)
-            npfile = True
-        else:
-            spath = model.get_weights_cache()
-            npfile = False
-            
-        if hasattr(model,'get_npmgpu_weights_cache'):
-            ppath = model.get_npmgpu_weights_cache(add_ext=True)
-            npfile = True
-        else:
-            ppath = model.get_mgpu_weights_cache()
-            npfile = False
             
         pred_model = load_model_weights(config,model,single,parallel)
         

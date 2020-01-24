@@ -188,7 +188,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                         sw_thread[k].join()
                         
             #Set load_full to false so dropout is disabled
-            predictor.run(self.test_x,self.test_y,load_full=False)
+            predictor.run(self.test_x,self.test_y,load_full=False,net_model=model)
             
             #Attempt to free GPU memory
             K.clear_session()
