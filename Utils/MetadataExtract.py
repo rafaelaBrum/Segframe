@@ -90,6 +90,34 @@ def _process_wsi_cluster(km,s,members,config):
 
     return wsi_mean
 
+def _save_wsi_stats(wsis,dest,ac_save):
+
+    init_k = 1
+    for a in ac_save:
+        save_to = os.path.join(dest,'patch_coordinates-{}-{}.txt'.format(init_k,a))
+        fd = open(save_to,'w')
+        fd.write('X-coordinate Y-coordinate Width Height\n')
+        patches = {}
+        for k in range(init_k,a):
+            for w in wsis[k]:
+                patches.setdefault(w,[])
+                patches[w].extend(wsis[k][w])
+
+        for ws in patches:
+            fd.write('WSI {}: {}\n'.format(ws,len(patches[ws])))
+            for i in patches[ws]:
+                coord = i.getCoord()
+                if not coord is None:
+                    try:
+                        dim = i.getImgDim()
+                    except FileNotFoundError:
+                        dim = (0,0)
+                    fd.write('{0} {1} {2} {3}\n'.format(coord[0],coord[1],dim[0],dim[1]))
+                else:
+                    fd.write('No coordinates\n')
+        init_k = a
+        fd.close()
+    
 def process_wsi_metadata(config):
     """
     Metadata should contain information about the WSI that originated the patch
@@ -102,10 +130,13 @@ def process_wsi_metadata(config):
     total_pos = 0
     discarded = 0
     
-    if config.ac_n[0] == -1:
+    if config.ac_n is None or config.save:
         #Use all data if specific acquisitions were not defined
         config.ac_n = list(ac_imgs.keys())
         config.ac_n.sort()
+
+    if config.save and config.ac_save is None:
+        config.ac_save = [min(config.ac_n),max(config.ac_n)]
         
     for k in config.ac_n:
         print("In acquisition {}:\n".format(k)) 
@@ -113,7 +144,7 @@ def process_wsi_metadata(config):
         
         if not k in ac_imgs:
             continue
-
+            
         ac_patches = len(ac_imgs[k][0])
         total_patches += ac_patches
         for ic in range(ac_patches):
@@ -152,6 +183,9 @@ def process_wsi_metadata(config):
 
     print("{} patches were disregarded for not having coordinate data".format(discarded))
 
+    if config.save:
+        _save_wsi_stats(acquisitions,config.sdir,config.ac_save)
+        
     print("\n"+" "*10+"ACQUIRED PATCHES STATISTICS\n\n")
     #This dict will store, for each WSI, [#positive patches acquired, #total of positive patches]
     pos_patches = {}
@@ -385,8 +419,8 @@ if __name__ == "__main__":
     parser.add_argument('--train_set', dest='trainset', type=str, nargs=2,
         help='Check if the training sets of two experiments are the same.', default=None)
         
-    parser.add_argument('-ac', dest='ac_n', nargs='?', type=int, const=[-1],
-        help='Acquisitions to obtain images.', default=None, required=True)
+    parser.add_argument('-ac', dest='ac_n', nargs='+', type=int,
+        help='Acquisitions to obtain images.', default=None, required=False)
     parser.add_argument('-sd', dest='sdir', type=str,default=None, 
         help='Experiment result path.')
     parser.add_argument('-od', dest='out_dir', type=str,default='img_grab', 
@@ -405,6 +439,10 @@ if __name__ == "__main__":
         help='Radius in pixels to group patches in each cluster.', default=300,required=False)
     parser.add_argument('-cache_file', dest='cache_file', type=str,default=None, 
         help='Dataset metadata for WSI statistics.')
+    parser.add_argument('-save', action='store_true', dest='save',
+        help='Saves generated statistics to file.',default=False)    
+    parser.add_argument('-ac_save', dest='ac_save', nargs='+', type=int,
+        help='Save image statistics from this this acquisitions.', default=None, required=False)
     
     config, unparsed = parser.parse_known_args()
 
