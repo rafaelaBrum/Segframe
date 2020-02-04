@@ -302,6 +302,11 @@ def process_al_metadata(config):
         os.mkdir(config.out_dir)
 
     ac_imgs = _process_al_metadata(config)
+
+    if config.ac_n is None:
+        #Use all data if specific acquisitions were not defined
+        config.ac_n = list(ac_imgs.keys())
+        config.ac_n.sort()    
     
     acquisitions = [ac_imgs[k][0][:config.n] for k in config.ac_n]
 
