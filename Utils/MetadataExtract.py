@@ -8,6 +8,7 @@ import shutil
 import math
 import argparse
 import pickle
+import importlib
 from sklearn.cluster import KMeans
     
 def _process_al_metadata(config):
@@ -117,7 +118,34 @@ def _save_wsi_stats(wsis,dest,ac_save):
                     fd.write('No coordinates\n')
         init_k = a
         fd.close()
-    
+
+def _generate_label_files(config):
+    """
+    This should be run after process_al_metadata
+    """
+    dirs = os.listdir(config.out_dir)
+
+    labels = {}
+    for d in dirs:
+        if not d in labels:
+            ol = open(os.path.join(config.cp_orig,d,'label.txt'),'r')
+            labels[d] = {}
+            for line in ol.readlines():
+                fields = line.strip().split(' ')
+                labels[d][fields[0]] = fields[1:]
+            ol.close()
+        copy_to = os.path.join(config.out_dir,d)
+        if os.path.isfile(os.path.join(copy_to,'label.txt')):
+            fd = open(os.path.join(copy_to,'label.txt'),'a')
+        else:
+            fd = open(os.path.join(copy_to,'label.txt'),'w')
+        for i in os.listdir(copy_to):
+            if i.endswith('png'):
+                fd.write('{} {}\n'.format(i,' '.join(labels[d][i])))
+
+        fd.close()
+
+
 def process_wsi_metadata(config):
     """
     Metadata should contain information about the WSI that originated the patch
@@ -298,8 +326,18 @@ def process_wsi_metadata(config):
         print("WSIs in dataset: {}".format(len(ds_wsis)))
         
 def process_al_metadata(config):
+    def change_root(s,d):
+        """
+        s -> original path
+        d -> change location to d
+        """
+        components = tuple(s.split(os.path.sep)[-2:])
+        relative_path = os.path.join(*components)
+
+        return os.path.join(d,relative_path)
+    
     if not os.path.isdir(config.out_dir):
-        os.mkdir(config.out_dir)
+        os.makedirs(config.out_dir)
 
     ac_imgs = _process_al_metadata(config)
 
@@ -317,16 +355,30 @@ def process_al_metadata(config):
     same_name = {}
     for a in range(len(config.ac_n)):
         ac_path = os.path.join(config.out_dir,str(config.ac_n[a]))
-        if not os.path.isdir(ac_path):
+        
+        if not os.path.isdir(ac_path) and not config.keep:
             os.mkdir(ac_path)
+            
         for img in acquisitions[a]:
-            img_name = os.path.basename(img.getPath())
-            if img_name in same_name:
-                print("Images with the same name detected: {}\n{}\n{}".format(img_name,img.getPath(),same_name[img_name]))
+            img.setPath(change_root(img.getPath(),config.cp_orig))
+            if not config.keep:
+                img_name = os.path.basename(img.getPath())
+                if img_name in same_name:
+                    print("Images with the same name detected: {}\n{}\n{}".format(img_name,img.getPath(),same_name[img_name]))
+                else:
+                    same_name[img_name] = img.getPath()
+                shutil.copy(img.getPath(),ac_path)
             else:
-                same_name[img_name] = img.getPath()
-            shutil.copy(img.getPath(),ac_path)
+                cur_dir = os.path.split(os.path.dirname(img.getPath()))[-1]
+                copy_to = os.path.join(config.out_dir,cur_dir)
+                if not os.path.isdir(copy_to):
+                    os.mkdir(copy_to)
+                shutil.copy(img.getPath(),copy_to)
 
+    if config.gen_label:
+        print("Generating label files...")
+        _generate_label_files(config)
+        
     print("Acquired images copied to output dir.")
 
 def process_cluster_metadata(config):
@@ -428,6 +480,8 @@ if __name__ == "__main__":
         help='Acquisitions to obtain images.', default=None, required=False)
     parser.add_argument('-sd', dest='sdir', type=str,default=None, 
         help='Experiment result path.')
+    parser.add_argument('-ds', dest='ds', type=str,default='CellRep', 
+        help='Dataset used in experiments.')        
     parser.add_argument('-od', dest='out_dir', type=str,default='img_grab', 
         help='Save selected images to this directory.')
     parser.add_argument('-n', dest='n', type=int, 
@@ -448,6 +502,10 @@ if __name__ == "__main__":
         help='Saves generated statistics to file.',default=False)    
     parser.add_argument('-ac_save', dest='ac_save', nargs='+', type=int,
         help='Save image statistics from this this acquisitions.', default=None, required=False)
+    parser.add_argument('-keep', action='store_true', dest='keep',
+        help='Keep original dataset structure when copying tiles.',default=False)    
+    parser.add_argument('-gen_label', action='store_true', dest='gen_label',
+        help='Generate label file for extracted patches.',default=False)
     
     config, unparsed = parser.parse_known_args()
 
