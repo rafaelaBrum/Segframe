@@ -146,6 +146,28 @@ def _generate_label_files(config):
         fd.close()
 
 
+def _append_label(config):
+    """
+    This should be run after process_al_metadata
+    """
+    dirs = os.listdir(config.out_dir)
+
+    labels = {}
+    for d in dirs:
+        if not d in labels:
+            ol = open(os.path.join(config.cp_orig,d,'label.txt'),'r')
+            labels[d] = {}
+            for line in ol.readlines():
+                fields = line.strip().split(' ')
+                labels[d][fields[0]] = fields[1] if int(fields[1]) >= 0 else '0'
+            ol.close()
+        move_to = os.path.join(config.out_dir,d)
+        for i in os.listdir(move_to):
+            if i.endswith('png'):
+                nn = i.split('.')
+                nn[0] += '_{}'.format(labels[d][i])
+                shutil.move(os.path.join(move_to,i),os.path.join(move_to,'.'.join(nn)))
+                
 def process_wsi_metadata(config):
     """
     Metadata should contain information about the WSI that originated the patch
@@ -378,6 +400,9 @@ def process_al_metadata(config):
     if config.gen_label:
         print("Generating label files...")
         _generate_label_files(config)
+    elif config.add_label:
+        print("Appending label to file names...")
+        _append_label(config)
         
     print("Acquired images copied to output dir.")
 
@@ -506,6 +531,8 @@ if __name__ == "__main__":
         help='Keep original dataset structure when copying tiles.',default=False)    
     parser.add_argument('-gen_label', action='store_true', dest='gen_label',
         help='Generate label file for extracted patches.',default=False)
+    parser.add_argument('-add_label', action='store_true', dest='add_label',
+        help='Append label to file names as used in quip_classification.',default=False)
     
     config, unparsed = parser.parse_known_args()
 
