@@ -244,7 +244,7 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
         Entropy_Per_Dropout = np.sum(Entropy_Compute, axis=1)
         
         All_Entropy_Dropout = All_Entropy_Dropout + Entropy_Per_Dropout 
-
+        del(proba)
 
     Avg_Pi = np.divide(score_All, emodels)
     Log_Avg_Pi = np.log2(Avg_Pi)
@@ -259,9 +259,9 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
 
     U_X = G_X - F_X
 
-    # THIS FINDS THE MINIMUM INDEX 
-    # a_1d = U_X.flatten()
-    # x_pool_index = a_1d.argsort()[-Queries:]
+    #Release memory
+    del(score_All)
+    del(All_Entropy_Dropout)
 
     a_1d = U_X.flatten()
     x_pool_index = a_1d.argsort()[-query:][::-1]    

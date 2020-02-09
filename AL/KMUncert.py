@@ -137,7 +137,8 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
             stime = time.time()
         
         km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=max(int(cpu_count/2),1)).fit(features)
-        
+        del(features)
+ 
         if config.verbose > 0:
             etime = time.time()
             td = timedelta(seconds=(etime-stime))
