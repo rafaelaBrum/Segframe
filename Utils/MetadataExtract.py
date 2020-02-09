@@ -91,6 +91,31 @@ def _process_wsi_cluster(km,s,members,config):
 
     return wsi_mean
 
+def _combine_acquired_ds(wsis,ds_wsis,max_w=20):
+    """
+    wsis and ds_wsis: dictionary of tuples:
+    wsi[k] -> ([imgs],[labels])
+    k -> WSI name
+    """
+    acquired = list(wsis.keys())
+    acquired.sort(key=lambda x:len(wsis[x][0]))
+
+    acquired = acquired[:max_w]
+
+    total_patches = 0
+    for d in ds_wsis:
+        total_patches += len(ds_wsis[d][0])
+
+    print("\n"*3 + " "*10 + "CHECKING ACQUIRED IMAGES AGAINST DATASET")
+    print(" "*10 + "Total of patches in dataset: {}".format(total_patches))
+    for w in acquired:
+        acq = len(wsis[w][0])
+        dsp = len(ds_wsis[w][0])
+        print("WSI {}:".format(w))
+        print("   - {} patche(s) acquired".format(acq))
+        print("   - {:2.4f} % of available patches from the WSI ({})".format(100*acq/dsp,dsp))
+        print("   - {:2.4f} % of dataset patches are from this WSI".format(100*dsp/total_patches))
+        
 def _save_wsi_stats(wsis,dest,ac_save):
 
     init_k = 1
@@ -346,7 +371,10 @@ def process_wsi_metadata(config):
         print("Total patches in dataset: {}".format(ac_patches))
         print("Total of positive patches in dataset: {} ({:2.2f}%)".format(total_pos,100*total_pos/ac_patches))
         print("WSIs in dataset: {}".format(len(ds_wsis)))
-        
+
+        if config.comb_wsi:
+            _combine_acquired_ds(wsis,ds_wsis)
+            
 def process_al_metadata(config):
     def change_root(s,d):
         """
@@ -533,6 +561,8 @@ if __name__ == "__main__":
         help='Generate label file for extracted patches.',default=False)
     parser.add_argument('-add_label', action='store_true', dest='add_label',
         help='Append label to file names as used in quip_classification.',default=False)
+    parser.add_argument('-comb_wsi', action='store_true', dest='comb_wsi',
+        help='Check patches acquired from a WSI in comparison to total WSI patches available .',default=False)
     
     config, unparsed = parser.parse_known_args()
 
