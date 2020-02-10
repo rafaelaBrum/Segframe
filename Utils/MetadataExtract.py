@@ -78,13 +78,14 @@ def _process_wsi_cluster(km,s,members,config):
             if dist < config.radius:
                 distances[members[p]] = dist
                 count_m += 1
-        mean_d = mean_d / c_count
-        wsi_mean += mean_d
         print("    - patches in cluster: {}".format(idx.shape[0]))
         print("    - {} patches are within {} pixels from cluster center".format(count_m,config.radius))
-        wrad += count_m
-        print("    - {:2.2f} % of cluster patches are within range".format(100*count_m/c_count))
+        if c_count > 0:
+            mean_d = mean_d / c_count
+            wsi_mean += mean_d
+            print("    - {:2.2f} % of cluster patches are within range".format(100*count_m/c_count))
         print("    - Mean distance from cluster center: {:.1f}".format(mean_d))
+        wrad += count_m        
     wsi_mean = wsi_mean/config.nc
     print("{:2.2f}% of all WSI patches are within cluster center ranges".format(100*wrad/len(members)))
     print("Mean distance of clusterd patches to centers: {:.1f}".format(wsi_mean))
