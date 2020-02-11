@@ -205,6 +205,7 @@ def process_wsi_metadata(config):
     total_patches = 0
     total_pos = 0
     discarded = 0
+    positives = []
     
     if config.ac_n is None or config.save:
         #Use all data if specific acquisitions were not defined
@@ -223,10 +224,14 @@ def process_wsi_metadata(config):
             
         ac_patches = len(ac_imgs[k][0])
         total_patches += ac_patches
+        pos_count = 0
         for ic in range(ac_patches):
             img = ac_imgs[k][0][ic]
             label = ac_imgs[k][1][ic]
-            
+
+            if label > 0:
+                pos_count += 1
+                
             if hasattr(img,'getOrigin'):
                 origin = img.getOrigin()
             elif hasattr(img,'_origin'):
@@ -253,10 +258,12 @@ def process_wsi_metadata(config):
             else:
                 acquisitions[k][origin] = [img]
 
+        positives.append(pos_count)
         for w in acquisitions[k]:
             coords = [str(p.getCoord()) for p in acquisitions[k][w]]
-            print(' '*3 + '**{} ({} patches):{}'.format(w,len(coords),''.join(coords)))
-
+            print(' '*3 + '**{} ({} patches):{}'.format(w,len(coords),','.join(coords)))
+        print("   Positive patches acquired: {} ({:2.2f})".format(pos_count,pos_count/ac_patches))
+        
     print("{} patches were disregarded for not having coordinate data".format(discarded))
 
     if config.save:
@@ -522,7 +529,7 @@ if __name__ == "__main__":
         Network for Image Segmentation.')
 
     parser.add_argument('--meta', dest='meta', action='store_true', 
-        help='Acquire from ALTrainer metadata.', default=False)
+        help='Acquire images from ALTrainer metadata.', default=False)
     parser.add_argument('--cluster', dest='cluster', action='store_true', 
         help='Acquire from KM clustering metadata.', default=False)
     parser.add_argument('--wsi', dest='wsi', action='store_true', 
