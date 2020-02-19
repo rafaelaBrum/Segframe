@@ -4,3 +4,5 @@
 #from .CVImage import CVImage
 from .PImage import PImage
 from .NPImage import NPImage
+
+from .Preprocess import background,white_ratio
