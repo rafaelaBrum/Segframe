@@ -2,6 +2,7 @@ import numpy as np
 import openslide
 import sys
 import os
+import time
 from PIL import Image
 import argparse
 import multiprocessing
@@ -9,37 +10,115 @@ import multiprocessing
 #Local functions
 from Preprocessing import background,white_ratio
 
-def make_tiles(slide_name,output_folder,patch_size_20X,wr):
+
+def _check_heatmap_size(imid,width,height,hms):
+    print("Heatmap: {}".format(hms[imid]['path']))
+    hm = Image.open(hms[imid]['path'])
+    hm_w,hm_h = hm.size
+
+    pw = round(50*hm_w/hms[imid]['mpp'])
+    ph = round(50*hm_h/hms[imid]['mpp'])
+    if pw != width or ph != height:
+        print("Shape mismatch:\n -WSI width:{0}; HM converted:{1};\n -WSI height:{2}; HM converted:{3}".format(width,pw,height,ph))
+    else:
+        print("Shape ok!")
+        
+
+def get_patch_label(imid,x,y,pw,hms,debug=False):
+    """
+    Extracts patch labels from heatmaps
+    """
+    hm_x = x*hms[imid]['mpp']/50
+    hm_y = y*hms[imid]['mpp']/50
+
+    hm_w = pw*hms[imid]['mpp']/50
+    hm = Image.open(hms[imid]['path'])
+    hm_roi = hm.crop((hm_x,hm_y,hm_x+hm_w,hm_y+hm_w))
+    del(hm)
+    np_hm = np.array(hm_roi)
+    if debug:
+        hm_roi.show()
+        time.sleep(10)
+
+    r,g,b = np_hm[:,:,0],np_hm[:,:,1],np_hm[:,:,2]
+    print("Red:\n {}".format(r))
+    print("Green:\n {}".format(g))    
+    print("Blue:\n {}".format(b))
+    
+def check_heatmaps(hm_path,wsis):
+    """
+    Checks if all WSIs in source dir have a corresponding heatmap
+    
+    Returns: dictionary of dictionarys
+    k -> {'path': path to the slide's heatmap}
+    """
+    if hm_path is None or not os.path.isdir(hm_path):
+        print("Path not found: {}".format(hm_path))
+        sys.exit(1)
+        
+    cancer_t = os.listdir(hm_path)
+    cancer_t = list(filter(lambda d: os.path.isdir(os.path.join(hm_path,d)),cancer_t))
+
+    hms = {}
+    for k in cancer_t:
+        for img in os.listdir(os.path.join(hm_path,k)):
+            img_id = img.split('.')[0]
+            hms[img_id] = {'path':os.path.join(hm_path,k,img)}
+
+    removed = 0
+    for w in wsis:
+        w_id = w.split('.')[0]
+        if not w_id in hms:
+            print("Slide {} has no heatmap.".format(w))
+            wsis.remove(w)
+            removed += 1
+
+    if removed == 0:
+        print("All WSIs have a corresponding heatmap.")
+        
+    return wsis,hms
+
+def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False):
+    imid = os.path.basename(slide_name).split('.')[0]
+    
     try:
         oslide = openslide.OpenSlide(slide_name);
         #mag = 10.0 / float(oslide.properties[openslide.PROPERTY_NAME_MPP_X]);
         if openslide.PROPERTY_NAME_MPP_X in oslide.properties:
-            mag = 10.0 / float(oslide.properties[openslide.PROPERTY_NAME_MPP_X]);
+            mpp = float(oslide.properties[openslide.PROPERTY_NAME_MPP_X]);
+            print("Image MPP: {}".format(mpp))
+            if not hms is None:
+                hms[imid]['mpp'] = mpp
+            mag = 10.0 / mpp
         elif "XResolution" in oslide.properties:
             mag = 10.0 / float(oslide.properties["XResolution"]);
         elif 'tiff.XResolution' in oslide.properties:   # for Multiplex IHC WSIs, .tiff images
             mag = 10.0 / float(oslide.properties["tiff.XResolution"]);
         else:
             mag = 10.0 / float(0.254);
-        pw = int(patch_size_20X * mag / 20);
-        width = oslide.dimensions[0];
-        height = oslide.dimensions[1];
     except:
         print('{}: exception caught'.format(slide_name));
         exit(1);
 
+    pw = int(patch_size_20X * mag / 20);
+    width = oslide.dimensions[0];
+    height = oslide.dimensions[1];
 
     pcount = 0
     print(slide_name, width, height);
-
+    if not hms is None and debug:
+        _check_heatmap_size(imid,width,height,hms)
+        
     for x in range(1, width, pw):
         for y in range(1, height, pw):
             if x + pw > width:
-                pw_x = width - x;
+                #pw_x = width - x;
+                continue
             else:
                 pw_x = pw;
             if y + pw > height:
-                pw_y = height - y;
+                #pw_y = height - y;
+                continue
             else:
                 pw_y = pw;
 
@@ -52,9 +131,16 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr):
             np_patch = np.array(patch)
             if not background(np_patch) and white_ratio(np_patch) <= wr:
                 patch = patch.resize((int(patch_size_20X * pw_x / pw), int(patch_size_20X * pw_y / pw)), Image.ANTIALIAS);
-                fname = '{}/{}_{}_{}_{}.png'.format(output_folder, x, y, pw, patch_size_20X);
+                if not hms is None:
+                    label = get_patch_label(imid,x,y,pw,hms,debug)
+                    #TODO: keep structure as in the heatmaps dir
+                    fname = '{}/{}-{}-{}-{}_{}.png'.format(output_folder, x, y, pw, patch_size_20X,label);
+                else:
+                    fname = '{}/{}-{}-{}-{}.png'.format(output_folder, x, y, pw, patch_size_20X);
                 patch.save(fname);
                 pcount += 1
+
+            del(np_patch)
 
     oslide.close()
     return pcount
@@ -81,6 +167,8 @@ if __name__ == "__main__":
         help='Patch size in 20x magnification (Default 500)', default=500,required=False)
     parser.add_argument('-wr', dest='white', type=float, 
         help='Maximum white ratio allowed for each patch (Default: 0.20)', default=0.2,required=False)
+    parser.add_argument('-db', action='store_true', dest='debug',
+        help='Use to make extra checks on labels and conversions.',default=False)    
     
     config, unparsed = parser.parse_known_args()
 
@@ -96,8 +184,14 @@ if __name__ == "__main__":
     
     results = None
     total_patches = 0
+
+    hms = None
+    if config.label:
+        wsis,hms = check_heatmaps(config.heatmap,wsis)
+        
     with multiprocessing.Pool(processes=config.mp) as pool:
-        results = [pool.apply_async(make_tiles,(os.path.join(config.ds,i),config.out_dir,config.patch_size,config.white)) for i in wsis]
+        results = [pool.apply_async(make_tiles,(os.path.join(config.ds,i),config.out_dir,config.patch_size,
+                                                    config.white,hms,config.debug)) for i in wsis]
         total_patches = sum([r.get() for r in results])
 
     print("Total of patches generated: {}".format(total_patches))
