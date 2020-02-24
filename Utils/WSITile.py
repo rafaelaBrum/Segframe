@@ -33,6 +33,9 @@ def get_patch_label(imid,x,y,pw,hms,debug=False):
 
     hm_w = pw*hms[imid]['mpp']/50
     hm = Image.open(hms[imid]['path'])
+    if not 'cancer_t' in hms[imid]:
+        cancer_t = os.path.split(os.path.dirname(hms[imid]['path']))[-1]
+        hms[imid]['cancer_t'] = cancer_t
     hm_roi = hm.crop((hm_x,hm_y,hm_x+hm_w,hm_y+hm_w))
     del(hm)
     np_hm = np.array(hm_roi)
@@ -41,9 +44,15 @@ def get_patch_label(imid,x,y,pw,hms,debug=False):
         time.sleep(10)
 
     r,g,b = np_hm[:,:,0],np_hm[:,:,1],np_hm[:,:,2]
-    print("Red:\n {}".format(r))
-    print("Green:\n {}".format(g))    
-    print("Blue:\n {}".format(b))
+    r_count = np.where(r == 255)[0].shape[0]
+    b_count = np.where(b == 255)[0].shape[0]
+    print("Red pixels: {}".format(r_count))
+    print("Blue pixels: {}".format(b_count))
+
+    if r_count > 0:
+        return 1
+    else:
+        return 0
     
 def check_heatmaps(hm_path,wsis):
     """
@@ -133,8 +142,10 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False):
                 patch = patch.resize((int(patch_size_20X * pw_x / pw), int(patch_size_20X * pw_y / pw)), Image.ANTIALIAS);
                 if not hms is None:
                     label = get_patch_label(imid,x,y,pw,hms,debug)
-                    #TODO: keep structure as in the heatmaps dir
-                    fname = '{}/{}-{}-{}-{}_{}.png'.format(output_folder, x, y, pw, patch_size_20X,label);
+                    to_dir = os.path.join(output_folder,hms[imid]['cancer_t'])
+                    if not os.path.isdir(os.path.join(to_dir)):
+                        os.mkdir(to_dir)
+                    fname = os.path.join(to_dir,'{}-{}-{}-{}_{}.png'.format(x, y, pw, patch_size_20X,label));
                 else:
                     fname = '{}/{}-{}-{}-{}.png'.format(output_folder, x, y, pw, patch_size_20X);
                 patch.save(fname);
