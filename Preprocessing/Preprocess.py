@@ -238,17 +238,20 @@ def white_ratio(pat):
     """
     white_count = 0.0
     total_count = 0.001
+    pw = 200
 
-    if pat.shape[0] < 200 or pat.shape[1] < 200:
+    if pat.shape[0] < 100 or pat.shape[1] < 100:
         whiteness = background(pat)
         if whiteness:
             return 1.0
         else:
             return 0.0
+    elif 100 <= pat.shape[0] <= 200 or 100 <= pat.shape[1] <= 200:
+        pw = 50
         
-    for x in range(0, pat.shape[0]-200, 100):
-        for y in range(0, pat.shape[1]-200, 100):
-            p = pat[x:x+200, y:y+200, :]
+    for x in range(0, pat.shape[0]-pw, int(pw/2)):
+        for y in range(0, pat.shape[1]-pw, int(pw/2)):
+            p = pat[x:x+pw, y:y+pw, :]
             whiteness = background(p)
             if whiteness:
                 white_count += 1.0

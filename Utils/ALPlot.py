@@ -211,7 +211,110 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
 
-    def draw_multiline(self,data,title,xtick,labels=None):
+    def draw_multilabel(self,data,title,xtick,metrics,labels=None):
+        palette = plt.get_cmap('Set1')
+        lbcount = 0
+        color = 0
+
+        if not 'trainset' in data:
+            print("Trainset should be provided as X axis")
+            sys.exit(1)
+
+        fig, ax1 = plt.subplots()
+        ax2 = None
+
+        print(data['trainset'])
+        for k in metrics:
+            if k == 'labels' and data[k].shape[0] > 0:
+                #Repeat last point if needed
+                if data['trainset'].shape[0] > data[k].shape[0]:
+                    print("Shape mismatch:\n Trainset: {}; Labels:{}".format(data['trainset'].shape,data[k].shape))
+                    data['labels'] = np.hstack((data[k],data[k][-1:]))
+
+                if labels is None:
+                    lb = k
+                else:
+                    lb = labels[lbcount]
+                    lbcount += 1
+
+                yd = [100*(data[k][z][0]/data['trainset'][z]) for z in range(data['trainset'].shape[0])]
+
+                #Prepare plot
+                if ax2 is None:
+                    ax1.set_ylabel("% Positive",color=palette(color))
+                    ax1.plot(data['trainset'],yd, marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
+                    ax1.set_yticks(np.arange(max(0,min(yd)-10), min(100,10+max(yd)), 5))
+                    ax1.tick_params(axis='y', labelcolor=palette(color))
+                    ax2 = ax1.twinx()
+                else:
+                    ax2.set_ylabel("% Positive",color=palette(color))
+                    ax2.plot(data['trainset'],yd, marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
+                    ax2.tick_params(axis='y', labelcolor=palette(color))
+                    ax2.set_yticks(np.arange(max(0,min(yd)-10), min(100,10+max(yd)), 5))
+                color += 1
+                
+            elif k == 'auc' and data[k].shape[0] > 0:
+                #Repeat last point if needed
+                if data['trainset'].shape[0] > data[k].shape[0]:
+                    print("Shape mismatch:\n Trainset: {}; AUC:{}".format(data['trainset'].shape,data[k].shape))
+                    data[k] = np.hstack((data[k],data[k][-1:]))
+
+                if labels is None:
+                    lb = k
+                else:
+                    lb = labels[lbcount]
+                    lbcount += 1
+
+                if ax2 is None:
+                    ax1.set_ylabel("AUC",color=palette(color))
+                    ax1.plot(data['trainset'],data[k], marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
+                    ax1.tick_params(axis='y', labelcolor=palette(color))
+                    ax1.set_yticks(np.arange(data[k].min(), 1.0, 0.06))
+                    ax2 = ax1.twinx()
+                else:
+                    ax2.set_ylabel("AUC",color=palette(color))
+                    ax2.plot(data['trainset'],data[k], marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
+                    ax2.tick_params(axis='y', labelcolor=palette(color))
+                    ax2.set_yticks(np.arange(data[k].min(), 1.0, 0.06))
+                color += 1
+                
+            elif k == 'accuracy' and data[k].shape[0] > 0:
+                #Repeat last point if needed
+                if data['trainset'].shape[0] > data[k].shape[0]:
+                    print("Shape mismatch:\n Trainset: {}; ACC:{}".format(data['trainset'].shape,data[k].shape))
+                    data[k] = np.hstack((data[k],data[k][-1:]))
+
+                if labels is None:
+                    lb = k
+                else:
+                    lb = labels[lbcount]
+                    lbcount += 1
+
+                if ax2 is None:
+                    ax1.set_ylabel("Accuracy",color=palette(color))
+                    plt.plot(data['trainset'],data[k], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
+                    ax1.tick_params(axis='y', labelcolor=palette(color))
+                    ax1.set_yticks(np.arange(data[k].min(), 1.0, 0.06))
+                    ax2 = ax1.twinx()
+                else:
+                    ax2.set_ylabel("Accuracy",color=palette(color))
+                    ax2.plot(data['trainset'],data[k], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
+                    ax2.tick_params(axis='y', labelcolor=palette(color))
+                    ax2.set_yticks(np.arange(data[k].min(), 1.0, 0.06))
+                    
+                color += 1
+
+        fig.legend(bbox_to_anchor=(0.87,0.16),loc=4,ncol=2,labels=config.labels)
+        ax1.set_xticks(np.arange(data['trainset'].min(), data['trainset'].max()+1, xtick))
+        if data['trainset'].max() > 1000:
+            plt.setp(ax1.get_xticklabels(),rotation=30)
+        plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
+        ax1.set_xlabel("Training set size")
+        plt.tight_layout()
+        plt.grid(True)
+        plt.show()
+        
+    def draw_multiline(self,data,title,xtick,labels=None,pos=False):
 
         palette = plt.get_cmap('Set1')
 
@@ -224,7 +327,28 @@ class Plotter(object):
         lbcount = 0
         
         for k in data:
-            if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
+            if 'labels' in data[k] or pos:
+                #Repeat last point if needed
+                if data[k]['trainset'].shape[0] > data[k]['labels'].shape[0]:
+                    print("Shape mismatch:\n Trainset: {}; Labels:{}".format(data[k]['trainset'].shape,data[k]['labels'].shape))
+                    data[k]['labels'] = np.hstack((data[k]['labels'],data[k]['labels'][-1:]))
+
+                if labels is None:
+                    lb = k
+                else:
+                    lb = labels[lbcount]
+                    lbcount += 1
+
+                yd = [100*(data[k]['labels'][z][0]/data[k]['trainset'][z]) for z in range(data[k]['trainset'].shape[0])]
+                plt.plot(data[k]['trainset'],yd, marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
+                color += 1
+                plotAUC = False
+                min_x.append(data[k]['trainset'].min())
+                max_x.append(data[k]['trainset'].max())
+                min_y.append(min(yd))
+                max_y.append(max(yd))
+                print(data[k]['trainset'])                
+            elif 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
                 #Repeat last point if needed
                 if data[k]['trainset'].shape[0] > data[k]['auc'].shape[0]:
                     print("Shape mismatch:\n Trainset: {}; AUC:{}".format(data[k]['trainset'].shape,data[k]['auc'].shape))
@@ -267,11 +391,16 @@ class Plotter(object):
         plt.xticks(np.arange(min(min_x), max(max_x)+1, xtick))
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
-        plt.yticks(np.arange(min(min_y), 1.0, 0.06))
+        if pos:
+            plt.yticks(np.arange(max(0,min(min_y)-10), min(100,10+max(max_y)), 5))
+        else:
+            plt.yticks(np.arange(min(min_y), 1.0, 0.06))
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         plt.xlabel("Training set size")
         if plotAUC:
             plt.ylabel("AUC")
+        elif pos:
+            plt.ylabel("% Positive")
         else:
             plt.ylabel("Accuracy")
 
@@ -281,6 +410,18 @@ class Plotter(object):
 
     def plotFromExec(self,data):
         pass
+
+    def parseMetrics(self,data,e_id,metrics):
+        split_data = {}
+        
+        for k in metrics:
+            if k == 'pos':
+                split_data['labels'] = data['labels']
+            else:
+                split_data[k] = data[k]
+        split_data['trainset'] = data['trainset']
+
+        return split_data
 
     def parseResults(self,path,al_dirs,n_ids=None,maxx=None):
 
@@ -349,6 +490,7 @@ class Plotter(object):
                 'auc':[],
                 'trainset':[],
                 'accuracy':[],
+                'labels':[],
                 'cluster':{}}
         start_line = 0
         timerex = r'Acquisition step took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
@@ -356,12 +498,14 @@ class Plotter(object):
         accrex = r'Accuracy: (?P<acc>0.[0-9]+)'
         trainsetrex = r'Train set: (?P<set>[0-9]+) items'
         clusterrex = r'Cluster (?P<cln>[0-9]+) labels: (?P<neg>[0-9]+) are 0; (?P<pos>[0-9]+) are 1;'
+        labelrex = r'Train labels: (?P<neg>[0-9]+) are 0; (?P<pos>[0-9]+) are 1;'
         
         timerc = re.compile(timerex)
         aucrc = re.compile(aucrex)
         trainrc = re.compile(trainsetrex)
         accrc = re.compile(accrex)
         clusterrc = re.compile(clusterrex)
+        labelrc = re.compile(labelrex)
 
         with open(slurm_path,'r') as fd:
             lines = fd.readlines()
@@ -374,6 +518,7 @@ class Plotter(object):
             trmatch = trainrc.fullmatch(lstrip)
             accmatch = accrc.fullmatch(lstrip)
             clustermatch = clusterrc.fullmatch(lstrip)
+            labelmatch = labelrc.fullmatch(lstrip)
             if tmatch:
                 td = datetime.timedelta(hours=int(tmatch.group('hours')),minutes=int(tmatch.group('min')),seconds=round(float(tmatch.group('sec'))))
                 data['time'].append(td.total_seconds()/3600.0)
@@ -383,6 +528,8 @@ class Plotter(object):
                 data['trainset'].append(int(trmatch.group('set')))
             if accmatch:
                 data['accuracy'].append(float(accmatch.group('acc')))
+            if labelmatch:
+                data['labels'].append((int(labelmatch.group('pos')),int(labelmatch.group('neg'))))
             if clustermatch:
                 cln = int(clustermatch.group('cln'))
                 tot = int(clustermatch.group('pos')) + int(clustermatch.group('neg'))
@@ -400,6 +547,7 @@ class Plotter(object):
         data['auc'] = np.asarray(data['auc'])
         data['trainset'] = np.asarray(data['trainset'])
         data['accuracy'] = np.asarray(data['accuracy'])
+        data['labels'] = np.asarray(data['labels'])
 
         if not maxx is None:
             if maxx > np.max(data['trainset']):
@@ -413,6 +561,7 @@ class Plotter(object):
             data['auc'] = data['auc'][:upl]
             data['trainset'] = data['trainset'][:upl]
             data['accuracy'] = data['accuracy'][:upl]
+            data['labels'] = data['labels'][:upl]
 
         if data['auc'].shape[0] > 0:
             print("Min AUC: {0}; Max AUC: {1}".format(data['auc'].min(),data['auc'].max()))            
@@ -572,6 +721,8 @@ if __name__ == "__main__":
     ##Multiline SLURM parse
     parser.add_argument('--multi', action='store_true', dest='multi', default=False, 
         help='Plot multiple lines from slurm files.')
+    parser.add_argument('-pos', action='store_true', dest='pos', default=False, 
+        help='Plot percentage of positive patches during aquisition.')    
     parser.add_argument('-ids', dest='ids', nargs='+', type=int, 
         help='Experiment IDs to plot.', default=None,required=False)
     parser.add_argument('-xtick', dest='xtick', nargs=1, type=int, 
@@ -580,6 +731,13 @@ if __name__ == "__main__":
         help='Plot maximum X.', default=None,required=False)
     parser.add_argument('-t', dest='title', type=str,default='AL Experiment', 
         help='Figure title.')
+    parser.add_argument('-metrics', dest='metrics', type=str, nargs='+',
+        help='Metrics to plot: \n \
+        time - Aquisition iteration time; \n \
+        auc - AUC; \n \
+        acc - Accuracy; \n \
+        labels - Positive labeled patches acquired,',
+       choices=['time','auc','acc','labels'],default=None)    
     parser.add_argument('-type', dest='tmode', type=str, nargs='+',
         help='Experiment type: \n \
         AL - General active learning experiment; \n \
@@ -645,12 +803,17 @@ if __name__ == "__main__":
             exp_type = [os.path.join(config.sdir,tmode,tmode) for tmode in config.tmode]
             
         p = Plotter()
-        
-        data = p.parseResults(exp_type,config.ids,maxx=config.maxx)
-        if len(data) == 0:
-            print("Something is wrong with your command options. No data to plot")
-            sys.exit(1)        
-        p.draw_multiline(data,config.title,config.xtick,config.labels)
+
+        if not config.metrics is None:
+            ex_dir = "{}-{}".format(exp_type,str(config.ids[0]))
+            data = p.parseMetrics(p.parseSlurm(ex_dir,config.maxx),config.ids[0],config.metrics)
+            p.draw_multilabel(data,config.title,config.xtick,config.metrics,config.labels)
+        else:
+            data = p.parseResults(exp_type,config.ids,maxx=config.maxx)
+            if len(data) == 0:
+                print("Something is wrong with your command options. No data to plot")
+                sys.exit(1)        
+            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos)
                 
     elif config.single:
         p = Plotter(path=config.sdir)
