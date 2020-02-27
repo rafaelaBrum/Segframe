@@ -246,7 +246,7 @@ def white_ratio(pat):
             return 1.0
         else:
             return 0.0
-    elif 100 <= pat.shape[0] < 200 or 100 <= pat.shape[1] < 200:
+    elif 100 <= pat.shape[0] <= 200 or 100 <= pat.shape[1] <= 200:
         pw = 50
         
     for x in range(0, pat.shape[0]-pw, int(pw/2)):

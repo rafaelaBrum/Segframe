@@ -41,13 +41,15 @@ def get_patch_label(imid,x,y,pw,hms,debug=False):
     np_hm = np.array(hm_roi)
     if debug:
         hm_roi.show()
-        time.sleep(10)
+        time.sleep(5)
 
     r,g,b = np_hm[:,:,0],np_hm[:,:,1],np_hm[:,:,2]
     r_count = np.where(r == 255)[0].shape[0]
     b_count = np.where(b == 255)[0].shape[0]
-    print("Red pixels: {}".format(r_count))
-    print("Blue pixels: {}".format(b_count))
+
+    if debug:
+        print("Red pixels: {}".format(r_count))
+        print("Blue pixels: {}".format(b_count))
 
     if r_count > 0:
         return 1
@@ -89,6 +91,7 @@ def check_heatmaps(hm_path,wsis):
 
 def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False):
     imid = os.path.basename(slide_name).split('.')[0]
+    hms[imid]['svs'] = os.path.basename(slide_name)
     
     try:
         oslide = openslide.OpenSlide(slide_name);
@@ -114,6 +117,7 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False):
     height = oslide.dimensions[1];
 
     pcount = 0
+    pos_count = 0
     print(slide_name, width, height);
     if not hms is None and debug:
         _check_heatmap_size(imid,width,height,hms)
@@ -142,21 +146,44 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False):
                 patch = patch.resize((int(patch_size_20X * pw_x / pw), int(patch_size_20X * pw_y / pw)), Image.ANTIALIAS);
                 if not hms is None:
                     label = get_patch_label(imid,x,y,pw,hms,debug)
+                    if label > 0:
+                        pos_count += 1
                     to_dir = os.path.join(output_folder,hms[imid]['cancer_t'])
                     if not os.path.isdir(os.path.join(to_dir)):
                         os.mkdir(to_dir)
-                    fname = os.path.join(to_dir,'{}-{}-{}-{}_{}.png'.format(x, y, pw, patch_size_20X,label));
+                    fname = os.path.join(to_dir,'{}-{}-{}-{}-{}_{}.png'.format(imid,x, y, pw, patch_size_20X,label));
                 else:
-                    fname = '{}/{}-{}-{}-{}.png'.format(output_folder, x, y, pw, patch_size_20X);
+                    fname = '{}/{}-{}-{}-{}-{}.png'.format(output_folder, imid, x, y, pw, patch_size_20X);
                 patch.save(fname);
                 pcount += 1
 
             del(np_patch)
 
     oslide.close()
-    return pcount
+    return pcount,pos_count
 
+def generate_label_files(tdir,hms):
+    """
+    CellRep datasources use label text files to store ground truth for each patch.
+    File: label.txt
+    Format: file_name label source_svs x y
+    """
 
+    for d in os.listdir(tdir):
+        c_dir = os.path.join(tdir,d)
+        if os.path.isdir(c_dir):
+            patches = os.listdir(c_dir)
+            patches = list(filter(lambda p: p.endswith('.png'),patches))
+            with open(os.path.join(c_dir,'label.txt'),'w') as fd:
+                for im in patches:
+                    fields = im.split('.')[0].split('_')
+                    label = fields[1]
+                    fields = fields[0].split('-')
+                    fields = [im,label,'-'.join(fields[:5]),fields[6],fields[7]]
+                    fd.write("{}\n".format(" ".join(fields)))
+
+    print("Done generating label files")
+    
 if __name__ == "__main__":
 
     #Parse input parameters
@@ -172,6 +199,8 @@ if __name__ == "__main__":
         help='Use multiprocessing. Number of processes to spawn', default=2,required=False)
     parser.add_argument('-label', action='store_true', dest='label',
         help='Generate labels for the patches from heatmaps.',default=False)
+    parser.add_argument('-txt_label', action='store_true', dest='txt_label',
+        help='Generate labels for the patches from heatmaps.',default=False)    
     parser.add_argument('-hm', dest='heatmap', type=str,default=None, 
         help='Heatmaps path.')
     parser.add_argument('-ps', dest='patch_size', type=int, 
@@ -190,12 +219,16 @@ if __name__ == "__main__":
         print("Path not found: {}".format(config.ds))
         sys.exit(1)
 
+    if config.txt_label:
+        config.label = True
+        
     wsis = os.listdir(config.ds)
     wsis = list(filter(lambda x:x.split('.')[-1] == 'svs',wsis))
     
     results = None
     total_patches = 0
-
+    total_pos = 0
+    
     hms = None
     if config.label:
         wsis,hms = check_heatmaps(config.heatmap,wsis)
@@ -203,6 +236,11 @@ if __name__ == "__main__":
     with multiprocessing.Pool(processes=config.mp) as pool:
         results = [pool.apply_async(make_tiles,(os.path.join(config.ds,i),config.out_dir,config.patch_size,
                                                     config.white,hms,config.debug)) for i in wsis]
-        total_patches = sum([r.get() for r in results])
+        total_patches = sum([r.get()[0] for r in results])
+        total_pos = sum([r.get()[1] for r in results])
 
     print("Total of patches generated: {}".format(total_patches))
+    print("Total of positive patches generated: {} ({:2.2f} %)".format(total_pos,100*total_pos/total_patches))
+
+    if config.txt_label:
+        generate_label_files(config.out_dir,hms)
