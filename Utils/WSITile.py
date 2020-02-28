@@ -24,14 +24,18 @@ def _check_heatmap_size(imid,width,height,hms):
         print("Shape ok!")
         
 
-def get_patch_label(hm,imid,x,y,pw,hms,debug=False):
+def get_patch_label(hm,imid,x,y,pw,hms,debug=False,cdict=None):
     """
     Extracts patch labels from heatmaps
     """
-    hm_x = x*hms[imid]['mpp']/50
-    hm_y = y*hms[imid]['mpp']/50
+    hm_x = round(round(x*hms[imid]['mpp'])/50)
+    hm_y = round(round(y*hms[imid]['mpp'])/50)
+    hm_w = round(round(pw*hms[imid]['mpp'])/50)
 
-    hm_w = pw*hms[imid]['mpp']/50
+    if not cdict is None:
+        cdict.setdefault((hm_x,hm_y),[])
+        cdict[(hm_x,hm_y)].append((x,y))
+        
     if not 'cancer_t' in hms[imid]:
         cancer_t = os.path.split(os.path.dirname(hms[imid]['path']))[-1]
         hms[imid]['cancer_t'] = cancer_t
@@ -43,6 +47,7 @@ def get_patch_label(hm,imid,x,y,pw,hms,debug=False):
 
     if len(np_hm.shape) < 3:
         print("Error processing WSI ({}), patch shape: {}".format(imid,np_hm.shape))
+        print("Crop region: {}".format((hm_x,hm_y,hm_x+hm_w,hm_y+hm_w)))
 
     r,g,b = np_hm[:,:,0],np_hm[:,:,1],np_hm[:,:,2]
     r_count = np.where(r == 255)[0].shape[0]
@@ -90,7 +95,7 @@ def check_heatmaps(hm_path,wsis):
         
     return wsis,hms
 
-def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False):
+def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False,hmc=False):
     imid = os.path.basename(slide_name).split('.')[0]
     hms[imid]['svs'] = os.path.basename(slide_name)
     
@@ -119,9 +124,18 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False):
 
     pcount = 0
     pos_count = 0
+    hm = None
+    hm_coords = None
+    
+    #Start patch extraction
     print(slide_name, width, height);
-    if not hms is None and debug:
-        _check_heatmap_size(imid,width,height,hms)
+    if not hms is None:
+        hm = Image.open(hms[imid]['path'])
+        if debug:
+            _check_heatmap_size(imid,width,height,hms)
+
+    if hmc:
+        hm_coords = {}
         
     for x in range(1, width, pw):
         for y in range(1, height, pw):
@@ -146,7 +160,7 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False):
             if not background(np_patch) and white_ratio(np_patch) <= wr:
                 patch = patch.resize((int(patch_size_20X * pw_x / pw), int(patch_size_20X * pw_y / pw)), Image.ANTIALIAS);
                 if not hms is None:
-                    label = get_patch_label(oslide,imid,x,y,pw,hms,debug)
+                    label = get_patch_label(hm,imid,x,y,pw,hms,debug,hm_coords)
                     if label > 0:
                         pos_count += 1
                     to_dir = os.path.join(output_folder,hms[imid]['cancer_t'])
@@ -161,6 +175,13 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False):
             del(np_patch)
 
     oslide.close()
+    del(hm)
+
+    if hmc:
+        for k in hm_coords:
+            if len(hm_coords[k]) > 1:
+                print("Heatmap position {},{} have duplicate patch origins: {}".format(k[0],k[1],hm_coords[k]))
+                
     return pcount,pos_count
 
 def generate_label_files(tdir,hms):
@@ -209,7 +230,9 @@ if __name__ == "__main__":
     parser.add_argument('-wr', dest='white', type=float, 
         help='Maximum white ratio allowed for each patch (Default: 0.20)', default=0.2,required=False)
     parser.add_argument('-db', action='store_true', dest='debug',
-        help='Use to make extra checks on labels and conversions.',default=False)    
+        help='Use to make extra checks on labels and conversions.',default=False)
+    parser.add_argument('-hmc', action='store_true', dest='hmc',
+        help='Check heatmap coordinates for duplicates.',default=False)
     
     config, unparsed = parser.parse_known_args()
 
@@ -236,7 +259,7 @@ if __name__ == "__main__":
         
     with multiprocessing.Pool(processes=config.mp) as pool:
         results = [pool.apply_async(make_tiles,(os.path.join(config.ds,i),config.out_dir,config.patch_size,
-                                                    config.white,hms,config.debug)) for i in wsis]
+                                                    config.white,hms,config.debug,config.hmc)) for i in wsis]
         total_patches = sum([r.get()[0] for r in results])
         total_pos = sum([r.get()[1] for r in results])
 
