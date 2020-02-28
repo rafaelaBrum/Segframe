@@ -181,7 +181,8 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False,hmc=Fa
         for k in hm_coords:
             if len(hm_coords[k]) > 1:
                 print("Heatmap position {},{} have duplicate patch origins: {}".format(k[0],k[1],hm_coords[k]))
-                
+        print("Done checking {}".format(imid))
+        
     return pcount,pos_count
 
 def generate_label_files(tdir,hms):
