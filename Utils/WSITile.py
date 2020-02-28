@@ -24,7 +24,7 @@ def _check_heatmap_size(imid,width,height,hms):
         print("Shape ok!")
         
 
-def get_patch_label(imid,x,y,pw,hms,debug=False):
+def get_patch_label(hm,imid,x,y,pw,hms,debug=False):
     """
     Extracts patch labels from heatmaps
     """
@@ -32,12 +32,10 @@ def get_patch_label(imid,x,y,pw,hms,debug=False):
     hm_y = y*hms[imid]['mpp']/50
 
     hm_w = pw*hms[imid]['mpp']/50
-    hm = Image.open(hms[imid]['path'])
     if not 'cancer_t' in hms[imid]:
         cancer_t = os.path.split(os.path.dirname(hms[imid]['path']))[-1]
         hms[imid]['cancer_t'] = cancer_t
     hm_roi = hm.crop((hm_x,hm_y,hm_x+hm_w,hm_y+hm_w))
-    del(hm)
     np_hm = np.array(hm_roi)
     if debug:
         hm_roi.show()
@@ -145,7 +143,7 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False):
             if not background(np_patch) and white_ratio(np_patch) <= wr:
                 patch = patch.resize((int(patch_size_20X * pw_x / pw), int(patch_size_20X * pw_y / pw)), Image.ANTIALIAS);
                 if not hms is None:
-                    label = get_patch_label(imid,x,y,pw,hms,debug)
+                    label = get_patch_label(oslide,imid,x,y,pw,hms,debug)
                     if label > 0:
                         pos_count += 1
                     to_dir = os.path.join(output_folder,hms[imid]['cancer_t'])
