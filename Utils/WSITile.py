@@ -41,6 +41,9 @@ def get_patch_label(hm,imid,x,y,pw,hms,debug=False):
         hm_roi.show()
         time.sleep(5)
 
+    if len(np_hm.shape) < 3:
+        print("Error processing WSI ({}), patch shape: {}".format(imid,np_hm.shape))
+
     r,g,b = np_hm[:,:,0],np_hm[:,:,1],np_hm[:,:,2]
     r_count = np.where(r == 255)[0].shape[0]
     b_count = np.where(b == 255)[0].shape[0]

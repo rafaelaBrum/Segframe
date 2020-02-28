@@ -99,7 +99,7 @@ def _combine_acquired_ds(wsis,ds_wsis,max_w=20):
     k -> WSI name
     """
     acquired = list(wsis.keys())
-    acquired.sort(key=lambda x:len(wsis[x][0]))
+    acquired.sort(key=lambda x:len(wsis[x][0]),reverse=True)
 
     acquired = acquired[:max_w]
 
