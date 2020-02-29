@@ -173,7 +173,7 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False,hmc=Fa
                 pcount += 1
 
             del(np_patch)
-
+            
     oslide.close()
     del(hm)
 
@@ -182,7 +182,8 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False,hmc=Fa
             if len(hm_coords[k]) > 1:
                 print("Heatmap position {},{} have duplicate patch origins: {}".format(k[0],k[1],hm_coords[k]))
         print("Done checking {}".format(imid))
-        
+
+    sys.stdout.flush()
     return pcount,pos_count
 
 def generate_label_files(tdir,hms):
