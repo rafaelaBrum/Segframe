@@ -115,7 +115,11 @@ class ActiveLearningTrainer(Trainer):
             print("[ALTrainer] Using an UNBALANCED initial dataset for AL ({} total elements).".format(len(X)))
             
         #Test set is extracted from the last items and is not changed for the whole run
-        t_idx = int(self._config.split[-1:][0] * len(X))
+        tsp = self._config.split[-1:][0]
+        if tsp > 1.0:
+            t_idx = int(tsp)
+        else:
+            t_idx = int(tsp * len(X))
         self.test_x = X[- t_idx:]
         self.test_y = Y[- t_idx:]
 

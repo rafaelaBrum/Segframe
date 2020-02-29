@@ -190,7 +190,7 @@ if __name__ == "__main__":
         help='Use weights file contained in path - usefull for sequential training (Default: None).',
         default='ModelWeights')
     train_args.add_argument('-split', dest='split', nargs=3, type=float, 
-        help='Split data in as much as 3 sets (Default: 80%% train, 10%% validation, 10%% test).',
+        help='Split data in as much as 3 sets (Default: 80%% train, 10%% validation, 10%% test). If AL experiment, test set can be defined as integer.',
         default=(0.8, 0.1,0.1), metavar=('Train', 'Validation','Test'))
     train_args.add_argument('-f1', dest='f1period', type=int, 
         help='Execute F1 and ROC AUC calculations every X epochs (Default: 20).', default=20)
