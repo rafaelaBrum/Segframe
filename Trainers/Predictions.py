@@ -5,6 +5,7 @@ import importlib
 import os,sys
 from tqdm import tqdm
 import numpy as np
+import math
 
 from Datasources.CellRep import CellRep
 from .BatchGenerator import SingleGenerator
@@ -220,7 +221,7 @@ class Predictor(object):
             return None
 
         bsize = self._config.batch_size
-        stp = round((len(X) / bsize) + 0.5)
+        stp = math.ceil(len(X) / bsize)
 
         image_generator = ImageDataGenerator(samplewise_center=self._config.batch_norm, 
                                             samplewise_std_normalization=self._config.batch_norm)
