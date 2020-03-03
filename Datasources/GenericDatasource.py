@@ -296,7 +296,7 @@ class GenericDS(ABC):
         else:
             return self._split_data(split,X_data,y)
 
-    def sample_metadata(self,k):
+    def sample_metadata(self,k,pos_rt=None):
         """
         Produces a sample of the full metadata with k items. Returns a cached sample if one exists
 
@@ -343,8 +343,20 @@ class GenericDS(ABC):
                 k = int(k*len(self.X))
             else:
                 k = int(k)
-            
-            samples = np.random.choice(range(len(self.X)),k,replace=False)
+
+            #All operations are over indexes
+            if not pos_rt is None:
+                np_y = np.array(self.Y)
+                unique,count = np.unique(np_y,return_counts=True)
+                l_count = dict(zip(unique,count))
+                pcount = min(int(pos_rt*k),l_count[1])
+                pos_samples = np.random.choice(np.where(np_y == 1)[0],pcount,replace=False)
+                neg_samples = np.random.choice(np.where(np_y != 1)[0],k-pcount,replace=False)
+                samples = np.concatenate((pos_samples,neg_samples))
+                np.random.shuffle(samples)
+                del(np_y)
+            else:
+                samples = np.random.choice(range(len(self.X)),k,replace=False)
             
             s_x = [self.X[s] for s in samples]
             s_y = [self.Y[s] for s in samples]

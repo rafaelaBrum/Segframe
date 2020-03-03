@@ -197,6 +197,9 @@ if __name__ == "__main__":
     train_args.add_argument('-sample', dest='sample', type=float, 
         help='Use a sample of the whole data for training (Default: 100.0%% - use floats [0.0-1.0]).',
         default=1.0)
+    train_args.add_argument('-pos_rt', dest='pos_rt', type=float, 
+        help='When sampling, keep a positive rate among samples (Default: not set - use floats [0.0-1.0]).',
+        default=None)
     
     ##Active Learning options
     al_args = parser.add_argument_group('AL','Active Learning options')

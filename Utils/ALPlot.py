@@ -314,7 +314,7 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
         
-    def draw_multiline(self,data,title,xtick,labels=None,pos=False):
+    def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False):
 
         palette = plt.get_cmap('Set1')
 
@@ -327,7 +327,7 @@ class Plotter(object):
         lbcount = 0
         
         for k in data:
-            if 'labels' in data[k] or pos:
+            if pos and data[k]['labels'].shape[0] > 0:
                 #Repeat last point if needed
                 if data[k]['trainset'].shape[0] > data[k]['labels'].shape[0]:
                     print("Shape mismatch:\n Trainset: {}; Labels:{}".format(data[k]['trainset'].shape,data[k]['labels'].shape))
@@ -348,7 +348,7 @@ class Plotter(object):
                 min_y.append(min(yd))
                 max_y.append(max(yd))
                 print(data[k]['trainset'])                
-            elif 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
+            elif auc and data[k]['auc'].shape[0] > 0:
                 #Repeat last point if needed
                 if data[k]['trainset'].shape[0] > data[k]['auc'].shape[0]:
                     print("Shape mismatch:\n Trainset: {}; AUC:{}".format(data[k]['trainset'].shape,data[k]['auc'].shape))
@@ -387,7 +387,7 @@ class Plotter(object):
                 min_y.append(data[k]['accuracy'].min())
                 max_y.append(data[k]['accuracy'].max())
                 
-        plt.legend(loc=4,ncol=2,labels=config.labels)
+        plt.legend(loc=0,ncol=2,labels=config.labels)
         plt.xticks(np.arange(min(min_x), max(max_x)+1, xtick))
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
@@ -761,8 +761,7 @@ if __name__ == "__main__":
         help='N experiments for each curve (allows plotting 2 curves together).',
         default=(3,3),required=False)
     parser.add_argument('-labels', dest='labels', nargs='+', type=str, 
-        help='Curve labels.',
-        default=None,required=False)
+        help='Curve labels.',default=None,required=False)
     
     ##Draw uncertainties
     parser.add_argument('--uncertainty', action='store_true', dest='unc', default=False, 
@@ -813,7 +812,7 @@ if __name__ == "__main__":
             if len(data) == 0:
                 print("Something is wrong with your command options. No data to plot")
                 sys.exit(1)        
-            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos)
+            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos,config.auc_only)
                 
     elif config.single:
         p = Plotter(path=config.sdir)
