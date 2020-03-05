@@ -31,7 +31,10 @@ def get_patch_label(hm,imid,x,y,pw,hms,debug=False,cdict=None):
     hm_x = round(round(x*hms[imid]['mpp'])/50)
     hm_y = round(round(y*hms[imid]['mpp'])/50)
     hm_w = round(round(pw*hms[imid]['mpp'])/50)
-
+    #hm_x = round((x+pw-1)/pw)
+    #hm_y = round((y+pw-1)/pw)
+    #hm_w = round((2*pw-1)/pw)
+    
     if not cdict is None:
         cdict.setdefault((hm_x,hm_y),[])
         cdict[(hm_x,hm_y)].append((x,y))
@@ -57,7 +60,7 @@ def get_patch_label(hm,imid,x,y,pw,hms,debug=False,cdict=None):
         print("Red pixels: {}".format(r_count))
         print("Blue pixels: {}".format(b_count))
 
-    if r_count > 0:
+    if b_count > 0 and r_count/b_count > 0.2:
         return 1
     else:
         return 0
@@ -96,8 +99,14 @@ def check_heatmaps(hm_path,wsis):
     return wsis,hms
 
 def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False,hmc=False):
+    """
+    Ask for a tile of size patch_size_20X, but output will only have this size if it is
+    a value divisible by 100.
+    """
     imid = os.path.basename(slide_name).split('.')[0]
     hms[imid]['svs'] = os.path.basename(slide_name)
+    base_pw = 100
+    amp = int(patch_size_20X/base_pw)
     
     try:
         oslide = openslide.OpenSlide(slide_name);
@@ -118,7 +127,9 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False,hmc=Fa
         print('{}: exception caught'.format(slide_name));
         exit(1);
 
-    pw = int(patch_size_20X * mag / 20);
+    pw = int(base_pw * mag / 20);
+    out_pw = int(base_pw * amp)
+    pw_amp = int(pw * amp)
     width = oslide.dimensions[0];
     height = oslide.dimensions[1];
 
@@ -137,18 +148,18 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False,hmc=Fa
     if hmc:
         hm_coords = {}
         
-    for x in range(1, width, pw):
-        for y in range(1, height, pw):
-            if x + pw > width:
+    for x in range(1, width, pw_amp):
+        for y in range(1, height, pw_amp):
+            if x + pw_amp > width:
                 #pw_x = width - x;
                 continue
             else:
-                pw_x = pw;
-            if y + pw > height:
+                pw_x = pw_amp;
+            if y + pw_amp > height:
                 #pw_y = height - y;
                 continue
             else:
-                pw_y = pw;
+                pw_y = pw_amp;
 
             if (int(patch_size_20X * pw_x / pw) <= 0) or \
               (int(patch_size_20X * pw_y / pw) <= 0) or \
@@ -158,17 +169,17 @@ def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False,hmc=Fa
             patch = oslide.read_region((x, y), 0, (pw_x, pw_y));
             np_patch = np.array(patch)
             if not background(np_patch) and white_ratio(np_patch) <= wr:
-                patch = patch.resize((int(patch_size_20X * pw_x / pw), int(patch_size_20X * pw_y / pw)), Image.ANTIALIAS);
+                patch = patch.resize((out_pw, out_pw), Image.ANTIALIAS);
                 if not hms is None:
-                    label = get_patch_label(hm,imid,x,y,pw,hms,debug,hm_coords)
+                    label = get_patch_label(hm,imid,x,y,pw_amp,hms,debug,hm_coords)
                     if label > 0:
                         pos_count += 1
                     to_dir = os.path.join(output_folder,hms[imid]['cancer_t'])
                     if not os.path.isdir(os.path.join(to_dir)):
                         os.mkdir(to_dir)
-                    fname = os.path.join(to_dir,'{}-{}-{}-{}-{}_{}.png'.format(imid,x, y, pw, patch_size_20X,label));
+                    fname = os.path.join(to_dir,'{}-{}-{}-{}-{}_{}.png'.format(imid,x, y, pw_amp, out_pw,label));
                 else:
-                    fname = '{}/{}-{}-{}-{}-{}.png'.format(output_folder, imid, x, y, pw, patch_size_20X);
+                    fname = '{}/{}-{}-{}-{}-{}.png'.format(output_folder, imid, x, y, pw_amp, out_pw);
                 patch.save(fname);
                 pcount += 1
 
