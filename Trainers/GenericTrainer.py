@@ -244,8 +244,8 @@ class Trainer(object):
         
         #Setup of generators, augmentation, preprocessing
         if train_data is None or val_data is None:
-            if self._config.sample < 1.0:
-                data_sample = self._ds.sample_metadata(self._config.sample)
+            if self._config.sample != 1.0:
+                data_sample = self._ds.sample_metadata(self._config.sample,self._config.pos_rt)
                 train_data,val_data,_ = self._ds.split_metadata(split=self._config.split,data=data_sample)
             else:
                 train_data,val_data,_ = self._ds.split_metadata(self._config.split)
