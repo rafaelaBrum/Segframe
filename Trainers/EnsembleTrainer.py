@@ -250,7 +250,11 @@ class EnsembleALTrainer(ActiveLearningTrainer):
 
         if self._config.verbose > 1:
             print("Starting acquisition using model: {0}".format(hex(id(pred_model))))
-        
+
+        if self._config.debug:
+            import gc
+            print("GC stats:\n {}".format(gc.get_stats()))
+            
         pooled_idx = function(None,generator,self.pool_x.shape[0],**kwargs)
         if pooled_idx is None:
             if self._config.info:
@@ -261,4 +265,10 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         self.pool_x = np.delete(self.pool_x,pooled_idx)
         self.pool_y = np.delete(self.pool_y,pooled_idx)
 
+        del(generator)
+        gc.collect(generation=1)
+        
+        if self._config.debug:
+            print("GC stats:\n {}".format(gc.get_stats()))
+            
         return True        
