@@ -8,7 +8,7 @@ import numpy as np
 import math
 
 from Datasources.CellRep import CellRep
-from .BatchGenerator import SingleGenerator
+from .BatchGenerator import ThreadedGenerator
 from Utils import SaveLRCallback
 from Utils import Exitcodes,CacheManager,PrintConfusionMatrix
 
@@ -170,8 +170,12 @@ class Predictor(object):
                     l_count[1] = 0
                 print("Test labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
             print("Test set: {} items".format(len(y_test)))
-            
-        X,Y = self._ds.load_data(data=(x_test,y_test),keepImg=self._keep)
+
+        if self._ensemble:
+            X,Y = x_test,y_test
+        else:
+            X,Y = self._ds.load_data(data=(x_test,y_test),keepImg=self._keep)
+                        
         if self._config.verbose > 1:
             print("Y original ({1}):\n{0}".format(Y,Y.shape))        
 
@@ -231,7 +235,7 @@ class Predictor(object):
                 fix_dim = self._config.tdim
             else:
                 fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
-            test_generator = SingleGenerator(dps=(X,Y),
+            test_generator = ThreadedGenerator(dps=(X,Y),
                                                 classes=self._ds.nclasses,
                                                 dim=fix_dim,
                                                 batch_size=self._config.batch_size,
