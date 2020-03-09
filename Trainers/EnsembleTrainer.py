@@ -209,6 +209,8 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         Returns True if acquisition was sucessful
         """
         from Trainers import ThreadedGenerator
+        import gc
+        
         #An acquisition function should return a NP array with the indexes of all items from the pool that 
         #should be inserted into training and validation sets
         if self.pool_x.shape[0] < self._config.acquire:
@@ -252,7 +254,6 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             print("Starting acquisition using model: {0}".format(hex(id(pred_model))))
 
         if self._config.debug:
-            import gc
             print("GC stats:\n {}".format(gc.get_stats()))
             
         pooled_idx = function(None,generator,self.pool_x.shape[0],**kwargs)
