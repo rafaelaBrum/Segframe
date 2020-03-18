@@ -331,19 +331,19 @@ def InceptionResNetV2(include_top=True,
         # Classification block
         x = layers.GlobalAveragePooling2D(name='avg_pool')(x)
         last_tensor = x
-        x = layers.Dense(classes, activation='softmax', name='predictions')(x)
+        x = layers.Dense(classes, activation='softmax', kernel_initializer='glorot_normal', name='predictions')(x)
     elif 'custom_top' in kwargs and kwargs['custom_top']:
         #Create a custom new classification here if needed
         x = layers.GlobalAveragePooling2D()(x)
         last_tensor = x
 
-        x = layers.Dense(512)(x)
+        x = layers.Dense(512,kernel_initializer='glorot_normal')(x)
         x = layers.Activation('relu', name='class1_ac')(x)
         x = layers.Dropout(0.3)(x,training=kwargs['training'])
-        x = layers.Dense(128)(x)
+        x = layers.Dense(128,kernel_initializer='glorot_normal')(x)
         x = layers.Activation('relu', name='class2_ac')(x)
         x = layers.Dropout(0.3)(x,training=kwargs['training'])
-        x = layers.Dense(classes)(x)
+        x = layers.Dense(classes,kernel_initializer='glorot_normal')(x)
         x = layers.Activation('softmax')(x)
     else:
         if pooling == 'avg':
@@ -351,7 +351,7 @@ def InceptionResNetV2(include_top=True,
         elif pooling == 'max':
             x = layers.GlobalMaxPooling2D()(x)
         last_tensor = x
-        x = layers.Dense(classes, activation='softmax', name='predictions')(x)
+        x = layers.Dense(classes, activation='softmax', kernel_initializer='glorot_normal', name='predictions')(x)
         
     # Ensure that the model takes into account
     # any potential predecessors of `input_tensor`.
