@@ -132,8 +132,8 @@ class Plotter(object):
             plots.append(c)
             # Shade the confidence interval
             if not np.isnan(ci).any():
-                low_ci = y_data - ci
-                upper_ci = y_data + ci
+                low_ci = np.clip(y_data - ci,0.0,1.0)
+                upper_ci = np.clip(y_data + ci,0.0,1.0)
                 ym = np.max(upper_ci)+0.05
             else:
                 ym = np.max(x_data)
@@ -149,7 +149,7 @@ class Plotter(object):
             labels = ['Mean','{} STD'.format(confidence)]
         plt.legend(plots,labels=labels,loc=4,ncol=2)
         plt.xticks(np.arange(min(x_data), max(x_data)+xticks, xticks))
-        rg = np.arange(np.min(low_ci)-0.05, up if up <= 1.05 else 1.05, 0.1)
+        rg = np.clip(np.arange(0.0, up if up <= 1.05 else 1.05, 0.05),0.0,1.0)
         plt.yticks(rg)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         if max(x_data) > 1000:
