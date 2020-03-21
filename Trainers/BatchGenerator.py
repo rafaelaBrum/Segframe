@@ -333,7 +333,7 @@ class ThreadedGenerator(GenericIterator):
         return output
 
     def _thread_run_images(self,t_x,t_y):
-        example = t_x.readImage(size=self.dim,verbose=self.verbose)
+        example = t_x.readImage(keepImg=False,size=self.dim,verbose=self.verbose)
             
         if not self.image_generator is None:
             example = self.image_generator.random_transform(example,self.seed)
