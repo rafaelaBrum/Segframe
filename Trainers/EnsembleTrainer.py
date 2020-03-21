@@ -210,6 +210,9 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         """
         from Trainers import ThreadedGenerator
         import gc
+
+        #Clear some memory before acquisitions
+        gc.collect(generation=1)
         
         #An acquisition function should return a NP array with the indexes of all items from the pool that 
         #should be inserted into training and validation sets
@@ -267,7 +270,6 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         self.pool_y = np.delete(self.pool_y,pooled_idx)
 
         del(generator)
-        gc.collect(generation=1)
         
         if self._config.debug:
             print("GC stats:\n {}".format(gc.get_stats()))
