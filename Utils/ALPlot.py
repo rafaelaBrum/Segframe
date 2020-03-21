@@ -149,7 +149,7 @@ class Plotter(object):
             labels = ['Mean','{} STD'.format(confidence)]
         plt.legend(plots,labels=labels,loc=4,ncol=2)
         plt.xticks(np.arange(min(x_data), max(x_data)+xticks, xticks))
-        rg = np.clip(np.arange(0.0, up if up <= 1.05 else 1.05, 0.05),0.0,1.0)
+        rg = np.clip(np.arange(max(np.min(low_ci),0.0), up if up <= 1.05 else 1.05, 0.05),0.0,1.0)
         plt.yticks(rg)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         if max(x_data) > 1000:
