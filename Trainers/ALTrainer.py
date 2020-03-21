@@ -131,7 +131,7 @@ class ActiveLearningTrainer(Trainer):
         if self._config.load_train and not self._config.balance:
             train_idx = cache_m.load('initial_train.pik')
             if not train_idx is None and self._config.info:
-                print("[ALTrainer] Using initial training set from {}. This is DANGEROUS. Use the metadata correspondent to the initial set.".format(initial_train))
+                print("[ALTrainer] Using initial training set from cache. This is DANGEROUS. Use the metadata correspondent to the initial set.")
             
         else:
             if not self._config.load_train and self._config.balance and self._config.info:
