@@ -111,13 +111,13 @@ class ActiveLearningTrainer(Trainer):
         self.test_x = fX[- t_idx:]
         self.test_y = fY[- t_idx:]
 
-        X,Y = fX[:t_idx],fY[:t_idx]
+        X,Y = fX[:-t_idx],fY[:-t_idx]
         del(fX)
         del(fY)
         
         #Use a sample of the metadata if so instructed
         if self._config.sample != 1.0:
-            X,Y = self._ds.sample_metadata(self._config.sample,self._config.pos_rt)
+            X,Y = self._ds.sample_metadata(self._config.sample,data=(X,Y),pos_rt=self._config.pos_rt)
             self._ds.check_paths(X,self._config.predst)
 
         if self._config.balance:
@@ -127,9 +127,10 @@ class ActiveLearningTrainer(Trainer):
         elif self._config.info:
             print("[ALTrainer] Using an UNBALANCED initial dataset for AL ({} total elements).".format(len(X)))
             
-
-        self.pool_x = X[:-t_idx]
-        self.pool_y = Y[:-t_idx]
+        self.pool_x = X
+        self.pool_y = Y
+        del(X)
+        del(Y)
 
         #Initial training set will be choosen at random from pool if a default is not provided
         cache_m = CacheManager()
