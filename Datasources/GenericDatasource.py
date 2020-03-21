@@ -296,19 +296,29 @@ class GenericDS(ABC):
         else:
             return self._split_data(split,X_data,y)
 
-    def sample_metadata(self,k,pos_rt=None):
+    def sample_metadata(self,k,data=None,pos_rt=None):
         """
         Produces a sample of the full metadata with k items. Returns a cached sample if one exists
 
         @param k <int>: total of samples
         @param k <float>: percentile of the whole dataset
-
+        @param data <tuple>: data to sample from. If not given, use cached metadata
         Return:
         - tuple (X,Y): X an Y have k elements
         """
 
         reload_data = False
         s_x,s_y = (None,None)
+
+        if data is None:
+            X,Y = self.X,self.Y
+        elif not (self.X is None or self.Y is None):
+            X,Y = data
+        else:
+            if self._config.verbose > 1:
+                print("[GenericDatasource] Run load_metadata first!")
+            return None
+        
         if self._cache.checkFileExistence('sampled_metadata.pik'):
             try:
                 s_x,s_y,name = self._cache.load('sampled_metadata.pik')
@@ -320,7 +330,7 @@ class GenericDS(ABC):
 
             #Check if we have the desired number of items
             if k <= 1.0:
-                k = int(k*len(self.X))
+                k = int(k*len(X))
             else:
                 k = int(k)
             if k != len(s_x):
@@ -333,20 +343,15 @@ class GenericDS(ABC):
         else:
             reload_data = True
         
-        if reload_data and (self.X is None or self.Y is None):
-            if self._config.verbose > 1:
-                print("[GenericDatasource] Run load_metadata first!")
-            return None
-        
         if reload_data:
             if k <= 1.0:
-                k = int(k*len(self.X))
+                k = int(k*len(X))
             else:
                 k = int(k)
 
             #All operations are over indexes
             if not pos_rt is None:
-                np_y = np.array(self.Y)
+                np_y = np.array(Y)
                 unique,count = np.unique(np_y,return_counts=True)
                 l_count = dict(zip(unique,count))
                 pcount = min(int(pos_rt*k),l_count[1])
@@ -356,10 +361,10 @@ class GenericDS(ABC):
                 np.random.shuffle(samples)
                 del(np_y)
             else:
-                samples = np.random.choice(range(len(self.X)),k,replace=False)
+                samples = np.random.choice(range(len(X)),k,replace=False)
             
-            s_x = [self.X[s] for s in samples]
-            s_y = [self.Y[s] for s in samples]
+            s_x = [X[s] for s in samples]
+            s_y = [Y[s] for s in samples]
 
         #Save last generated sample
         self._cache.dump((s_x,s_y,self.name),'sampled_metadata.pik')

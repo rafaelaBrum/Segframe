@@ -100,8 +100,21 @@ class ActiveLearningTrainer(Trainer):
 
         All sets are kept as NP arrays
         """
-        X,Y = self._ds.load_metadata()
+        fX,fY = self._ds.load_metadata()
 
+        #Test set is extracted from the last items of the full DS and is not changed for the whole run
+        tsp = self._config.split[-1:][0]
+        if tsp > 1.0:
+            t_idx = int(tsp)
+        else:
+            t_idx = int(tsp * len(fX))
+        self.test_x = fX[- t_idx:]
+        self.test_y = fY[- t_idx:]
+
+        X,Y = fX[:t_idx],fY[:t_idx]
+        del(fX)
+        del(fY)
+        
         #Use a sample of the metadata if so instructed
         if self._config.sample != 1.0:
             X,Y = self._ds.sample_metadata(self._config.sample,self._config.pos_rt)
@@ -114,14 +127,6 @@ class ActiveLearningTrainer(Trainer):
         elif self._config.info:
             print("[ALTrainer] Using an UNBALANCED initial dataset for AL ({} total elements).".format(len(X)))
             
-        #Test set is extracted from the last items and is not changed for the whole run
-        tsp = self._config.split[-1:][0]
-        if tsp > 1.0:
-            t_idx = int(tsp)
-        else:
-            t_idx = int(tsp * len(X))
-        self.test_x = X[- t_idx:]
-        self.test_y = Y[- t_idx:]
 
         self.pool_x = X[:-t_idx]
         self.pool_y = Y[:-t_idx]
