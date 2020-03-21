@@ -212,7 +212,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         import gc
 
         #Clear some memory before acquisitions
-        gc.collect(generation=1)
+        gc.collect()
         
         #An acquisition function should return a NP array with the indexes of all items from the pool that 
         #should be inserted into training and validation sets
