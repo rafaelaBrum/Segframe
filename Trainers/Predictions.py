@@ -171,7 +171,7 @@ class Predictor(object):
                 print("Test labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
             print("Test set: {} items".format(len(y_test)))
 
-        if self._ensemble:
+        if self._ensemble or not self._keep:
             X,Y = x_test,y_test
         else:
             X,Y = self._ds.load_data(data=(x_test,y_test),keepImg=self._keep)
@@ -230,7 +230,7 @@ class Predictor(object):
         image_generator = ImageDataGenerator(samplewise_center=self._config.batch_norm, 
                                             samplewise_std_normalization=self._config.batch_norm)
 
-        if self._ensemble:
+        if self._ensemble or not self._keep:
             if not self._config.tdim is None:
                 fix_dim = self._config.tdim
             else:
@@ -243,7 +243,7 @@ class Predictor(object):
                                                 extra_aug=self._config.augment,
                                                 shuffle=False,
                                                 verbose=self._verbose,
-                                                input_n=self._config.emodels)
+                                                input_n=self._config.emodels if self._ensemble else 1)
         else:
             Y = to_categorical(Y,self._ds.nclasses)
             test_generator = image_generator.flow(x=X,
@@ -274,7 +274,7 @@ class Predictor(object):
             l.close()
 
         y_pred = np.argmax(Y_pred, axis=1)
-        if self._ensemble:
+        if self._ensemble or not self._keep:
             expected = np.asarray(Y)
             del(Y)
         else:

@@ -181,7 +181,7 @@ class ActiveLearningTrainer(Trainer):
         self.configure_sets()
         #AL components
         cache_m = CacheManager()
-        predictor = Predictor(self._config,keepImg=True)
+        predictor = Predictor(self._config,keepImg=self._config.keepimg)
         function = None
         
         if not self._config.ac_function is None:
