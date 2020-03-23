@@ -195,6 +195,7 @@ class ActiveLearningTrainer(Trainer):
         etime = None
         sw_thread = None
         end_train = False
+                    
         for r in range(self._config.acquisition_steps):
             if self._config.info:
                 print("[ALTrainer] Starting acquisition step {0}/{1}".format(r+1,self._config.acquisition_steps))
@@ -206,12 +207,12 @@ class ActiveLearningTrainer(Trainer):
             cache_m.dump(((self.train_x,self.train_y),(self.val_x,self.val_y),(self.test_x,self.test_y)),fid)
                 
             sw_thread = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))            
-            
+                
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are in order")
                 end_train = True
-                    
+                
             #Some models may take too long to save weights
             if not sw_thread is None and sw_thread.is_alive():
                 if self._config.info:
@@ -240,6 +241,11 @@ class ActiveLearningTrainer(Trainer):
         Returns True if acquisition was sucessful
         """
         from Trainers import ThreadedGenerator
+        import gc
+
+        #Clear some memory before acquisitions
+        gc.collect()
+        
         #An acquisition function should return a NP array with the indexes of all items from the pool that 
         #should be inserted into training and validation sets
         if self.pool_x.shape[0] < self._config.acquire:
@@ -287,6 +293,9 @@ class ActiveLearningTrainer(Trainer):
             print("Starting acquisition using model: {0}".format(hex(id(pred_model))))
         
         pooled_idx = function(pred_model,generator,self.pool_x.shape[0],**kwargs)
+
+        del(generator)
+        
         if pooled_idx is None:
             if self._config.info:
                 print("[ALTrainer] No indexes returned. Something is wrong.")
