@@ -2,7 +2,7 @@
 #-*- coding: utf-8
 
 import numpy as np
-import os
+import os,sys
 from tqdm import tqdm
 
 from scipy.stats import mode
@@ -223,6 +223,7 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
     for d in l:
         if not pbar and config.info:
             print("Step {0}/{1}".format(d+1,emodels))
+            sys.stdout.flush()
             
         model.register_ensemble(d)
             

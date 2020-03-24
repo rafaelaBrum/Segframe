@@ -125,7 +125,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
 
         if config.pca > 0:
             if config.info:
-                print("Starting PCA decomposition...")
+                print("Starting PCA decomposition ({} features)...".format(config.pca))
 
             pca = PCA(n_components = config.pca)
             features = pca.fit_transform(features)
