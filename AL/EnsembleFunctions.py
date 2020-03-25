@@ -203,13 +203,13 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
             fidp = 'al-probs-{1}-r{0}.pik'.format(r,config.ac_function)
             cache_m.registerFile(os.path.join(config.logdir,fidp),fidp)
             
-    All_Entropy_Dropout = np.zeros(shape=data_size)
-    score_All = np.zeros(shape=(data_size, generator.classes))
+    All_Entropy_Dropout = np.zeros(shape=data_size,dtype=np.float32)
+    score_All = np.zeros(shape=(data_size, generator.classes),dtype=np.float32)
 
     #Keep probabilities for analysis
     all_probs = None
     if config.debug:
-        all_probs = np.zeros(shape=(emodels,data_size,generator.classes))
+        all_probs = np.zeros(shape=(emodels,data_size,generator.classes),dtype=np.float32)
         
     if pbar:
         l = tqdm(range(emodels), desc="Ensemble member predictions",position=0)

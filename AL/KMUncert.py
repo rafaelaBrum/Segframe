@@ -35,7 +35,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     pbar <boolean>: user progress bars
     sw_threads <thread Object>: if a thread object is passed, you must wait its conclusion before loading weights
     """
-    from sklearn.cluster import KMeans
+    from sklearn.cluster import KMeans,MiniBatchKMeans
     from sklearn.decomposition import PCA
     import importlib
     import copy
@@ -94,7 +94,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         if config.info:
             print("[km_uncert] Loaded clusters from previous acquisition")
             #TODO: REMOVE
-            print("Previous cluster size: {};\nAcquired: {}".format(km.labels_.shape,acquired.shape))
+            print("[km_uncert] Previous cluster size: {};\nAcquired: {}".format(km.labels_.shape,acquired.shape))
         km.labels_ = np.delete(km.labels_,acquired)
     else:
         #Run feature extraction and clustering
@@ -135,8 +135,12 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         if config.verbose > 0:
             print("Done extraction...starting KMeans")
             stime = time.time()
-        
-        km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=max(int(cpu_count/2),1)).fit(features)
+            
+        if data_size > 10000:
+            km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=max(int(cpu_count/2),1)).fit(features)
+        else:
+            km = MiniBatchKMeans(n_clusters = clusters, init='k-means++',batch_size=100).fit(features)
+            
         del(features)
  
         if config.verbose > 0:
