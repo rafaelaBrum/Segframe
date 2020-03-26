@@ -157,9 +157,13 @@ def bayesian_bald(pred_model,generator,data_size,**kwargs):
         fid = 'al-uncertainty-{1}-r{0}.pik'.format(r,config.ac_function)
         cache_m.registerFile(os.path.join(config.logdir,fid),fid)
 
-    All_Entropy_Dropout = np.zeros(shape=data_size)
-    score_All = np.zeros(shape=(data_size, generator.classes))
-    
+    All_Entropy_Dropout = np.zeros(shape=data_size,dtype=np.float32)
+    score_All = np.zeros(shape=(data_size, generator.classes),dtype=np.float32)
+    #Keep probabilities for analysis
+    all_probs = None
+    if config.debug:
+        all_probs = np.zeros(shape=(mc_dp,data_size,generator.classes),dtype=np.float32)
+        
     if pbar:
         l = tqdm(range(mc_dp), desc="MC Dropout",position=0)
     else:
@@ -175,6 +179,9 @@ def bayesian_bald(pred_model,generator,data_size,**kwargs):
                                                         workers=5*cpu_count,
                                                         max_queue_size=100*gpu_count,
                                                         verbose=0)
+        if config.debug:
+            all_probs[d] = dropout_score
+            
         #computing G_X
         score_All = score_All + dropout_score
 
@@ -183,7 +190,8 @@ def bayesian_bald(pred_model,generator,data_size,**kwargs):
         Entropy_Compute = - np.multiply(dropout_score, dropout_score_log)
         Entropy_Per_Dropout = np.sum(Entropy_Compute, axis=1)
         
-        All_Entropy_Dropout = All_Entropy_Dropout + Entropy_Per_Dropout 
+        All_Entropy_Dropout = All_Entropy_Dropout + Entropy_Per_Dropout
+        del(dropout_score)
 
 
     Avg_Pi = np.divide(score_All, mc_dp)
@@ -208,6 +216,13 @@ def bayesian_bald(pred_model,generator,data_size,**kwargs):
 
     if save_var:
         cache_m.dump((x_pool_index,a_1d),fid)
+
+    if config.debug:
+        from .Common import debug_acquisition
+        s_expected = generator.returnLabelsFromIndex(x_pool_index)
+        #After transposition shape will be (classes,items,mc_dp)
+        s_probs = all_probs[:mc_dp,x_pool_index].T
+        debug_acquisition(s_expected,s_probs,generator.classes,cache_m,config,fidp)
         
     if verbose > 0:
         #print("Selected item indexes: {0}".format(x_pool_index))
