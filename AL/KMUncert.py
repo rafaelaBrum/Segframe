@@ -148,7 +148,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
             td = timedelta(seconds=(etime-stime))
             print("KMeans took {}".format(td))
 
-    un_clusters = {k:[] for k in range(config.clusters)}
+    un_clusters = {k:[] for k in range(clusters)}
 
     #Distributes items in clusters in descending order of uncertainty
     for iid in un_indexes:
@@ -159,20 +159,22 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         fid = 'al-clustermetadata-{1}-r{0}.pik'.format(acq,model.name)
         cache_m.registerFile(os.path.join(config.logdir,fid),fid)
         cache_m.dump((generator.returnDataAsArray(),un_clusters,un_indexes),fid)
+
+    #Check uncertainty by the indexes, lower indexes correspond to greater uncertainty
+    ind = None
+    posa = {}
+    for k in range(clusters):
+        ind = np.asarray(un_clusters[k],dtype=np.int32)
+        posa[k] = []
+        for ii in range(min(ind.shape[0],query)):
+            posa[k].append(np.where(un_indexes == ind[ii])[0][0])
+        posa[k] = np.asarray(posa[k])
         
-    #If debug
-    if config.debug:
-        expected = generator.returnLabelsFromIndex()
-        for k in range(len(un_clusters)):
-            ind = np.asarray(un_clusters[k])
+        #If debug
+        if config.debug:
+            expected = generator.returnLabelsFromIndex()
             print("Cluster {}, # of items: {}".format(k,ind.shape[0]))
-            posa = np.ndarray(shape=(1,),dtype=np.int32)
-            for ii in range(min(ind.shape[0],30)):
-                if ii == 0:
-                    posa[0] = np.where(un_indexes == ind[ii])[0]
-                else:
-                    posa = np.hstack((posa,np.where(un_indexes == ind[ii])[0]))
-            print("Cluster {} first items positions in index array (at most 30): {}".format(k,posa))
+            print("Cluster {} first items positions in index array (first 30): {}".format(k,posa[k][:30]))
             #Check % of items of each class in cluster k
             c_labels = expected[ind]
             unique,count = np.unique(c_labels,return_counts=True)
@@ -183,24 +185,32 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
             else:
                 if unique.shape[0] == 1:
                     l_count[unique[0] ^ 1] = 0
-                print("Cluster {3} labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1])),k))            
-            
+                print("Cluster {3} labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1])),k))
+            del(expected)
+
+    #Acquisition logic
     ac_count = 0
     acquired = []
     j = 0
+    cmean = np.asarray([np.mean(posa[k]) for k in range(clusters)])
+    glb = np.sum(cmean)
+    frac = (glb/cmean)/np.sum(glb/cmean)
     while ac_count < query:
-        cln = (ac_count+j) % clusters
+        cln = j % clusters
         q = un_clusters[cln]
-        if len(q) > 0:
-            acquired.append(q.pop(0))
-            ac_count += 1
+        cl_aq = int(round(frac[cln]*query))
+        if len(q) >= cl_aq:
+            acquired.extend(q[:cl_aq])
+            ac_count += cl_aq
+            if config.debug:
+                print("[km_uncert] Selected {} patches for acquisition from cluster {}".format(cl_aq,cln))
         else:
             if verbose > 0:
-                print("[km_uncert] Cluster {} exausted, will try to acquire image from cluster {}".format(cln,(cln+1)%clusters))
-            j += 1
-            continue
+                print("[km_uncert] Cluster {} exausted, will try to acquire patches from cluster {}".format(cln,(cln+1)%clusters))
+        j += 1
+            
 
-    acquired = np.asarray(acquired)
+    acquired = np.asarray(acquired[:query])
     if config.recluster > 0:
         cache_m.dump((km,acquired),'clusters.pik')
     
