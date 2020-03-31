@@ -23,8 +23,11 @@ def _process_al_metadata(config):
 
     acfiles = {}
     for f in files:
-        if f.startswith('al-metadata'):
-            ac_id = int(f.split('.')[0].split('-')[3][1:])
+        if f == '{}-inittrain.pik'.format(config.ds) and config.pinit:
+            ac_id = 0
+            acfiles[ac_id] = os.path.join(config.sdir,f)
+        elif f.startswith('al-metadata'):
+            ac_id = int(f.split('.')[0].split('-')[3][1:]) + 1
             net = f.split('.')[0].split('-')[2]
             if (not config.net is None and config.net == net) or config.net is None:
                 acfiles[ac_id] = os.path.join(config.sdir,f)
@@ -35,7 +38,21 @@ def _process_al_metadata(config):
     ac_imgs = {}
     for k in ordered_k:
         with open(acfiles[k],'rb') as fd:
-            train,val,test = pickle.load(fd)
+            try:
+                train,val,test = pickle.load(fd)
+            except ValueError:
+                fd.seek(0)
+                idx = pickle.load(fd)
+                fd.close()
+                mt = os.path.join(config.sdir,'{}-sampled_metadata.pik'.format(config.ds))
+                if os.path.isfile(mt):
+                   fd = open(mt,'rb')
+                   tx,ty,_ = pickle.load(fd)
+                   tx = np.asarray(tx)[idx]
+                   train = (tx,ty)
+                else:
+                    print("Not ready to extract from full DS")
+                    sys.exit(1)
             
         if initial_set is None:
             #Acquisitions are obtained from keys k and k-1
@@ -397,6 +414,10 @@ def process_al_metadata(config):
     if not os.path.isdir(config.out_dir):
         os.makedirs(config.out_dir)
 
+    if config.cp_orig is None:
+        print("Define local patches location by setting -orig")
+        sys.exit(1)
+        
     ac_imgs = _process_al_metadata(config)
 
     if config.ac_n is None:
@@ -562,7 +583,7 @@ if __name__ == "__main__":
     parser.add_argument('-save', action='store_true', dest='save',
         help='Saves generated statistics to file.',default=False)    
     parser.add_argument('-ac_save', dest='ac_save', nargs='+', type=int,
-        help='Save image statistics from this this acquisitions.', default=None, required=False)
+        help='Save image statistics from this acquisitions.', default=None, required=False)
     parser.add_argument('-keep', action='store_true', dest='keep',
         help='Keep original dataset structure when copying tiles.',default=False)    
     parser.add_argument('-gen_label', action='store_true', dest='gen_label',
@@ -570,7 +591,9 @@ if __name__ == "__main__":
     parser.add_argument('-add_label', action='store_true', dest='add_label',
         help='Append label to file names as used in quip_classification.',default=False)
     parser.add_argument('-comb_wsi', action='store_true', dest='comb_wsi',
-        help='Check patches acquired from a WSI in comparison to total WSI patches available .',default=False)
+        help='Check patches acquired from a WSI in comparison to total WSI patches available.',default=False)
+    parser.add_argument('-pinit', action='store_true', dest='pinit',
+        help='Parse and extract initial training set, if it exists.',default=False)
     
     config, unparsed = parser.parse_known_args()
 
