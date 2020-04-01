@@ -48,6 +48,7 @@ def _process_al_metadata(config):
                 if os.path.isfile(mt):
                    fd = open(mt,'rb')
                    tx,ty,_ = pickle.load(fd)
+                   fd.close()
                    tx = np.asarray(tx)[idx]
                    train = (tx,ty)
                 else:
@@ -58,12 +59,13 @@ def _process_al_metadata(config):
             #Acquisitions are obtained from keys k and k-1
             initial_set = list(train[0])
         else:
-            mask = np.isin(list(train[0]),initial_set,assume_unique=True,invert=True)
+            ctrain = list(train[0])
+            mask = np.isin(ctrain,initial_set,assume_unique=True,invert=True)
             imgs = train[0][mask]
             labels = train[1][mask]
             print("Acquired {} images in acquisition {}".format(imgs.shape[0],k-1))
             ac_imgs[k-1] = (imgs,labels)
-            initial_set = list(train[0])    
+            initial_set = ctrain    
 
     return ac_imgs
 
