@@ -60,12 +60,15 @@ def _process_al_metadata(config):
             initial_set = list(train[0])
         else:
             ctrain = list(train[0])
-            mask = np.isin(ctrain,initial_set,assume_unique=True,invert=True)
+            if k == 1 and config.pinit:
+                mask = np.isin(ctrain,initial_set,assume_unique=True,invert=False)
+            else:
+                mask = np.isin(ctrain,initial_set,assume_unique=True,invert=True)
             imgs = train[0][mask]
             labels = train[1][mask]
             print("Acquired {} images in acquisition {}".format(imgs.shape[0],k-1))
             ac_imgs[k-1] = (imgs,labels)
-            initial_set = ctrain    
+            initial_set = ctrain
 
     return ac_imgs
 
@@ -426,7 +429,7 @@ def process_al_metadata(config):
         #Use all data if specific acquisitions were not defined
         config.ac_n = list(ac_imgs.keys())
         config.ac_n.sort()    
-    
+     
     acquisitions = [ac_imgs[k][0][:config.n] for k in config.ac_n]
 
     print("# of acquisitions obtained: {} -> ".format(len(acquisitions)),end='')
@@ -569,7 +572,7 @@ if __name__ == "__main__":
     parser.add_argument('-od', dest='out_dir', type=str,default='img_grab', 
         help='Save selected images to this directory.')
     parser.add_argument('-n', dest='n', type=int, 
-        help='Grab this many images. If cluster, grab this many images per cluster', default=200,required=False)
+        help='Grab this many images. If cluster, grab this many images per cluster (Default: 200)', default=200,required=False)
     parser.add_argument('-orig', dest='cp_orig', type=str, nargs='?', default=None, const='../data/lym_cnn_training_data',
         help='Copy original images instead of the normalized ones. Define location of the originals.')
     parser.add_argument('-net', dest='net', type=str,default=None, 
