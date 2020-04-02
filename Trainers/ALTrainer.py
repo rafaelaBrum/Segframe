@@ -110,7 +110,8 @@ class ActiveLearningTrainer(Trainer):
             t_idx = int(tsp * len(fX))
         self.test_x = fX[- t_idx:]
         self.test_y = fY[- t_idx:]
-
+        self._ds.check_paths(self.test_x,self._config.predst)
+        
         X,Y = fX[:-t_idx],fY[:-t_idx]
         del(fX)
         del(fY)
