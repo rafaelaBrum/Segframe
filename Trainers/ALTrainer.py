@@ -135,7 +135,7 @@ class ActiveLearningTrainer(Trainer):
 
         #Initial training set will be choosen at random from pool if a default is not provided
         cache_m = CacheManager()
-        if self._config.load_train and not self._config.balance:
+        if self._config.load_train and not self._config.balance and cache_m.checkFileExistence('initial_train.pik'):
             train_idx = cache_m.load('initial_train.pik')
             if not train_idx is None and self._config.info:
                 print("[ALTrainer] Using initial training set from cache. This is DANGEROUS. Use the metadata correspondent to the initial set.")
