@@ -83,20 +83,24 @@ def check_heatmaps(hm_path,wsis):
     for k in cancer_t:
         for img in os.listdir(os.path.join(hm_path,k)):
             img_id = img.split('.')[0]
+            if img_id in hms:
+                print("Duplicate heatmap name ({}):\n - {}\n - {}".format(img_id,hms[img_id],os.path.join(hm_path,k,img)))
             hms[img_id] = {'path':os.path.join(hm_path,k,img)}
 
     removed = 0
+    final = []
     for w in wsis:
         w_id = w.split('.')[0]
         if not w_id in hms:
             print("Slide {} has no heatmap.".format(w))
-            wsis.remove(w)
             removed += 1
+        else:
+            final.append(w)
 
     if removed == 0:
         print("All WSIs have a corresponding heatmap.")
         
-    return wsis,hms
+    return final,hms
 
 def make_tiles(slide_name,output_folder,patch_size_20X,wr,hms,debug=False,hmc=False):
     """
@@ -246,6 +250,8 @@ if __name__ == "__main__":
         help='Use to make extra checks on labels and conversions.',default=False)
     parser.add_argument('-hmc', action='store_true', dest='hmc',
         help='Check heatmap coordinates for duplicates.',default=False)
+    parser.add_argument('-hmq', action='store_true', dest='hmq',
+        help='Check heatmap file names only and exit.',default=False)
     
     config, unparsed = parser.parse_known_args()
 
@@ -269,6 +275,10 @@ if __name__ == "__main__":
     hms = None
     if config.label:
         wsis,hms = check_heatmaps(config.heatmap,wsis)
+
+    if config.hmq:
+        print("Done checking heatmap names")
+        sys.exit(0)
         
     with multiprocessing.Pool(processes=config.mp) as pool:
         results = [pool.apply_async(make_tiles,(os.path.join(config.ds,i),config.out_dir,config.patch_size,

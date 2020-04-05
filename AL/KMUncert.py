@@ -73,7 +73,8 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     n_config.acquire = data_size
     kwargs['config'] = n_config
     un_function = getattr(importlib.import_module('AL'),config.un_function)
-    un_indexes = un_function(bayesian_model,generator,data_size,**kwargs)    
+    un_indexes = un_function(bayesian_model,generator,data_size,**kwargs)
+    del(un_function)
 
     #Models that take to long to save weights might not have finished
     if 'sw_thread' in kwargs:
