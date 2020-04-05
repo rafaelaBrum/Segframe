@@ -100,19 +100,29 @@ class ActiveLearningTrainer(Trainer):
 
         All sets are kept as NP arrays
         """
-        fX,fY = self._ds.load_metadata()
 
-        #Test set is extracted from the last items of the full DS and is not changed for the whole run
+        #Test set is extracted from the last items of the full DS or from a test dir and is not changed for the whole run
+        fX,fY = self._ds.load_metadata()
         tsp = self._config.split[-1:][0]
+        t_idx = 0
         if tsp > 1.0:
             t_idx = int(tsp)
         else:
             t_idx = int(tsp * len(fX))
-        self.test_x = fX[- t_idx:]
-        self.test_y = fY[- t_idx:]
+
+        if self._config.testdir is None or not os.path.isdir(self._config.testdir):
+            self.test_x = fX[- t_idx:]
+            self.test_y = fY[- t_idx:]
+            X,Y = fX[:-t_idx],fY[:-t_idx]
+        else:
+            x_test,y_test = self._ds.run_dir(self._config.testdir)
+            self.test_x, self.test_y = self._ds.sample_metadata(t_idx,data=(x_test,y_test),pos_rt=self._config.pos_rt)
+            del(x_test)
+            del(y_test)
+            X,Y = fX,fY
+
         self._ds.check_paths(self.test_x,self._config.predst)
-        
-        X,Y = fX[:-t_idx],fY[:-t_idx]
+
         del(fX)
         del(fY)
         

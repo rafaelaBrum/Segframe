@@ -157,7 +157,7 @@ class Predictor(object):
                 else:
                     _,_,(x_test,y_test) = self._ds.split_metadata(split)
             else:
-                x_test,y_test = self._ds._run_dir(self._config.testdir)
+                x_test,y_test = self._ds.run_dir(self._config.testdir)
 
         if self._config.verbose > 0:
             unique,count = np.unique(y_test,return_counts=True)

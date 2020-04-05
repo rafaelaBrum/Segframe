@@ -124,7 +124,13 @@ class GenericDS(ABC):
         else:
             raise ValueError("[GenericDatasource] Spliting values have to equal 1.0")
 
-    def _run_dir(self,path):
+    def run_dir(self,path):
+        """
+        Multiprocess execution over directories of path in search for images.
+        """
+
+        if not os.path.isdir(path):
+            return None
 
         dlist = []
         files = os.listdir(path)
@@ -215,7 +221,7 @@ class GenericDS(ABC):
             X,Y = self._shuffle(X,Y)
             
         if reload_data:
-            X,Y = self._run_dir(self.path)
+            X,Y = self.run_dir(self.path)
 
         if reload_data or reshuffle:
             self._cache.dump((X,Y,self.name),metadata_file)

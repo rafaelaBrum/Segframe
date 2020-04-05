@@ -124,6 +124,7 @@ class Plotter(object):
         color = 0
         plots = []
         up = 0.0
+        low = 1.0
         for d in data:
             x_data,y_data,ci,y_label = d
             if auc_only and y_label != 'AUC':
@@ -134,10 +135,13 @@ class Plotter(object):
             if not np.isnan(ci).any():
                 low_ci = np.clip(y_data - ci,0.0,1.0)
                 upper_ci = np.clip(y_data + ci,0.0,1.0)
-                ym = np.max(upper_ci)+0.05
+                ym = np.max(upper_ci)
+                yl = np.min(low_ci)
             else:
+                yl = np.min(x_data)
                 ym = np.max(x_data)
             up = ym if ym > up else up
+            low = yl if yl < low else low
             if not np.isnan(ci).any():
                 plt.fill_between(x_data, low_ci, upper_ci, color = palette(color), alpha = 0.4)
             color += 1
@@ -149,7 +153,8 @@ class Plotter(object):
             labels = ['Mean','{} STD'.format(confidence)]
         plt.legend(plots,labels=labels,loc=4,ncol=2)
         plt.xticks(np.arange(min(x_data), max(x_data)+xticks, xticks))
-        rg = np.clip(np.arange(max(np.min(low_ci),0.0), up if up <= 1.05 else 1.05, 0.05),0.0,1.0)
+        ydelta = (1.0 - low)/15
+        rg = np.clip(np.arange(max(low,0.0), up if up <= 1.05 else 1.05, ydelta),0.0,1.0)
         plt.yticks(rg)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         if max(x_data) > 1000:
