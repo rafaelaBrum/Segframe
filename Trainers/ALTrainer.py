@@ -117,9 +117,12 @@ class ActiveLearningTrainer(Trainer):
         else:
             x_test,y_test = self._ds.run_dir(self._config.testdir)
             t_idx = min(len(x_test),t_idx)
-            self.test_x, self.test_y = self._ds.sample_metadata(t_idx,data=(x_test,y_test),pos_rt=self._config.pos_rt)
+            samples = np.random.choice(range(len(x_test)),t_idx,replace=False)
+            self.test_x = [x_test[s] for s in samples]
+            self.test_y = [y_test[s] for s in samples]
             del(x_test)
             del(y_test)
+            del(samples)
             X,Y = fX,fY
 
         self._ds.check_paths(self.test_x,self._config.predst)
