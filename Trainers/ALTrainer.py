@@ -116,6 +116,7 @@ class ActiveLearningTrainer(Trainer):
             X,Y = fX[:-t_idx],fY[:-t_idx]
         else:
             x_test,y_test = self._ds.run_dir(self._config.testdir)
+            t_idx = min(len(x_test),t_idx)
             self.test_x, self.test_y = self._ds.sample_metadata(t_idx,data=(x_test,y_test),pos_rt=self._config.pos_rt)
             del(x_test)
             del(y_test)
