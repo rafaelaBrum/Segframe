@@ -114,6 +114,7 @@ class ActiveLearningTrainer(Trainer):
             self.test_x = fX[- t_idx:]
             self.test_y = fY[- t_idx:]
             X,Y = fX[:-t_idx],fY[:-t_idx]
+            self._ds.check_paths(self.test_x,self._config.predst)
         else:
             x_test,y_test = self._ds.run_dir(self._config.testdir)
             t_idx = min(len(x_test),t_idx)
@@ -124,8 +125,6 @@ class ActiveLearningTrainer(Trainer):
             del(y_test)
             del(samples)
             X,Y = fX,fY
-
-        self._ds.check_paths(self.test_x,self._config.predst)
 
         del(fX)
         del(fY)

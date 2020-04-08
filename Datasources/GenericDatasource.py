@@ -316,14 +316,14 @@ class GenericDS(ABC):
         reload_data = False
         s_x,s_y = (None,None)
 
-        if data is None:
-            X,Y = self.X,self.Y
-        elif not (self.X is None or self.Y is None):
-            X,Y = data
-        else:
+        if data is None and (self.X is None or self.Y is None):
             if self._config.verbose > 1:
                 print("[GenericDatasource] Run load_metadata first!")
             return None
+        elif not data is None:
+            X,Y = data
+        else:
+            X,Y = self.X,self.Y
         
         if self._cache.checkFileExistence('sampled_metadata.pik'):
             try:
