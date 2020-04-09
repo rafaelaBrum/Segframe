@@ -229,7 +229,7 @@ class GenericDS(ABC):
             
         self.X = X.copy()
         self.Y = Y.copy()
-        return X,Y
+        return np.asarray(X),np.asarray(Y)
     
     def load_data(self,split=None,keepImg=False,data=None):
         """
@@ -302,13 +302,15 @@ class GenericDS(ABC):
         else:
             return self._split_data(split,X_data,y)
 
-    def sample_metadata(self,k,data=None,pos_rt=None):
+    def sample_metadata(self,k,data=None,pos_rt=None,use_cache=True):
         """
         Produces a sample of the full metadata with k items. Returns a cached sample if one exists
 
         @param k <int>: total of samples
         @param k <float>: percentile of the whole dataset
         @param data <tuple>: data to sample from. If not given, use cached metadata
+        @param pos_rt <float>: load a percentile of positive samples
+        @param use_cache <boolean>: load cached data sample
         Return:
         - tuple (X,Y): X an Y have k elements
         """
@@ -325,7 +327,7 @@ class GenericDS(ABC):
         else:
             X,Y = self.X,self.Y
         
-        if self._cache.checkFileExistence('sampled_metadata.pik'):
+        if self._cache.checkFileExistence('sampled_metadata.pik') and use_cache:
             try:
                 s_x,s_y,name = self._cache.load('sampled_metadata.pik')
             except ValueError:
@@ -374,5 +376,5 @@ class GenericDS(ABC):
 
         #Save last generated sample
         self._cache.dump((s_x,s_y,self.name),'sampled_metadata.pik')
-        return (s_x,s_y)
+        return (np.asarray(s_x),np.asarray(s_y))
         

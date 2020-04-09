@@ -93,7 +93,31 @@ class ActiveLearningTrainer(Trainer):
         nX[:],nY[:] = zip(*combined)
 
         return nX,nY
-        
+
+
+    def _split_origins(self,x_data,t_idx):
+        """
+        Separates patches of a predefined number of WSIs to be used as test set
+        """
+        wsis = set()
+
+        for k in x_data:
+            wsis.add(k.getOrigin())
+
+        wsis = list(wsis)
+        selected = set(random.choices(wsis,k=self._config.wsi_split))
+        selected_idx = []
+
+        if self._config.info > 0:
+            print("[ALTrainer] WSIs selected to provide test patches: {}".format(",".join(selected)))
+            
+        for i in range(len(x_data)):
+            if x_data[i].getOrigin() in selected:
+                selected_idx.append(i)
+
+        t_idx = min(len(selected_idx),t_idx)
+        return np.random.choice(selected_idx,t_idx,replace=False)
+    
     def configure_sets(self):
         """
         Creates the initial sets: training (X,Y); example pool; validation set; test set
@@ -110,10 +134,22 @@ class ActiveLearningTrainer(Trainer):
         else:
             t_idx = int(tsp * len(fX))
 
+        use_cache = True
+        #Configuration option that limits test set size
+        t_idx = min(self._config.pred_size,t_idx) if self._config.pred_size > 0 else t_idx
+
         if self._config.testdir is None or not os.path.isdir(self._config.testdir):
-            self.test_x = fX[- t_idx:]
-            self.test_y = fY[- t_idx:]
-            X,Y = fX[:-t_idx],fY[:-t_idx]
+            if self._config.wsi_split > 0:
+                samples = self._split_origins(fX,t_idx)
+                self.test_x = fX[samples]
+                self.test_y = fY[samples]
+                X = np.delete(fX,samples)
+                Y = np.delete(fY,samples)
+                use_cache = False
+            else:
+                self.test_x = fX[- t_idx:]
+                self.test_y = fY[- t_idx:]
+                X,Y = fX[:-t_idx],fY[:-t_idx]
             self._ds.check_paths(self.test_x,self._config.predst)
         else:
             x_test,y_test = self._ds.run_dir(self._config.testdir)
@@ -131,7 +167,7 @@ class ActiveLearningTrainer(Trainer):
         
         #Use a sample of the metadata if so instructed
         if self._config.sample != 1.0:
-            X,Y = self._ds.sample_metadata(self._config.sample,data=(X,Y),pos_rt=self._config.pos_rt)
+            X,Y = self._ds.sample_metadata(self._config.sample,data=(X,Y),pos_rt=self._config.pos_rt,use_cache=use_cache)
             self._ds.check_paths(X,self._config.predst)
 
         if self._config.balance:
