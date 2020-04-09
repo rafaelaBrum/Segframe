@@ -169,7 +169,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         posa[k] = []
         for ii in range(min(ind.shape[0],query)):
             posa[k].append(np.where(un_indexes == ind[ii])[0][0])
-        posa[k] = np.asarray(posa[k])
+        posa[k] = np.asarray(posa[k],dtype=np.int32)
         
         #If debug
         if config.debug:
@@ -211,7 +211,7 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
         j += 1
             
 
-    acquired = np.asarray(acquired[:query])
+    acquired = np.asarray(acquired[:query],dtype=np.int32)
     if config.recluster > 0:
         cache_m.dump((km,acquired),'clusters.pik')
     

@@ -108,7 +108,7 @@ class ActiveLearningTrainer(Trainer):
         selected = set(random.choices(wsis,k=self._config.wsi_split))
         selected_idx = []
 
-        if self._config.info > 0:
+        if self._config.info:
             print("[ALTrainer] WSIs selected to provide test patches: {}".format(",".join(selected)))
             
         for i in range(len(x_data)):
