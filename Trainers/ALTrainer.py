@@ -99,6 +99,14 @@ class ActiveLearningTrainer(Trainer):
         """
         Separates patches of a predefined number of WSIs to be used as test set
         """
+
+        cache_m = CacheManager()
+        if cache_m.checkFileExistence('testset.pik'):
+            full_id,samples = cache_m.load('testset.pik')
+            if not samples is None and self._config.info:
+                print("[ALTrainer] Using cached TEST SET. This is DANGEROUS. Use the metadata correspondent to the set.")
+            return full_id,samples
+            
         wsis = set()
 
         for k in x_data:
@@ -109,14 +117,18 @@ class ActiveLearningTrainer(Trainer):
         selected_idx = []
 
         if self._config.info:
-            print("[ALTrainer] WSIs selected to provide test patches: {}".format(",".join(selected)))
+            print("[ALTrainer] WSIs selected to provide test patches:\n {}".format("\n".join(selected)))
             
         for i in range(len(x_data)):
             if x_data[i].getOrigin() in selected:
                 selected_idx.append(i)
 
         t_idx = min(len(selected_idx),t_idx)
-        return np.random.choice(selected_idx,t_idx,replace=False)
+        samples = np.random.choice(selected_idx,t_idx,replace=False)
+        full_id = np.asarray(selected_idx,dtype=np.int32)
+        cache_m.dump((full_id,samples),'testset.pik')
+        
+        return full_id,samples
     
     def configure_sets(self):
         """
@@ -134,18 +146,16 @@ class ActiveLearningTrainer(Trainer):
         else:
             t_idx = int(tsp * len(fX))
 
-        use_cache = True
         #Configuration option that limits test set size
         t_idx = min(self._config.pred_size,t_idx) if self._config.pred_size > 0 else t_idx
 
         if self._config.testdir is None or not os.path.isdir(self._config.testdir):
             if self._config.wsi_split > 0:
-                samples = self._split_origins(fX,t_idx)
+                full_id,samples = self._split_origins(fX,t_idx)
                 self.test_x = fX[samples]
                 self.test_y = fY[samples]
-                X = np.delete(fX,samples)
-                Y = np.delete(fY,samples)
-                use_cache = False
+                X = np.delete(fX,full_id)
+                Y = np.delete(fY,full_id)
             else:
                 self.test_x = fX[- t_idx:]
                 self.test_y = fY[- t_idx:]
@@ -167,7 +177,7 @@ class ActiveLearningTrainer(Trainer):
         
         #Use a sample of the metadata if so instructed
         if self._config.sample != 1.0:
-            X,Y = self._ds.sample_metadata(self._config.sample,data=(X,Y),pos_rt=self._config.pos_rt,use_cache=use_cache)
+            X,Y = self._ds.sample_metadata(self._config.sample,data=(X,Y),pos_rt=self._config.pos_rt)
             self._ds.check_paths(X,self._config.predst)
 
         if self._config.balance:
@@ -188,7 +198,6 @@ class ActiveLearningTrainer(Trainer):
             train_idx = cache_m.load('initial_train.pik')
             if not train_idx is None and self._config.info:
                 print("[ALTrainer] Using initial training set from cache. This is DANGEROUS. Use the metadata correspondent to the initial set.")
-            
         else:
             if not self._config.load_train and self._config.balance and self._config.info:
                 print("[ALTrainer] Dataset balancing and initial train set loading not possible at the same time.")

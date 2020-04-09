@@ -326,6 +326,7 @@ if __name__ == "__main__":
         'tcga.pik':os.path.join(config.cache,'tcga.pik'),
         'metadata.pik':os.path.join(config.cache,'{0}-metadata.pik'.format(config.data)),
         'sampled_metadata.pik':os.path.join(config.cache,'{0}-sampled_metadata.pik'.format(config.data)),
+        'testset.pik':os.path.join(config.cache,'{0}-testset.pik'.format(config.data)),
         'initial_train.pik':os.path.join(config.cache,'{0}-inittrain.pik'.format(config.data)),
         'split_ratio.pik':os.path.join(config.cache,'{0}-split_ratio.pik'.format(config.data)),
         'clusters.pik':os.path.join(config.cache,'{0}-clusters.pik'.format(config.data)),
