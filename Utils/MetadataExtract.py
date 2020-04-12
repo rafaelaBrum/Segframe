@@ -52,7 +52,7 @@ def _process_al_metadata(config):
                    tx = np.asarray(tx)[idx]
                    train = (tx,ty)
                 else:
-                    print("Not ready to extract from full DS")
+                    print("Not ready to extract from full DS. Missing sampled metadata.")
                     sys.exit(1)
             
         if initial_set is None:
@@ -110,7 +110,7 @@ def _process_wsi_cluster(km,s,members,config):
         wrad += count_m        
     wsi_mean = wsi_mean/config.nc
     print("{:2.2f}% of all WSI patches are within cluster center ranges".format(100*wrad/len(members)))
-    print("Mean distance of clusterd patches to centers: {:.1f}".format(wsi_mean))
+    print("Mean distance of clustered patches to centers: {:.1f}".format(wsi_mean))
 
     return wsi_mean
 
@@ -376,6 +376,7 @@ def process_wsi_metadata(config):
                     total_pos += l_count[1]
                 else:
                     pos_patches[s] = [0,l_count[1]]
+                    total_pos += l_count[1]
             else:
                 if s in pos_patches:
                     pos_patches[s].append(0)

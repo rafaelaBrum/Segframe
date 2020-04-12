@@ -117,7 +117,7 @@ class ActiveLearningTrainer(Trainer):
         selected_idx = []
 
         if self._config.info:
-            print("[ALTrainer] WSIs selected to provide test patches:\n {}".format("\n".join(selected)))
+            print("[ALTrainer] WSIs selected to provide test patches:\n{}".format("\n".join(selected)))
             
         for i in range(len(x_data)):
             if x_data[i].getOrigin() in selected:

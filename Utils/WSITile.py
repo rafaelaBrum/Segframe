@@ -218,7 +218,7 @@ def generate_label_files(tdir,hms):
                     fields = im.split('.')[0].split('_')
                     label = fields[1]
                     fields = fields[0].split('-')
-                    fields = [im,label,'-'.join(fields[:5]),fields[6],fields[7]]
+                    fields = [im,label,'-'.join(fields[:6]),fields[6],fields[7]]
                     fd.write("{}\n".format(" ".join(fields)))
 
     print("Done generating label files")
