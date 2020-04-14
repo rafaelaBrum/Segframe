@@ -296,7 +296,7 @@ if __name__ == "__main__":
     parser.add_argument('-print', action='store_true', dest='print_pred', default=False, 
         help='Prints stored prediction results.')
     parser.add_argument('-pred_size', dest='pred_size', type=int,
-        help='Limit test set size to this number os images.', default=0)
+        help='Limit test set size to this number of images.', default=0)
     parser.add_argument('-test_dir', dest='testdir', type=str,default=None, 
         help='Runs prediction on a different set of images stored in dir.')
     parser.add_argument('-wsi_split', dest='wsi_split', type=int,

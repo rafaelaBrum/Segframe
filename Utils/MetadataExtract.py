@@ -4,6 +4,7 @@
 
 import numpy as np
 import os,sys
+import copy
 import shutil
 import math
 import argparse
@@ -215,7 +216,97 @@ def _append_label(config):
                 nn = i.split('.')
                 nn[0] += '_{}'.format(labels[d][i])
                 shutil.move(os.path.join(move_to,i),os.path.join(move_to,'.'.join(nn)))
+
+
+def _dataset_wsi_metadata(cache_file,wsis,pos_patches,title="DATASET"):
+    #Generate dataset stats
+    total_patches = 0
+    discarded = 0
+    total_pos = 0
+    ds_wsis = {}
+
+    print("\n\n"+" "*10+"{} PATCHES STATISTICS".format(title))
+    if not cache_file is None:
+        with open(cache_file,'rb') as fd:
+            X,Y,_ = pickle.load(fd)
+        ac_patches = len(X)
+        for ic in range(ac_patches):
+            img = X[ic]
+            label = Y[ic]
+            
+            if hasattr(img,'getOrigin'):
+                origin = img.getOrigin()
+            elif hasattr(img,'_origin'):
+                origin = img._origin
+            else:
+                print("Image has no origin information: {}".format(img.getPath()))
+                continue
+            
+            if img.getCoord() is None:
+                discarded += 1
+                #continue
                 
+            if origin.startswith('log.'):
+                origin = origin.split('.')[1]
+                
+            if origin in ds_wsis:
+                ds_wsis[origin][0].append(img)
+                ds_wsis[origin][1].append(label)
+            else:
+                c_type = os.path.basename(os.path.dirname(img.getPath()))
+                ds_wsis[origin] = ([img],[label],c_type)
+        
+
+        cancer_type = {}
+        for s in ds_wsis:
+            n_patches = len(ds_wsis[s][0])
+            labels = np.asarray(ds_wsis[s][1])
+            cancer_type.setdefault(ds_wsis[s][2],[])
+            cancer_type[ds_wsis[s][2]].append(s)
+            
+            #Count positive patches:
+            unique,count = np.unique(labels,return_counts=True)
+            l_count = dict(zip(unique,count))
+            if 1 in l_count:
+                if s in pos_patches:
+                    pos_patches[s].append(l_count[1])
+                    total_pos += l_count[1]
+                else:
+                    pos_patches[s] = [0,l_count[1]]
+                    total_pos += l_count[1]
+            else:
+                if s in pos_patches:
+                    pos_patches[s].append(0)
+                else:
+                    pos_patches[s] = [0,0]
+            
+            print("******   {} ({} total patches)  *******".format(s,n_patches))
+            print("Positive patches: {} ({:2.2f}%)".format(pos_patches[s][1],100*pos_patches[s][1]/n_patches))
+            if pos_patches[s][1] > 0:
+                print("Positive patches acquired from this WSI: {} ({:2.2f}%)".format(pos_patches[s][0],100*pos_patches[s][0]/pos_patches[s][1]))
+            else:
+                print("Positive patches acquired from this WSI: {} (0.0%)".format(pos_patches[s][0]))
+            if config.nc > 0:
+                features = []
+                for p in range(n_patches):
+                    if not ds_wsis[s][0][p].getCoord() is None:
+                        features.append(ds_wsis[s][0][p].getCoord())
+                features = np.asarray(features)
+                if features.shape[0] > config.minp:
+                    km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
+                    _process_wsi_cluster(km,s,ds_wsis[s][0],config)
+        print("-----------------------------------------------------")
+        print("Total patches in dataset: {}".format(ac_patches))
+        print("Total of positive patches in dataset: {} ({:2.2f}%)".format(total_pos,100*total_pos/ac_patches))
+        print("WSIs in dataset: {}".format(len(ds_wsis)))
+        print("WSIS by cancer type:\n")
+        for ct in cancer_type:
+            print("{} ({} WSIs):\n{}".format(ct,len(cancer_type[ct]),"\n".join(cancer_type[ct])))
+        print("-----------------------------------------------------")
+        
+        if config.comb_wsi:
+            _combine_acquired_ds(wsis,ds_wsis)
+            
 def process_wsi_metadata(config):
     """
     Metadata should contain information about the WSI that originated the patch
@@ -327,85 +418,12 @@ def process_wsi_metadata(config):
     if config.nc > 0:
         print("Acquired patches dispersion around cluster means: {:.1f}".format(np.mean(wsi_means)))
 
-    #Generate dataset stats
-    total_patches = 0
-    discarded = 0
-    total_pos = 0
-    ds_wsis = {}
-    print("\n"+" "*10+"DATASET PATCHES STATISTICS")
-    if not config.cache_file is None:
-        with open(config.cache_file,'rb') as fd:
-            X,Y,_ = pickle.load(fd)
-        ac_patches = len(X)
-        for ic in range(ac_patches):
-            img = X[ic]
-            label = Y[ic]
-            
-            if hasattr(img,'getOrigin'):
-                origin = img.getOrigin()
-            elif hasattr(img,'_origin'):
-                origin = img._origin
-            else:
-                print("Image has no origin information: {}".format(img.getPath()))
-                continue
-            
-            if img.getCoord() is None:
-                discarded += 1
-                #continue
-                
-            if origin.startswith('log.'):
-                origin = origin.split('.')[1]
-                
-            if origin in ds_wsis:
-                ds_wsis[origin][0].append(img)
-                ds_wsis[origin][1].append(label)
-            else:
-                ds_wsis[origin] = ([img],[label])
-        
 
-        for s in ds_wsis:
-            n_patches = len(ds_wsis[s][0])
-            labels = np.asarray(ds_wsis[s][1])
-        
-            #Count positive patches:
-            unique,count = np.unique(labels,return_counts=True)
-            l_count = dict(zip(unique,count))
-            if 1 in l_count:
-                if s in pos_patches:
-                    pos_patches[s].append(l_count[1])
-                    total_pos += l_count[1]
-                else:
-                    pos_patches[s] = [0,l_count[1]]
-                    total_pos += l_count[1]
-            else:
-                if s in pos_patches:
-                    pos_patches[s].append(0)
-                else:
-                    pos_patches[s] = [0,0]
-            
-            print("******   {} ({} total patches)  *******".format(s,n_patches))
-            print("Positive patches: {} ({:2.2f}%)".format(pos_patches[s][1],100*pos_patches[s][1]/n_patches))
-            if pos_patches[s][1] > 0:
-                print("Positive patches acquired from this WSI: {} ({:2.2f}%)".format(pos_patches[s][0],100*pos_patches[s][0]/pos_patches[s][1]))
-            else:
-                print("Positive patches acquired from this WSI: {} (0.0%)".format(pos_patches[s][0]))
-            if config.nc > 0:
-                features = []
-                for p in range(n_patches):
-                    if not ds_wsis[s][0][p].getCoord() is None:
-                        features.append(ds_wsis[s][0][p].getCoord())
-                features = np.asarray(features)
-                if features.shape[0] > config.minp:
-                    km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
-                    _process_wsi_cluster(km,s,ds_wsis[s][0],config)
-        print("-----------------------------------------------------")
-        print("Total patches in dataset: {}".format(ac_patches))
-        print("Total of positive patches in dataset: {} ({:2.2f}%)".format(total_pos,100*total_pos/ac_patches))
-        print("WSIs in dataset: {}".format(len(ds_wsis)))
-
-        if config.comb_wsi:
-            _combine_acquired_ds(wsis,ds_wsis)
-            
+    _dataset_wsi_metadata(config.cache_file,wsis,copy.deepcopy(pos_patches),"DATASET")
+    sp_file = os.path.join(config.sdir,"{}-sampled_metadata.pik".format(config.ds))
+    if os.path.isfile(sp_file):
+        _dataset_wsi_metadata(sp_file,wsis,pos_patches,"SAMPLED")
+    
 def process_al_metadata(config):
     def change_root(s,d):
         """
