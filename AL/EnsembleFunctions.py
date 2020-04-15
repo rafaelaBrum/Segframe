@@ -241,11 +241,12 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
 
         #computing F_X
         dropout_score_log = np.log2(proba)
-        Entropy_Compute = - np.multiply(proba, dropout_score_log)
+        Entropy_Compute = - np.multiply(proba, dropout_score_log,out=dropout_score_log)
         Entropy_Per_Dropout = np.sum(Entropy_Compute, axis=1)
         
         All_Entropy_Dropout = All_Entropy_Dropout + Entropy_Per_Dropout 
         del(proba)
+        del(dropout_score_log)
 
     Avg_Pi = np.divide(score_All, emodels)
     Log_Avg_Pi = np.log2(Avg_Pi)
