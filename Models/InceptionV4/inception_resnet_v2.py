@@ -249,8 +249,6 @@ def InceptionResNetV2(include_top=True,
         use_dp = kwargs['use_dp']
     else:
         use_dp = True
-
-    print('use_dp: {}'.format(use_dp))
     
     # Stem block: 35 x 35 x 192
     x = conv2d_bn(img_input, 32, 3, strides=2, padding='valid', use_bn=use_bn)
