@@ -244,6 +244,13 @@ def InceptionResNetV2(include_top=True,
             img_input = input_tensor
 
     use_bn = kwargs['batch_n']
+
+    if 'use_dp' in kwargs:
+        use_dp = kwargs['use_dp']
+    else:
+        use_dp = True
+
+    print('use_dp: {}'.format(use_dp))
     
     # Stem block: 35 x 35 x 192
     x = conv2d_bn(img_input, 32, 3, strides=2, padding='valid', use_bn=use_bn)
@@ -275,7 +282,8 @@ def InceptionResNetV2(include_top=True,
                                     block_idx=block_idx,
                                     use_bn=use_bn)
 
-        #x = layers.Dropout(0.1)(x,training=kwargs['training'])
+        if use_dp:
+            x = layers.Dropout(0.1)(x,training=kwargs['training'])
 
     # Mixed 6a (Reduction-A block): 17 x 17 x 1088
     branch_0 = conv2d_bn(x, 384, 3, strides=2, padding='valid', use_bn=use_bn)
@@ -293,7 +301,9 @@ def InceptionResNetV2(include_top=True,
                                     block_type='block17',
                                     block_idx=block_idx,
                                     use_bn=use_bn)
-        #x = layers.Dropout(0.2)(x,training=kwargs['training'])
+
+        if use_dp:
+            x = layers.Dropout(0.2)(x,training=kwargs['training'])
 
     # Mixed 7a (Reduction-B block): 8 x 8 x 2080
     branch_0 = conv2d_bn(x, 256, 1, use_bn=use_bn)
@@ -314,7 +324,8 @@ def InceptionResNetV2(include_top=True,
                                     block_type='block8',
                                     block_idx=block_idx,
                                     use_bn=use_bn)
-        #x = layers.Dropout(0.3)(x,training=kwargs['training'])
+        if use_dp:
+            x = layers.Dropout(0.3)(x,training=kwargs['training'])
         
     x = inception_resnet_block(x,
                                 scale=1.,
@@ -339,10 +350,12 @@ def InceptionResNetV2(include_top=True,
 
         x = layers.Dense(512,kernel_initializer='glorot_normal')(x)
         x = layers.Activation('relu', name='class1_ac')(x)
-        x = layers.Dropout(0.3)(x,training=kwargs['training'])
+        if use_dp:
+            x = layers.Dropout(0.3)(x,training=kwargs['training'])
         x = layers.Dense(128,kernel_initializer='glorot_normal')(x)
         x = layers.Activation('relu', name='class2_ac')(x)
-        x = layers.Dropout(0.3)(x,training=kwargs['training'])
+        if use_dp:
+            x = layers.Dropout(0.3)(x,training=kwargs['training'])
         x = layers.Dense(classes,kernel_initializer='glorot_normal')(x)
         x = layers.Activation('softmax')(x)
     else:

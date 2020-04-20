@@ -311,13 +311,24 @@ class Inception(GenericModel):
 
 
     def _build_architecture(self,input_shape,training=None,feature=False,preload=True,ensemble=False):
+
+        """
+        Parameters:
+        - training <boolean>: sets network to training mode, wich enables dropout if there are DP layers
+        - feature <boolean>: build a feature extractor
+        - preload <boolean>: preload Imagenet weights
+        - ensemble <boolean>: builds an ensemble of networks from the Inception architecture
+
+        OBS: self.is_ensemble() returns if the ensemble strategy is in use
+        """
         from . import inception_resnet_v2
 
         kwargs = {'training':training,
                     'feature':feature,
                     'custom_top':False,
                     'preload':preload,
-                    'batch_n':True if self._config.gpu_count <= 1 else False}
+                    'batch_n':True if self._config.gpu_count <= 1 else False,
+                    'use_dp': False if self.is_ensemble() else True}
 
         inp = Input(shape=input_shape)
                 
