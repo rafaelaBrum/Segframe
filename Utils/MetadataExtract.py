@@ -306,7 +306,79 @@ def _dataset_wsi_metadata(cache_file,wsis,pos_patches,title="DATASET"):
         
         if config.comb_wsi:
             _combine_acquired_ds(wsis,ds_wsis)
+
+        return ds_wsis
+
+
+def _wsi_check_test(wsis,testf,dsf,question):
+
+    def _run(t_x,t_y,wsis,question,title):
+        ac_patches = len(t_x)
+        ts_wsis = {}
+        discarded = 0
+        cancer_t = {}
+        for ic in range(ac_patches):
+            img = t_x[ic]
+            label = t_y[ic]
             
+            if hasattr(img,'getOrigin'):
+                origin = img.getOrigin()
+            elif hasattr(img,'_origin'):
+                origin = img._origin
+            else:
+                print("Image has no origin information: {}".format(img.getPath()))
+                continue
+            
+            if img.getCoord() is None:
+                discarded += 1
+                #continue
+                
+            if origin.startswith('log.'):
+                origin = origin.split('.')[1]
+                
+            if origin in ts_wsis:
+                ts_wsis[origin][0].append(img)
+                ts_wsis[origin][1].append(label)
+            else:
+                c_type = os.path.basename(os.path.dirname(img.getPath()))
+                cancer_t.setdefault(c_type,[])
+                cancer_t[c_type].append(origin)
+                ts_wsis[origin] = ([img],[label],c_type)
+
+        #Slides in test set:
+        tkeys = set(cancer_t.keys())
+        qkeys = set([wsis[w][2] for w in wsis])
+        
+        print("\n\nCancer tissues common to {} and {}: ".format(question,title),end='')
+        print(", ".join([k for k in tkeys.intersection(qkeys)]))
+        print("\n\nCancer tissues present in {} and NOT in {}: ".format(title,question),end='')
+        print(", ".join([k for k in tkeys.difference(qkeys)]))
+
+        return ts_wsis
+        
+    #Main logic
+    if testf is None or not os.path.isfile(testf):
+        return None
+
+    with open(testf,'rb') as tfd:
+        fids,sids = pickle.load(tfd)
+
+    with open(dsf,'rb') as dfd:
+        X,Y,_ = pickle.load(dfd)
+        X,Y = np.asarray(X),np.asarray(Y)
+        
+    t_x,t_y = X[fids],Y[fids]
+    s_x,s_y = X[sids],Y[sids]
+
+    del(X)
+    del(Y)
+    
+    ts_wsis = _run(t_x,t_y,wsis,question,"TEST")
+    st_wsis = _run(s_x,s_y,wsis,question, "SAMPLED TEST")
+
+    print("\n\nTest set is composed of slides:\n - {}".format(", ".join([k for k in ts_wsis])))
+    print("\n\nSampled from test set is composed of slides:\n - {}".format(", ".join([k for k in st_wsis])))
+    
 def process_wsi_metadata(config):
     """
     Metadata should contain information about the WSI that originated the patch
@@ -327,7 +399,8 @@ def process_wsi_metadata(config):
 
     if config.save and config.ac_save is None:
         config.ac_save = [min(config.ac_n),max(config.ac_n)]
-        
+
+    
     for k in config.ac_n:
         print("In acquisition {}:\n".format(k)) 
         acquisitions[k] = {}
@@ -364,7 +437,8 @@ def process_wsi_metadata(config):
                 wsis[origin][0].append(img)
                 wsis[origin][1].append(label)
             else:
-                wsis[origin] = ([img],[label])
+                c_type = os.path.basename(os.path.dirname(img.getPath()))
+                wsis[origin] = ([img],[label],c_type)
                 
             if origin in acquisitions[k]:
                 acquisitions[k][origin].append(img)
@@ -420,9 +494,16 @@ def process_wsi_metadata(config):
 
 
     _dataset_wsi_metadata(config.cache_file,wsis,copy.deepcopy(pos_patches),"DATASET")
+    if config.ctest:
+        tst_file = os.path.join(config.sdir,"{}-testset.pik".format(config.ds))
+        _wsi_check_test(wsis,tst_file,config.cache_file,"ACQUIRED")
+        
     sp_file = os.path.join(config.sdir,"{}-sampled_metadata.pik".format(config.ds))
     if os.path.isfile(sp_file):
-        _dataset_wsi_metadata(sp_file,wsis,pos_patches,"SAMPLED")
+        sds = _dataset_wsi_metadata(sp_file,wsis,pos_patches,"SAMPLED")
+        if config.ctest:
+            tst_file = os.path.join(config.sdir,"{}-testset.pik".format(config.ds))
+            _wsi_check_test(sds,tst_file,config.cache_file,"POOL")
     
 def process_al_metadata(config):
     def change_root(s,d):
@@ -618,6 +699,8 @@ if __name__ == "__main__":
         help='Check patches acquired from a WSI in comparison to total WSI patches available.',default=False)
     parser.add_argument('-pinit', action='store_true', dest='pinit',
         help='Parse and extract initial training set, if it exists.',default=False)
+    parser.add_argument('-ctest', action='store_true', dest='ctest',
+        help='Check acquired and sampled sets against test set.',default=False)    
     
     config, unparsed = parser.parse_known_args()
 
