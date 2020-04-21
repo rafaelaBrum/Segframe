@@ -20,6 +20,13 @@ Returns: numpy array of element indexes
 """
 
 def km_uncert(bayesian_model,generator,data_size,**kwargs):
+    return _km_uncert(bayesian_model,generator,data_size,**kwargs)
+
+def kmng_uncert(bayesian_model,generator,data_size,**kwargs):
+    kwargs['ng_logic'] = True
+    return _km_uncert(bayesian_model,generator,data_size,**kwargs)
+
+def _km_uncert(bayesian_model,generator,data_size,**kwargs):
     """
     Cluster in K centroids and extract N samples from each cluster, based on maximum bayesian_varratios
     uncertainty.
@@ -189,6 +196,12 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
                 print("Cluster {3} labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1])),k))
             del(expected)
 
+    if 'ng_logic' in kwargs and kwargs['ng_logic']:
+        return _acq_ng_logic(posa,clusters,un_clusters,query,config,verbose,cache_m)
+    else:
+        return _acq_logic(clusters,un_clusters,query,config,verbose,cache_m)
+
+def _acq_ng_logic(posa,clusters,un_clusters,query,config,verbose,cache_m):
     #Acquisition logic
     ac_count = 0
     acquired = []
@@ -215,4 +228,26 @@ def km_uncert(bayesian_model,generator,data_size,**kwargs):
     if config.recluster > 0:
         cache_m.dump((km,acquired),'clusters.pik')
     
+    return acquired
+
+def _acq_logic(clusters,un_clusters,query,config,verbose,cache_m):
+    ac_count = 0
+    acquired = []
+    j = 0
+    while ac_count < query:
+        cln = (ac_count+j) % clusters
+        q = un_clusters[cln]
+        if len(q) > 0:
+            acquired.append(q.pop(0))
+            ac_count += 1
+        else:
+            if verbose > 0:
+                rint("[km_uncert] Cluster {} exausted, will try to acquire image from cluster {}".format(cln,(cln+1)%clusters))
+            j += 1
+            continue
+        
+    acquired = np.asarray(acquired)
+    if config.recluster > 0:
+        cache_m.dump((km,acquired),'clusters.pik')
+
     return acquired

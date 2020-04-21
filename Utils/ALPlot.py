@@ -391,6 +391,7 @@ class Plotter(object):
                 max_x.append(data[k]['trainset'].max())                
                 min_y.append(data[k]['accuracy'].min())
                 max_y.append(data[k]['accuracy'].max())
+                print(data[k]['trainset'])
                 
         plt.legend(loc=0,ncol=2,labels=config.labels)
         plt.xticks(np.arange(min(min_x), max(max_x)+1, xtick))
