@@ -21,9 +21,9 @@ from keras import backend as K
 
 #Locals
 from Utils import CacheManager
-from Models.GenericModel import GenericModel
+from Models.GenericEnsemble import GenericEnsemble
 
-class KNet(GenericModel):
+class KNet(GenericEnsemble):
     """
     Implements abstract methods from GenericModel.
     Model is the same as in: https://keras.io/examples/mnist_cnn/
@@ -97,10 +97,17 @@ class KNet(GenericModel):
         else:
             input_shape = (height, width, channels)
 
+        if 'allocated_gpus' in kwargs and not kwargs['allocated_gpus'] is None:
+            allocated_gpus = kwargs['allocated_gpus']
+        else:
+            allocated_gpus = self._config.gpu_count            
+
         self.cache_m = CacheManager()
         
         model = self._build_architecture(input_shape,training,feature)
-        
+        return self._configure_compile(model,allocated_gpus)
+
+    def _configure_compile(self,model,allocated_gpus):
         #Check if previous training and LR is saved, if so, use it
         lr_cache = "{0}_learning_rate.txt".format(self.name)
         self.cache_m.registerFile(os.path.join(self._config.cache,lr_cache),lr_cache)
@@ -140,7 +147,7 @@ class KNet(GenericModel):
 
         return (model,parallel_model)
 
-    def _build_architecture(self,input_shape,training=None,feature=False):
+    def _build_architecture(self,input_shape,training,feature,preload=True,ensemble=False):
             
         model = Sequential()
         model.add(Convolution2D(32, kernel_size=(3, 3),
@@ -213,22 +220,15 @@ class GalKNet(KNet):
     def __init__(self,config,ds):
         super(GalKNet,self).__init__(config=config,ds=ds,name = "GalKNet")
 
-    def build_extractor(self,**kwargs):
-        """
-        Builds a feature extractor
-        """
 
-        return self._build(**kwargs)        
-
-    def _build_architecture(self,input_shape,training,feature):
-
+    def _build_architecture(self,input_shape,training,feature,preload=True,ensemble=False):
         if hasattr(self,'data_size'):
             weight_decay = 2.5/float(self.data_size)
             if self._config.verbose > 1:
                 print("Setting weight decay to: {0}".format(weight_decay))
         else:
             weight_decay = 0.01
-            
+
         inp = Input(shape=input_shape)
 
         #Block 1
@@ -260,14 +260,21 @@ class GalKNet(KNet):
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
         x = Dropout(0.25)(x,training=training)
-
+        
         if feature:
-            return Model(inp,x)
+            body = Model(inp,x)
         
         x = Flatten()(x)
         x = Dense(128,kernel_regularizer=regularizers.l2(weight_decay))(x)
         x = Dropout(0.5)(x,training=training)
         x = Dense(self._ds.nclasses)(x)
         output = Activation('softmax')(x)
+
+        if not feature:
+            body = Model(inp,output)
         
-        return Model(inp,output)    
+        if ensemble:
+            return (body,inp)
+        else:
+            return body
+        

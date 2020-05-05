@@ -560,7 +560,7 @@ class Plotter(object):
                 print("Slurm file ({}) does not have that many samples ({}). Maximum is {}.".format(slurm_path,maxx,np.max(data['trainset'])))
                 sys.exit(1)
             else:
-                upl = np.where(data['trainset'] == maxx)[0][0]
+                upl = np.where(data['trainset'] >= maxx)[0][0]
                 upl += 1
             
             data['time'] = data['time'][:upl]

@@ -36,21 +36,6 @@ class GenericModel(ABC):
 
         return (width,height,channels)
 
-    def is_ensemble(self):
-        return self._config.strategy == 'EnsembleTrainer'
-
-    def get_ds(self):
-        return self._ds
-    
-    @abstractmethod
-    def build(self,**kwargs):
-        """
-        Possible parameters to pass in kwargs (some models may use them, others not):
-        data_size <int>: Training data size, usefull for custom parameter settings
-        pre_trained <boolean>: Should load a pre-trained model?
-        """
-        pass
-
     @abstractmethod
     def get_model_cache(self):
         pass
@@ -62,3 +47,16 @@ class GenericModel(ABC):
     @abstractmethod
     def get_mgpu_weights_cache(self):
         pass
+    
+    @abstractmethod
+    def build(self,**kwargs):
+        """
+        Possible parameters to pass in kwargs (some models may use them, others not):
+        data_size <int>: Training data size, usefull for custom parameter settings
+        pre_trained <boolean>: Should load a pre-trained model?
+        """
+        pass
+
+    def get_ds(self):
+        return self._ds
+        

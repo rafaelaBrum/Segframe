@@ -131,6 +131,9 @@ def _km_uncert(bayesian_model,generator,data_size,**kwargs):
                                                 verbose=0)
         features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
 
+        if config.info:
+            print("Feature vector shape: {}".format(features.shape))
+            
         if config.pca > 0:
             if config.info:
                 print("Starting PCA decomposition ({} features)...".format(config.pca))
