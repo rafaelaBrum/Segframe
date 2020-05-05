@@ -21,7 +21,7 @@ module load openslide/3.4.1
 echo '[START] training'
 date +"%D %T"
 
-time python3 Utils/WSITile.py -ds ../data/wsis-ext/ -od ../data/nds300 -hm ../data/til_maps/TIL_maps_after_thres_v1/ -mp 4 -ps 300 -wr 0.25 -txt_label -hmc
+time python3 Utils/WSITile.py -ds ../data/wsis-ext4/ -od ../data/nds300 -hm ../data/til_maps/TIL_maps_after_thres_v1/ -mp 5 -ps 300 -wr 0.25 -txt_label -hmc
 
 echo '[FINAL] done training'
 

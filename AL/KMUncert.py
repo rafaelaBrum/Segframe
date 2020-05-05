@@ -147,7 +147,7 @@ def _km_uncert(bayesian_model,generator,data_size,**kwargs):
             print("Done extraction...starting KMeans")
             stime = time.time()
             
-        if data_size > 10000:
+        if data_size < 10000:
             km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=max(int(cpu_count/2),1)).fit(features)
         else:
             km = MiniBatchKMeans(n_clusters = clusters, init='k-means++',batch_size=500).fit(features)
