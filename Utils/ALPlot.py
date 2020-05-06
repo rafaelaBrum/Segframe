@@ -16,6 +16,33 @@ import re
 import sys
 import argparse
 
+font = {'family' : 'DejaVu Sans',
+        'weight' : 'normal',
+        'size'   : 13}
+
+mpl.rc('font',**font)
+
+linestyle = [
+    #('loosely dotted',        (0, (1, 10))),
+    ('dotted',                (0, (1, 5))),
+    ('densely dotted',        (0, (1, 1))),
+    
+    #('loosely dashed',        (0, (5, 10))),
+    ('dashed',                (0, (5, 5))),
+    ('densely dashed',        (0, (5, 1))),
+    
+    #('loosely dashdotted',    (0, (3, 10, 1, 10))),
+    ('dashdotted',            (0, (3, 5, 1, 5))),
+    ('densely dashdotted',    (0, (3, 1, 1, 1))),
+
+    ('dashdotdotted',         (0, (3, 5, 1, 5, 1, 5))),
+    #('loosely dashdotdotted', (0, (3, 10, 1, 10, 1, 10))),
+    ('densely dashdotdotted', (0, (3, 1, 1, 1, 1, 1)))
+    ]
+
+#markers = ['','*','+','x','^','.','2','v']
+markers = ['*','+','x','^','.','2','v','','','','','','','','']
+
 class Plotter(object):
 
     def __init__(self,data=None, path=None):
@@ -120,16 +147,24 @@ class Plotter(object):
         """
         @param data <list>: a list as returned by calculate_stats
         """
-        palette = plt.get_cmap('Set1')
+        palette = plt.get_cmap('Dark2')
         color = 0
+        line = 0
+        marker = 0
         plots = []
         up = 0.0
         low = 1.0
         for d in data:
-            x_data,y_data,ci,y_label = d
+            x_data,y_data,ci,y_label,color = d
+            color = 0 if color < 0 else color
+            line = color%len(linestyle)
+            marker = color%len(markers)
+                    
             if auc_only and y_label != 'AUC':
                 continue
-            c = plt.plot(x_data, y_data, lw = 1, color = palette(color), alpha = 1)
+            print(d)
+            
+            c = plt.plot(x_data, y_data, lw = 2.0, marker=markers[marker],linestyle=linestyle[line][1], color = palette(color), alpha = 1)
             plots.append(c)
             # Shade the confidence interval
             if not np.isnan(ci).any():
@@ -145,6 +180,8 @@ class Plotter(object):
             if not np.isnan(ci).any():
                 plt.fill_between(x_data, low_ci, upper_ci, color = palette(color), alpha = 0.4)
             color += 1
+            line = (line+1)%len(linestyle)
+            marker = color%len(markers)
             plt.xlabel("Trainset size")
             plt.ylabel(y_label)
                 
@@ -155,6 +192,7 @@ class Plotter(object):
         plt.xticks(np.arange(min(x_data), max(x_data)+xticks, xticks))
         ydelta = (1.0 - low)/15
         rg = np.clip(np.arange(max(low,0.0), up if up <= 1.05 else 1.05, ydelta),0.0,1.0)
+        np.around(rg,3,rg)
         plt.yticks(rg)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         if max(x_data) > 1000:
@@ -321,9 +359,11 @@ class Plotter(object):
         
     def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False):
 
-        palette = plt.get_cmap('Set1')
-
+        palette = plt.get_cmap('Dark2')
+            
         color = 0
+        line = 0
+        marker = 0
         plotAUC = False
         min_x = []
         max_x = []
@@ -345,8 +385,16 @@ class Plotter(object):
                     lbcount += 1
 
                 yd = [100*(data[k]['labels'][z][0]/data[k]['trainset'][z]) for z in range(data[k]['trainset'].shape[0])]
-                plt.plot(data[k]['trainset'],yd, marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
+                if 'color' in data[k]:
+                    color = data[k]['color']
+                    line = color%len(linestyle)
+                    marker = color%len(markers)
+                    
+                plt.plot(data[k]['trainset'],yd, marker=markers[marker],color=palette(color),linewidth=1.5,linestyle=linestyle[line],alpha=0.9,label=lb)
                 color += 1
+                line = (line+1)%len(linestyle)
+                marker = color%len(markers)
+                
                 plotAUC = False
                 min_x.append(data[k]['trainset'].min())
                 max_x.append(data[k]['trainset'].max())
@@ -364,9 +412,16 @@ class Plotter(object):
                 else:
                     lb = labels[lbcount]
                     lbcount += 1
+
+                if 'color' in data[k]:
+                    color = data[k]['color']
+                    line = color%len(linestyle)
+                    marker = color%len(markers)
                     
-                plt.plot(data[k]['trainset'],data[k]['auc'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
+                plt.plot(data[k]['trainset'],data[k]['auc'], marker=markers[marker],color=palette(color),linewidth=1.5,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                 color += 1
+                line = (line+1)%len(linestyle)
+                marker = color%len(markers)
                 plotAUC = True
                 min_x.append(data[k]['trainset'].min())
                 max_x.append(data[k]['trainset'].max())
@@ -384,9 +439,16 @@ class Plotter(object):
                 else:
                     lb = labels[lbcount]
                     lbcount += 1
+
+                if 'color' in data[k]:
+                    color = data[k]['color']
+                    line = color%len(linestyle)
+                    marker = color%len(markers)
                     
-                plt.plot(data[k]['trainset'],data[k]['accuracy'], marker='',color=palette(color),linewidth=1,alpha=0.9,label=k)
+                plt.plot(data[k]['trainset'],data[k]['accuracy'], marker=markers[marker],color=palette(color),linewidth=2.0,linestyle=linestyle[line][1],alpha=0.9,label=k)
                 color += 1
+                line = (line+1)%len(linestyle)
+                marker = color%len(markers)
                 min_x.append(data[k]['trainset'].min())
                 max_x.append(data[k]['trainset'].max())                
                 min_y.append(data[k]['accuracy'].min())
@@ -505,6 +567,7 @@ class Plotter(object):
         trainsetrex = r'Train set: (?P<set>[0-9]+) items'
         clusterrex = r'Cluster (?P<cln>[0-9]+) labels: (?P<neg>[0-9]+) are 0; (?P<pos>[0-9]+) are 1;'
         labelrex = r'Train labels: (?P<neg>[0-9]+) are 0; (?P<pos>[0-9]+) are 1;'
+        colorrex = r'ColorCode: (?P<code>[0-9]+)'
         
         timerc = re.compile(timerex)
         aucrc = re.compile(aucrex)
@@ -512,6 +575,7 @@ class Plotter(object):
         accrc = re.compile(accrex)
         clusterrc = re.compile(clusterrex)
         labelrc = re.compile(labelrex)
+        colorrc = re.compile(colorrex)
 
         with open(slurm_path,'r') as fd:
             lines = fd.readlines()
@@ -525,6 +589,7 @@ class Plotter(object):
             accmatch = accrc.fullmatch(lstrip)
             clustermatch = clusterrc.fullmatch(lstrip)
             labelmatch = labelrc.fullmatch(lstrip)
+            colormatch = colorrc.fullmatch(lstrip)
             if tmatch:
                 td = datetime.timedelta(hours=int(tmatch.group('hours')),minutes=int(tmatch.group('min')),seconds=round(float(tmatch.group('sec'))))
                 data['time'].append(td.total_seconds()/3600.0)
@@ -536,6 +601,9 @@ class Plotter(object):
                 data['accuracy'].append(float(accmatch.group('acc')))
             if labelmatch:
                 data['labels'].append((int(labelmatch.group('pos')),int(labelmatch.group('neg'))))
+            if colormatch:
+                data['color'] = int(colormatch.group('code'))
+                
             if clustermatch:
                 cln = int(clustermatch.group('cln'))
                 tot = int(clustermatch.group('pos')) + int(clustermatch.group('neg'))
@@ -654,11 +722,12 @@ class Plotter(object):
 
         Calculates mean and standard deviation for AUC and/or Accuracy.
 
-        Returns a list of tuples (trainset,mean_values,std dev) for each AUC and Accuracy
+        Returns a list of tuples (trainset,mean_values,std dev,label,color) for each AUC and Accuracy
         """
         auc_value = None
         acc_value = None
         i = 0
+        color = -1
         trainset = None
         stats = []
 
@@ -702,6 +771,9 @@ class Plotter(object):
                     data[k]['accuracy'] = np.concatenate((data[k]['accuracy'],data[k]['accuracy'][-1:]),axis=0)
                 acc_value[i] = data[k]['accuracy'][:max_samples]
                 
+            if 'color' in data[k]:
+                color = data[k]['color']
+                
             i += 1
 
         if not auc_value is None:
@@ -711,9 +783,9 @@ class Plotter(object):
 
         #Return mean and STD dev
         if auc_only:
-            return [(trainset[:max_samples],np.mean(auc_value.transpose(),axis=1),calc_ci(auc_value.transpose(),ci),"AUC")]
+            return [(trainset[:max_samples],np.mean(auc_value.transpose(),axis=1),calc_ci(auc_value.transpose(),ci),"AUC",color)]
         else:
-            return [(trainset[:max_samples],np.mean(arr[0].transpose(),axis=1),np.std(arr[0].transpose(),axis=1),arr[1]) for arr in stats]
+            return [(trainset[:max_samples],np.mean(arr[0].transpose(),axis=1),np.std(arr[0].transpose(),axis=1),arr[1],color) for arr in stats]
                                                                                                               
     
 if __name__ == "__main__":

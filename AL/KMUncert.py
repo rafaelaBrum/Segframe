@@ -245,7 +245,7 @@ def _acq_logic(clusters,un_clusters,query,config,verbose,cache_m):
             ac_count += 1
         else:
             if verbose > 0:
-                rint("[km_uncert] Cluster {} exausted, will try to acquire image from cluster {}".format(cln,(cln+1)%clusters))
+                print("[km_uncert] Cluster {} exausted, will try to acquire image from cluster {}".format(cln,(cln+1)%clusters))
             j += 1
             continue
         
