@@ -10,17 +10,24 @@ Utility functions for acquisition functions and independent functions
 
 def load_model_weights(config,model,single_m,parallel_m):
 
+    npfile = False
+    checkpath = None
+    
     if hasattr(model,'get_npweights_cache'):
-        spath = model.get_npweights_cache(add_ext=True)
+        checkpath = model.get_npweights_cache(add_ext=True)
+        spath = checkpath
         npfile = True
-    else:
+        
+    if npfile and not os.path.isfile(checkpath):
         spath = model.get_weights_cache()
         npfile = False
             
     if hasattr(model,'get_npmgpu_weights_cache'):
-        ppath = model.get_npmgpu_weights_cache(add_ext=True)
+        checkpath = model.get_npmgpu_weights_cache(add_ext=True)
+        ppath = checkpath
         npfile = True
-    else:
+        
+    if npfile and not os.path.isfile(checkpath):
         ppath = model.get_mgpu_weights_cache()
         npfile = False
             

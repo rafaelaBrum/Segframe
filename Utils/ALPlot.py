@@ -162,7 +162,6 @@ class Plotter(object):
                     
             if auc_only and y_label != 'AUC':
                 continue
-            print(d)
             
             c = plt.plot(x_data, y_data, lw = 2.0, marker=markers[marker],linestyle=linestyle[line][1], color = palette(color), alpha = 1)
             plots.append(c)
@@ -173,8 +172,8 @@ class Plotter(object):
                 ym = np.max(upper_ci)
                 yl = np.min(low_ci)
             else:
-                yl = np.min(x_data)
-                ym = np.max(x_data)
+                yl = np.min(y_data)
+                ym = np.max(y_data)
             up = ym if ym > up else up
             low = yl if yl < low else low
             if not np.isnan(ci).any():
