@@ -85,10 +85,15 @@ def _km_uncert(bayesian_model,generator,data_size,**kwargs):
 
     #Models that take to long to save weights might not have finished
     if 'sw_thread' in kwargs:
-        if config.ffeat is None and kwargs['sw_thread'][-1].is_alive():
+        last_thread = None
+        if isinstance(kwargs['sw_thread'],list):
+            last_thread = kwargs['sw_thread'][-1]
+        else:
+            last_thread = kwargs['sw_thread']
+        if config.ffeat is None and last_thread.is_alive():
             if config.info:
                 print("[km_uncert] Waiting for model weights to become available...")
-            kwargs['sw_thread'][-1].join()
+            last_thread.join()
     elif config.info:
         print("[km_uncert] Weights thread not available...trying to load weights")
 

@@ -41,7 +41,7 @@ linestyle = [
     ]
 
 #markers = ['','*','+','x','^','.','2','v']
-markers = ['*','+','x','^','.','2','v','','','','','','','','']
+markers = ['*','+','x','^','.','2','v','s','p','D','1','2','3','4','']
 
 class Plotter(object):
 
@@ -347,7 +347,7 @@ class Plotter(object):
                     
                 color += 1
 
-        fig.legend(bbox_to_anchor=(0.87,0.16),loc=4,ncol=2,labels=config.labels)
+        fig.legend(bbox_to_anchor=(0.87,0.16),loc=4,ncol=2,labels=config.labels,prop=dict(weight='bold'))
         ax1.set_xticks(np.arange(data['trainset'].min(), data['trainset'].max()+1, xtick))
         if data['trainset'].max() > 1000:
             plt.setp(ax1.get_xticklabels(),rotation=30)
@@ -455,14 +455,14 @@ class Plotter(object):
                 max_y.append(data[k]['accuracy'].max())
                 print(data[k]['trainset'])
                 
-        plt.legend(loc=0,ncol=2,labels=config.labels)
+        plt.legend(loc=0,ncol=2,labels=config.labels,prop=dict(weight='bold'))
         plt.xticks(np.arange(min(min_x), max(max_x)+1, xtick))
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
         if pos:
             plt.yticks(np.arange(max(0,min(min_y)-10), min(100,10+max(max_y)), 5))
         else:
-            plt.yticks(np.arange(min(min_y), 1.0, 0.06))
+            plt.yticks(np.arange(min(0.6,min(min_y)), 1.05, 0.05))
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         plt.xlabel("Training set size")
         if plotAUC:
