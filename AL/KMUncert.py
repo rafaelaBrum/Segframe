@@ -119,7 +119,7 @@ def _km_uncert(bayesian_model,generator,data_size,**kwargs):
             return None
 
         if not model.is_ensemble():
-            pred_model = load_model_weights(config,model)
+            pred_model = load_model_weights(config,model,single_m,parallel_m)
         else:
             generator.set_input_n(config.emodels)
             if not parallel_m is None:
