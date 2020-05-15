@@ -8,6 +8,7 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 import pandas as pd
 from matplotlib.ticker import MaxNLocator
+from matplotlib.colors import ListedColormap
 
 import datetime
 import numpy as np
@@ -22,7 +23,21 @@ font = {'family' : 'DejaVu Sans',
 
 mpl.rc('font',**font)
 
+palette = plt.get_cmap('Dark2')
+newcolors = np.ones((5,4))
+newcolors[0,0:3] = np.array([29/256,39/256,125/256])
+newcolors[1,0:3] = np.array([110/256,29/256,5/256])
+newcolors[2,0:3] = np.array([0/256,5/256,105/256])
+newcolors[3,0:3] = np.array([159/256,32/256,54/256])
+newcolors[4,0:3] = np.array([76/256,0/256,153/256])
+newcolors = np.vstack((palette(np.linspace(0,1,len(palette.colors))),
+                           newcolors))
+   
+palette = ListedColormap(newcolors,name='CustomDark')
+del(newcolors)
+
 linestyle = [
+    ('solid', (0,())),
     #('loosely dotted',        (0, (1, 10))),
     ('dotted',                (0, (1, 5))),
     ('densely dotted',        (0, (1, 1))),
@@ -36,12 +51,12 @@ linestyle = [
     ('densely dashdotted',    (0, (3, 1, 1, 1))),
 
     ('dashdotdotted',         (0, (3, 5, 1, 5, 1, 5))),
-    #('loosely dashdotdotted', (0, (3, 10, 1, 10, 1, 10))),
+    ('loosely dashdotdotted', (0, (3, 8, 1, 8, 1, 8))),
     ('densely dashdotdotted', (0, (3, 1, 1, 1, 1, 1)))
     ]
 
 #markers = ['','*','+','x','^','.','2','v']
-markers = ['*','+','x','^','.','2','v','s','p','D','1','2','3','4','']
+markers = ['*','+','x','^','.','2','v','s','p','D',8,9,10,'4','']
 
 class Plotter(object):
 
@@ -49,7 +64,7 @@ class Plotter(object):
         if not path is None and os.path.isdir(path):
             self.path = path
         else:
-            self.path = None
+            self.path = None            
 
     def draw_uncertainty(self,data,xticks,spread=1,title=''):
         """
@@ -147,7 +162,6 @@ class Plotter(object):
         """
         @param data <list>: a list as returned by calculate_stats
         """
-        palette = plt.get_cmap('Dark2')
         color = 0
         line = 0
         marker = 0
@@ -254,7 +268,6 @@ class Plotter(object):
         plt.show()
 
     def draw_multilabel(self,data,title,xtick,metrics,labels=None):
-        palette = plt.get_cmap('Set1')
         lbcount = 0
         color = 0
 
@@ -357,8 +370,8 @@ class Plotter(object):
         plt.show()
         
     def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False):
-
-        palette = plt.get_cmap('Dark2')
+        
+        print("Colors: {}".format(len(palette.colors)))
             
         color = 0
         line = 0

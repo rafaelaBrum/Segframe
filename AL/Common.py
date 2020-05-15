@@ -22,17 +22,18 @@ def load_model_weights(config,model,single_m,parallel_m):
         spath = model.get_weights_cache()
         npfile = False
             
-    if hasattr(model,'get_npmgpu_weights_cache'):
-        checkpath = model.get_npmgpu_weights_cache(add_ext=True)
-        ppath = checkpath
-        npfile = True
-        
-    if npfile and not os.path.isfile(checkpath):
-        ppath = model.get_mgpu_weights_cache()
-        npfile = False
             
     #Model can be loaded from previous acquisition train or from a fixed final model
     if config.gpu_count > 1 and not parallel_m is None:
+        if hasattr(model,'get_npmgpu_weights_cache'):
+            checkpath = model.get_npmgpu_weights_cache(add_ext=True)
+            ppath = checkpath
+            npfile = True
+        
+        if npfile and not os.path.isfile(checkpath):
+            ppath = model.get_mgpu_weights_cache()
+            npfile = False
+            
         pred_model = parallel_m
         if not config.ffeat is None and os.path.isfile(config.ffeat):
             pred_model.load_weights(config.ffeat,by_name=True)
