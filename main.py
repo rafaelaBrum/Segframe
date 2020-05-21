@@ -238,7 +238,9 @@ if __name__ == "__main__":
     al_args.add_argument('-pca', dest='pca', type=int, 
         help='Apply PCA to extracted features before clustering (Default: 0 (not used)).',default=0)
     al_args.add_argument('-load_train', dest='load_train', action='store_true', default=False,
-        help='Use the same initial training set as produced by a previous experiment.')    
+        help='Use the same initial training set as produced by a previous experiment.')
+    al_args.add_argument('-spool', dest='spool', type=int, 
+        help='Regenerate the pool every spool acquisitions. Default = 0 (do not regenerate).',default=0)    
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')

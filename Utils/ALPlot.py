@@ -402,7 +402,7 @@ class Plotter(object):
                     line = color%len(linestyle)
                     marker = color%len(markers)
                     
-                plt.plot(data[k]['trainset'],yd, marker=markers[marker],color=palette(color),linewidth=1.5,linestyle=linestyle[line],alpha=0.9,label=lb)
+                plt.plot(data[k]['trainset'],yd, marker=markers[marker],color=palette(color),linewidth=1.5,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                 color += 1
                 line = (line+1)%len(linestyle)
                 marker = color%len(markers)

@@ -55,6 +55,10 @@ class ActiveLearningTrainer(Trainer):
         self.val_y = None
         self.test_x = None
         self.test_y = None
+        self.superp_x = None
+        self.superp_y = None
+        self.acq_idx = None
+        self.sample_idx = None
 
 
     def _balance_classes(self,X,Y):
@@ -129,6 +133,35 @@ class ActiveLearningTrainer(Trainer):
         cache_m.dump((full_id,samples),'testset.pik')
         
         return full_id,samples
+
+    def _refresh_pool(self,r,name):
+        if self.superp_x is None or self.superp_y is None:
+            return None
+        
+        #Store every pool
+        cache_m = CacheManager()
+        fid = 'al-pool-{1}-r{0}.pik'.format(r,name)
+        cache_m.registerFile(os.path.join(self._config.logdir,fid),fid)
+        
+        pool_size = self.sample_idx.shape[0]
+        self.pool_x = None
+        self.pool_y = None
+
+        if self._config.info:
+            print("[ALTrainer] Regenerating pool from superpool ({} patches available)".format(self.superp_x.shape[0]))
+        if self._config.verbose > 0:
+            print("[ALTrainer] Removed from super pool ({1}): {0}".format(self.acq_idx,self.acq_idx.shape[0]))
+            
+        self.superp_x = np.delete(self.superp_x,self.acq_idx)
+        self.superp_y = np.delete(self.superp_y,self.acq_idx)
+        self.sample_idx = np.random.choice(range(self.superp_x.shape[0]),pool_size,replace=False)
+        self.pool_x = self.superp_x[self.sample_idx]
+        self.pool_y = self.superp_y[self.sample_idx]
+        self.acq_idx = None
+        cache_m.dump((self.sample_idx,name),fid)
+        
+        if self._config.info:
+            print("[ALTrainer] Pool regenerated. Superpool size: {}".format(self.superp_x.shape[0])) 
     
     def configure_sets(self):
         """
@@ -177,7 +210,10 @@ class ActiveLearningTrainer(Trainer):
         
         #Use a sample of the metadata if so instructed
         if self._config.sample != 1.0:
-            X,Y = self._ds.sample_metadata(self._config.sample,data=(X,Y),pos_rt=self._config.pos_rt)
+            if self._config.spool > 0:
+                self.superp_x = X
+                self.superp_y = Y            
+            X,Y,self.sample_idx = self._ds.sample_metadata(self._config.sample,data=(X,Y),pos_rt=self._config.pos_rt)
             self._ds.check_paths(X,self._config.predst)
 
         if self._config.balance:
@@ -187,8 +223,8 @@ class ActiveLearningTrainer(Trainer):
         elif self._config.info:
             print("[ALTrainer] Using an UNBALANCED initial dataset for AL ({} total elements).".format(len(X)))
             
-        self.pool_x = X
-        self.pool_y = Y
+        self.pool_x = np.asarray(X)
+        self.pool_y = np.asarray(Y)
         del(X)
         del(Y)
 
@@ -205,16 +241,12 @@ class ActiveLearningTrainer(Trainer):
             train_idx = np.random.choice(len(self.pool_x),self._config.init_train,replace=False)
             cache_m.dump(train_idx,'initial_train.pik')
             
-        pool_ar_x = np.asarray(self.pool_x)
-        pool_ar_y = np.asarray(self.pool_y)
-        self.train_x = pool_ar_x[train_idx]
-        self.train_y = pool_ar_y[train_idx]
+        self.train_x = self.pool_x[train_idx]
+        self.train_y = self.pool_y[train_idx]
 
         #Remove choosen elements from the pool
-        self.pool_x = np.delete(pool_ar_x,train_idx)
-        self.pool_y = np.delete(pool_ar_y,train_idx)
-        del(pool_ar_x)
-        del(pool_ar_y)
+        self.pool_x = np.delete(self.pool_x,train_idx)
+        self.pool_y = np.delete(self.pool_y,train_idx)
         
         #Initial validation set - keeps the same split ratio for train/val as defined in the configuration
         val_samples = int((self._config.init_train*self._config.split[1])/self._config.split[0])
@@ -302,6 +334,10 @@ class ActiveLearningTrainer(Trainer):
         from Trainers import ThreadedGenerator
         import gc
 
+        #Regenerate pool if defined
+        if self._config.spool > 0 and ((kwargs['acquisition'] + 1) % (self._config.spool+1)) == 0:
+            self._refresh_pool(kwargs['acquisition'],model.name)
+            
         #Clear some memory before acquisitions
         gc.collect()
         
@@ -353,12 +389,20 @@ class ActiveLearningTrainer(Trainer):
         
         pooled_idx = function(pred_model,generator,self.pool_x.shape[0],**kwargs)
 
-        del(generator)
-        
         if pooled_idx is None:
             if self._config.info:
                 print("[ALTrainer] No indexes returned. Something is wrong.")
             sys.exit(1)
+            
+        #Store acquired patches indexes in pool set
+        if self._config.spool > 0:
+            if self.acq_idx is None:
+                self.acq_idx = self.sample_idx[pooled_idx]
+            else:
+                self.acq_idx = np.concatenate((self.acq_idx,self.sample_idx[pooled_idx]),axis=0)
+            
+        del(generator)
+        
         self.train_x = np.concatenate((self.train_x,self.pool_x[pooled_idx]),axis=0)
         self.train_y = np.concatenate((self.train_y,self.pool_y[pooled_idx]),axis=0)
         self.pool_x = np.delete(self.pool_x,pooled_idx)

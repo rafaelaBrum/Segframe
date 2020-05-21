@@ -211,6 +211,10 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         from Trainers import ThreadedGenerator
         import gc
 
+        #Regenerate pool if defined
+        if self._config.spool > 0 and ((kwargs['acquisition'] + 1) % (self._config.spool+1)) == 0:
+            self._refresh_pool(kwargs['acquisition'],model.name)
+            
         #Clear some memory before acquisitions
         gc.collect()
         
@@ -264,6 +268,14 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             if self._config.info:
                 print("[EnsembleTrainer] No indexes returned. Something is wrong.")
             sys.exit(1)
+
+        #Store acquired patches indexes in pool set
+        if self._config.spool > 0:
+            if self.acq_idx is None:
+                self.acq_idx = self.sample_idx[pooled_idx]
+            else:
+                self.acq_idx = np.concatenate((self.acq_idx,self.sample_idx[pooled_idx]),axis=0)
+                
         self.train_x = np.concatenate((self.train_x,self.pool_x[pooled_idx]),axis=0)
         self.train_y = np.concatenate((self.train_y,self.pool_y[pooled_idx]),axis=0)
         self.pool_x = np.delete(self.pool_x,pooled_idx)

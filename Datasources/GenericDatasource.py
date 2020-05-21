@@ -302,7 +302,7 @@ class GenericDS(ABC):
         else:
             return self._split_data(split,X_data,y)
 
-    def sample_metadata(self,k,data=None,pos_rt=None,use_cache=True):
+    def sample_metadata(self,k,data=None,pos_rt=None,use_cache=True,s_idx=None):
         """
         Produces a sample of the full metadata with k items. Returns a cached sample if one exists
 
@@ -311,13 +311,25 @@ class GenericDS(ABC):
         @param data <tuple>: data to sample from. If not given, use cached metadata
         @param pos_rt <float>: load a percentile of positive samples
         @param use_cache <boolean>: load cached data sample
+        @param s_idx <np array>: if given, return sample indexes with respect to data
         Return:
-        - tuple (X,Y): X an Y have k elements
+        - tuple (X,Y,sample_idx): X an Y have k elements, sample_idx has the indexes from X/Y that samples came from
         """
 
+        def regen_idx(s_x,X):
+            samples = np.zeros(len(s_x),dtype=np.int32)
+
+            for k in range(len(s_x)):
+                samples[k] = np.where(X == s_x[k])[0][0]
+            print("[GenericDatasource] Sample indexes regeneration: \n{}".format(samples))
+
+            return samples
+
+        #Init
         reload_data = False
         s_x,s_y = (None,None)
-
+        samples = None
+        
         if data is None and (self.X is None or self.Y is None):
             if self._config.verbose > 1:
                 print("[GenericDatasource] Run load_metadata first!")
@@ -326,36 +338,43 @@ class GenericDS(ABC):
             X,Y = data
         else:
             X,Y = self.X,self.Y
-        
+
+        #Check if we have the desired number of items
+        if k <= 1.0:
+            k = int(k*len(X))
+        else:
+            k = int(k)
+            
         if self._cache.checkFileExistence('sampled_metadata.pik') and use_cache:
             try:
-                s_x,s_y,name = self._cache.load('sampled_metadata.pik')
+                data = self._cache.load('sampled_metadata.pik')
             except ValueError:
                 name = ''
                 reload_data = True
+
+            if len(data) == 3:
+                s_x,s_y,name = data
+            elif len(data) == 4:
+                s_x,s_y,name,samples = data
+
             if name != self.name:
                 reload_data = True
-
-            #Check if we have the desired number of items
-            if k <= 1.0:
-                k = int(k*len(X))
-            else:
-                k = int(k)
+                
             if k != len(s_x):
                 if self._config.info:
-                    print("Saved samples are different from requested ({} x {}). Resampling...".format(k,len(s_x)))
+                    print("[GenericDatasource] Saved samples are different from requested ({} x {}). Resampling...".format(k,len(s_x)))
                 reload_data = True
                 
-            if not reload_data and self._verbose > 0:
-                print("[GenericDatasource] Loaded sampled data cache. Previously defined splitting can be used.")
+            if not reload_data:
+                if samples is None:
+                    samples = regen_idx(s_x,X)
+                if self._verbose > 0:
+                    print("[GenericDatasource] Loaded sampled data cache. Previously defined splitting can be used.")
+                
         else:
             reload_data = True
         
         if reload_data:
-            if k <= 1.0:
-                k = int(k*len(X))
-            else:
-                k = int(k)
 
             #All operations are over indexes
             if not pos_rt is None:
@@ -375,6 +394,6 @@ class GenericDS(ABC):
             s_y = [Y[s] for s in samples]
 
         #Save last generated sample
-        self._cache.dump((s_x,s_y,self.name),'sampled_metadata.pik')
-        return (np.asarray(s_x),np.asarray(s_y))
+        self._cache.dump((s_x,s_y,self.name,samples),'sampled_metadata.pik')
+        return (np.asarray(s_x),np.asarray(s_y),samples)
         
