@@ -150,7 +150,7 @@ class ActiveLearningTrainer(Trainer):
         if self._config.info:
             print("[ALTrainer] Regenerating pool from superpool ({} patches available)".format(self.superp_x.shape[0]))
         if self._config.verbose > 0:
-            print("[ALTrainer] Removed from super pool ({1}): {0}".format(self.acq_idx.sort(),self.acq_idx.shape[0]))
+            print("[ALTrainer] Removed from super pool ({1}): {0}".format(self.acq_idx,self.acq_idx.shape[0]))
             
         self.superp_x = np.delete(self.superp_x,self.acq_idx)
         self.superp_y = np.delete(self.superp_y,self.acq_idx)

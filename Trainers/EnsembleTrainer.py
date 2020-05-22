@@ -275,6 +275,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                 self.acq_idx = self.sample_idx[pooled_idx]
             else:
                 self.acq_idx = np.concatenate((self.acq_idx,self.sample_idx[pooled_idx]),axis=0)
+            self.sample_idx = np.delete(self.sample_idx,pooled_idx)
                 
         self.train_x = np.concatenate((self.train_x,self.pool_x[pooled_idx]),axis=0)
         self.train_y = np.concatenate((self.train_y,self.pool_y[pooled_idx]),axis=0)
