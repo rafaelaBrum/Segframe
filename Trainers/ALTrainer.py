@@ -143,22 +143,29 @@ class ActiveLearningTrainer(Trainer):
         fid = 'al-pool-{1}-r{0}.pik'.format(r,name)
         cache_m.registerFile(os.path.join(self._config.logdir,fid),fid)
         
-        pool_size = self.sample_idx.shape[0]
+        pool_size = self.sample_idx.shape[0]+self.acq_idx.shape[0]
         self.pool_x = None
         self.pool_y = None
 
         if self._config.info:
             print("[ALTrainer] Regenerating pool from superpool ({} patches available)".format(self.superp_x.shape[0]))
         if self._config.verbose > 0:
-            print("[ALTrainer] Removed from super pool ({1}): {0}".format(self.acq_idx,self.acq_idx.shape[0]))
+            print("[ALTrainer] Removed from super pool ({1}): {0}".format(self.acq_idx.sort(),self.acq_idx.shape[0]))
             
         self.superp_x = np.delete(self.superp_x,self.acq_idx)
         self.superp_y = np.delete(self.superp_y,self.acq_idx)
-        self.sample_idx = np.random.choice(range(self.superp_x.shape[0]),pool_size,replace=False)
+        if cache_m.checkFileExistence(fid):
+            self.sample_idx,_ = cache_m.load(fid)
+            if self._config.info:
+                print("[ALTrainer] Loaded resampled pool from: {}".format(cache_m.fileLocation(fid)))
+        else:
+            self.sample_idx = np.random.choice(range(self.superp_x.shape[0]),pool_size,replace=False)
+            cache_m.dump((self.sample_idx,name),fid)
+            
         self.pool_x = self.superp_x[self.sample_idx]
         self.pool_y = self.superp_y[self.sample_idx]
         self.acq_idx = None
-        cache_m.dump((self.sample_idx,name),fid)
+        self._ds.check_paths(self.pool_x,self._config.predst)
         
         if self._config.info:
             print("[ALTrainer] Pool regenerated. Superpool size: {}".format(self.superp_x.shape[0])) 
@@ -400,6 +407,7 @@ class ActiveLearningTrainer(Trainer):
                 self.acq_idx = self.sample_idx[pooled_idx]
             else:
                 self.acq_idx = np.concatenate((self.acq_idx,self.sample_idx[pooled_idx]),axis=0)
+            self.sample_idx = np.delete(self.sample_idx,pooled_idx)
             
         del(generator)
         
