@@ -115,7 +115,7 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
 
     if verbose > 0:
-        print("All dropout {0}:".format(All_Dropout_Classes.shape))
+        print("Variation array {0}:".format(All_Dropout_Classes.shape))
         for i in np.random.choice(All_Dropout_Classes.shape[0],100,replace=False):
             print("Predictions for image ({0}): {1}".format(i,All_Dropout_Classes[i]))
     

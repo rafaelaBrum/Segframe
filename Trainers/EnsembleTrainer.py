@@ -212,7 +212,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         import gc
 
         #Regenerate pool if defined
-        if self._config.spool > 0 and ((kwargs['acquisition'] + 1) % (self._config.spool+1)) == 0:
+        if self._config.spool > 0 and ((kwargs['acquisition'] + 1) % (self._config.spool)) == 0:
             self._refresh_pool(kwargs['acquisition'],model.name)
             
         #Clear some memory before acquisitions

@@ -168,7 +168,7 @@ class ActiveLearningTrainer(Trainer):
         self._ds.check_paths(self.pool_x,self._config.predst)
         
         if self._config.info:
-            print("[ALTrainer] Pool regenerated. Superpool size: {}".format(self.superp_x.shape[0])) 
+            print("[ALTrainer] Pool regenerated: {}. Superpool size: {}".format(self.pool_y.shape[0],self.superp_x.shape[0])) 
     
     def configure_sets(self):
         """
@@ -342,7 +342,7 @@ class ActiveLearningTrainer(Trainer):
         import gc
 
         #Regenerate pool if defined
-        if self._config.spool > 0 and ((kwargs['acquisition'] + 1) % (self._config.spool+1)) == 0:
+        if self._config.spool > 0 and ((kwargs['acquisition'] + 1) % (self._config.spool)) == 0:
             self._refresh_pool(kwargs['acquisition'],model.name)
             
         #Clear some memory before acquisitions
