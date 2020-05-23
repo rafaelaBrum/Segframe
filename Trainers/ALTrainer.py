@@ -255,10 +255,7 @@ class ActiveLearningTrainer(Trainer):
         #Validation element index definition
         val_samples = int((self._config.init_train*self._config.split[1])/self._config.split[0])
         val_samples = max(val_samples,100)
-        val_idx = np.random.choice(np.setdiff1d(np.arange(self.pool_x.shape[0]),train_idx))
-        if self._config.verbose > 0:
-            print("Common elements between train and val (should be none): {}".format(np.intersect1d(train_idx,val_idx,assume_unique=True)))
-        #val_idx = np.random.choice(self.pool_x.shape[0],val_samples,replace=False)
+        val_idx = np.random.choice(np.setdiff1d(np.arange(self.pool_x.shape[0]),train_idx),val_samples,replace=False)
 
         self.train_x = self.pool_x[train_idx]
         self.train_y = self.pool_y[train_idx]
@@ -420,8 +417,6 @@ class ActiveLearningTrainer(Trainer):
             else:
                 self.acq_idx = np.concatenate((self.acq_idx,self.sample_idx[pooled_idx]),axis=0)
             self.sample_idx = np.delete(self.sample_idx,pooled_idx)
-            print("Pooled indexes ({}): {}".format(pooled_idx.shape[0],pooled_idx))
-            print("Sample_idx ({}): {}".format(self.sample_idx.shape[0],self.sample_idx))
  
         del(generator)
         
