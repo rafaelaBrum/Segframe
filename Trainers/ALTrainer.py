@@ -55,10 +55,12 @@ class ActiveLearningTrainer(Trainer):
         self.val_y = None
         self.test_x = None
         self.test_y = None
-        self.superp_x = None
-        self.superp_y = None
-        self.acq_idx = None
-        self.sample_idx = None
+        if self._config.spool > 0:
+            self.superp_x = None
+            self.superp_y = None
+            self.acq_idx = None
+            self.sample_idx = None
+            self.pool_size = None
 
 
     def _balance_classes(self,X,Y):
@@ -143,7 +145,6 @@ class ActiveLearningTrainer(Trainer):
         fid = 'al-pool-{1}-r{0}.pik'.format(r,name)
         cache_m.registerFile(os.path.join(self._config.logdir,fid),fid)
         
-        pool_size = self.sample_idx.shape[0]+self.acq_idx.shape[0]
         self.pool_x = None
         self.pool_y = None
 
@@ -159,7 +160,7 @@ class ActiveLearningTrainer(Trainer):
             if self._config.info:
                 print("[ALTrainer] Loaded resampled pool from: {}".format(cache_m.fileLocation(fid)))
         else:
-            self.sample_idx = np.random.choice(range(self.superp_x.shape[0]),pool_size,replace=False)
+            self.sample_idx = np.random.choice(range(self.superp_x.shape[0]),self.pool_size,replace=False)
             cache_m.dump((self.sample_idx,name),fid)
             
         self.pool_x = self.superp_x[self.sample_idx]
@@ -229,6 +230,9 @@ class ActiveLearningTrainer(Trainer):
                 print("[ALTrainer] Using a balanced initial dataset for AL ({} total elements).".format(len(X)))
         elif self._config.info:
             print("[ALTrainer] Using an UNBALANCED initial dataset for AL ({} total elements).".format(len(X)))
+
+        if self._config.spool > 0:
+            self.pool_size = X.shape[0]
             
         self.pool_x = np.asarray(X)
         self.pool_y = np.asarray(Y)
@@ -247,23 +251,25 @@ class ActiveLearningTrainer(Trainer):
                 
             train_idx = np.random.choice(len(self.pool_x),self._config.init_train,replace=False)
             cache_m.dump(train_idx,'initial_train.pik')
-            
-        self.train_x = self.pool_x[train_idx]
-        self.train_y = self.pool_y[train_idx]
 
-        #Remove choosen elements from the pool
-        self.pool_x = np.delete(self.pool_x,train_idx)
-        self.pool_y = np.delete(self.pool_y,train_idx)
-        
-        #Initial validation set - keeps the same split ratio for train/val as defined in the configuration
+        #Validation element index definition
         val_samples = int((self._config.init_train*self._config.split[1])/self._config.split[0])
         val_samples = max(val_samples,100)
         val_idx = np.random.choice(self.pool_x.shape[0],val_samples,replace=False)
+
+        self.train_x = self.pool_x[train_idx]
+        self.train_y = self.pool_y[train_idx]
+        
+        #Initial validation set - keeps the same split ratio for train/val as defined in the configuration
         self.val_x = self.pool_x[val_idx]
         self.val_y = self.pool_y[val_idx]
-        self.pool_x = np.delete(self.pool_x,val_idx)
-        self.pool_y = np.delete(self.pool_y,val_idx)
 
+        #Remove the selected items from pool
+        remove = np.concatenate((train_idx,val_idx),axis=0)
+        self.pool_x = np.delete(self.pool_x,remove)
+        self.pool_y = np.delete(self.pool_y,remove)
+        self.sample_idx = np.delete(self.sample_idx,remove)
+        
     def run(self):
         """
         Coordenates the AL process
