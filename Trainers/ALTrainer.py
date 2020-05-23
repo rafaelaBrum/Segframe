@@ -160,7 +160,7 @@ class ActiveLearningTrainer(Trainer):
             if self._config.info:
                 print("[ALTrainer] Loaded resampled pool from: {}".format(cache_m.fileLocation(fid)))
         else:
-            self.sample_idx = np.random.choice(range(self.superp_x.shape[0]),self.pool_size,replace=False)
+            self.sample_idx = np.random.choice(self.superp_x.shape[0],self.pool_size,replace=False)
             cache_m.dump((self.sample_idx,name),fid)
             
         self.pool_x = self.superp_x[self.sample_idx]
@@ -205,7 +205,7 @@ class ActiveLearningTrainer(Trainer):
         else:
             x_test,y_test = self._ds.run_dir(self._config.testdir)
             t_idx = min(len(x_test),t_idx)
-            samples = np.random.choice(range(len(x_test)),t_idx,replace=False)
+            samples = np.random.choice(len(x_test),t_idx,replace=False)
             self.test_x = [x_test[s] for s in samples]
             self.test_y = [y_test[s] for s in samples]
             del(x_test)
@@ -255,7 +255,10 @@ class ActiveLearningTrainer(Trainer):
         #Validation element index definition
         val_samples = int((self._config.init_train*self._config.split[1])/self._config.split[0])
         val_samples = max(val_samples,100)
-        val_idx = np.random.choice(self.pool_x.shape[0],val_samples,replace=False)
+        val_idx = np.random.choice(np.setdiff1d(np.arange(self.pool_x.shape[0]),train_idx))
+        if self._config.verbose > 0:
+            print("Common elements between train and val (should be none): {}".format(np.intersect1d(train_idx,val_idx,assume_unique=True)))
+        #val_idx = np.random.choice(self.pool_x.shape[0],val_samples,replace=False)
 
         self.train_x = self.pool_x[train_idx]
         self.train_y = self.pool_y[train_idx]
@@ -264,11 +267,14 @@ class ActiveLearningTrainer(Trainer):
         self.val_x = self.pool_x[val_idx]
         self.val_y = self.pool_y[val_idx]
 
-        #Remove the selected items from pool
+        #Remove the selected items from pool and superset
         remove = np.concatenate((train_idx,val_idx),axis=0)
         self.pool_x = np.delete(self.pool_x,remove)
         self.pool_y = np.delete(self.pool_y,remove)
+        if self._config.spool > 0:
+            self.acq_idx = self.sample_idx[remove]
         self.sample_idx = np.delete(self.sample_idx,remove)
+
         
     def run(self):
         """
