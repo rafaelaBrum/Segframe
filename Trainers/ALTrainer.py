@@ -342,7 +342,7 @@ class ActiveLearningTrainer(Trainer):
         import gc
 
         #Regenerate pool if defined
-        if self._config.spool > 0 and ((kwargs['acquisition'] + 1) % (self._config.spool)) == 0:
+        if self._config.spool > 0 and kwargs['acquisition'] > 0 and ((kwargs['acquisition'] + 1) % (self._config.spool)) == 0:
             self._refresh_pool(kwargs['acquisition'],model.name)
             
         #Clear some memory before acquisitions
@@ -408,7 +408,9 @@ class ActiveLearningTrainer(Trainer):
             else:
                 self.acq_idx = np.concatenate((self.acq_idx,self.sample_idx[pooled_idx]),axis=0)
             self.sample_idx = np.delete(self.sample_idx,pooled_idx)
-            
+            print("Pooled indexes ({}): {}".format(pooled_idx.shape[0],pooled_idx))
+            print("Sample_idx ({}): {}".format(self.sample_idx.shape[0],self.sample_idx))
+ 
         del(generator)
         
         self.train_x = np.concatenate((self.train_x,self.pool_x[pooled_idx]),axis=0)
