@@ -220,7 +220,7 @@ def _acq_ng_logic(posa,clusters,un_clusters,query,config,verbose,cache_m):
     while ac_count < query:
         cln = j % clusters
         q = un_clusters[cln]
-        cl_aq = int(round(frac[cln]*query))
+        cl_aq = int(np.ceil(frac[cln]*query))
         if len(q) >= cl_aq:
             acquired.extend(q[:cl_aq])
             ac_count += cl_aq
