@@ -19,7 +19,7 @@ from Utils import Exitcodes,CacheManager
 from keras import backend as K
 from keras.preprocessing.image import ImageDataGenerator
 # Training callbacks
-from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau,LearningRateScheduler
+from keras.callbacks import ModelCheckpoint, ReduceLROnPlateau,LearningRateScheduler,EarlyStopping
 from keras.utils import to_categorical
 
 #Preparing migration to TF 2.0
@@ -320,7 +320,10 @@ class Trainer(object):
         callbacks.append(ReduceLROnPlateau(monitor='loss',factor=0.7,\
                                            patience=10,verbose=self._verbose,\
                                            mode='auto',min_lr=1e-7))
+        ##LearningRateScheduler
         callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=self._verbose))
+        ##EarlyStopping
+        callbacks.append(EarlyStopping(monitor='acc',mode='max',min_delta=0.001,patience=3))
         ## CalculateF1Score
         if self._config.f1period > 0:
             callbacks.append(CalculateF1Score(val_generator,self._config.f1period,self._config.batch_size,self._config.info))
