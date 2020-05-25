@@ -301,7 +301,7 @@ def InceptionResNetV2(include_top=True,
                                     use_bn=use_bn)
 
         if use_dp:
-            x = layers.Dropout(0.2)(x,training=kwargs['training'])
+            x = layers.Dropout(0.1)(x,training=kwargs['training'])
 
     # Mixed 7a (Reduction-B block): 8 x 8 x 2080
     branch_0 = conv2d_bn(x, 256, 1, use_bn=use_bn)
@@ -323,7 +323,7 @@ def InceptionResNetV2(include_top=True,
                                     block_idx=block_idx,
                                     use_bn=use_bn)
         if use_dp:
-            x = layers.Dropout(0.3)(x,training=kwargs['training'])
+            x = layers.Dropout(0.1)(x,training=kwargs['training'])
         
     x = inception_resnet_block(x,
                                 scale=1.,

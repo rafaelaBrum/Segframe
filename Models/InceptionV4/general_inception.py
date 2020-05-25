@@ -183,7 +183,7 @@ class Inception(GenericEnsemble):
                     'custom_top':False,
                     'preload':preload,
                     'batch_n':True if self._config.gpu_count <= 1 else False,
-                    'use_dp': False if self.is_ensemble() else True}
+                    'use_dp': True } #False if self.is_ensemble() else True}
 
         inp = Input(shape=input_shape)
                 
