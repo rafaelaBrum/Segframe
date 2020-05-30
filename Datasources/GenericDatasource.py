@@ -110,7 +110,7 @@ class GenericDS(ABC):
         Split data in at most N sets. Returns a tuple (set1,set2,set3,setN) with the divided
         data
         """
-        if sum(split) == 1.0:
+        if sum(split) <= 1.0:
             it_count = 0
             split_data = []
             start_idx = 0
@@ -171,7 +171,7 @@ class GenericDS(ABC):
         """
         if data is None:
             return self._split_data(split,self.X,self.Y)
-        elif len(data) == 2:
+        elif len(data) >= 2:
             return self._split_data(split,data[0],data[1])
         else:
             return None

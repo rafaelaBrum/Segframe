@@ -47,7 +47,7 @@ linestyle = [
     ('densely dashed',        (0, (5, 1))),
     
     #('loosely dashdotted',    (0, (3, 10, 1, 10))),
-    ('dashdotted',            (0, (3, 5, 1, 5))),
+    ('dashdotted',            (0, (3, 3, 1, 3))),
     ('densely dashdotted',    (0, (3, 1, 1, 1))),
 
     ('dashdotdotted',         (0, (3, 5, 1, 5, 1, 5))),

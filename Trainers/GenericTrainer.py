@@ -14,6 +14,7 @@ warnings.filterwarnings('ignore')
 from Datasources.CellRep import CellRep
 from Utils import SaveLRCallback,CalculateF1Score,EnsembleModelCallback
 from Utils import Exitcodes,CacheManager
+from .DataSetup import split_test
 
 #Keras
 from keras import backend as K
@@ -109,7 +110,20 @@ class Trainer(object):
 
         self._rex = self._rex.format(net_model.name)
 
-        sw_thread = self.train_model(net_model)
+        #Define training data
+        #TODO: if wsi_split extract test first, then do sampling with the remaining data
+        train_data,val_data = None,None
+        if self._config.sample != 1.0:
+            data_sample = self._ds.sample_metadata(self._config.sample,self._config.pos_rt)
+            train_data,val_data,_ = self._ds.split_metadata(split=self._config.split,data=data_sample)
+
+        elif self._config.wsi_split > 0:
+            _,_,X,Y = split_test(self._config,self._ds)
+            train_data,val_data,_ = self._ds.split_metadata(split=self._config.split[:2],data=(X,Y))
+        else:
+            train_data,val_data,_ = self._ds.split_metadata(self._config.split)        
+
+        sw_thread = self.train_model(net_model,train_data,val_data)
         return sw_thread.join()
 
     def _choose_generator(self,train_data,val_data):
@@ -183,7 +197,7 @@ class Trainer(object):
 
         return (train_generator,val_generator)
     
-    def train_model(self,model,train_data=None,val_data=None,**kwargs):
+    def train_model(self,model,train_data,val_data=None,**kwargs):
         """
         Generic trainer. Receives a GenericModel and trains it
         @param model <GenericModel>
@@ -241,14 +255,6 @@ class Trainer(object):
                 )
             session.config = ses_config
             K.set_session(session)
-        
-        #Setup of generators, augmentation, preprocessing
-        if train_data is None or val_data is None:
-            if self._config.sample != 1.0:
-                data_sample = self._ds.sample_metadata(self._config.sample,self._config.pos_rt)
-                train_data,val_data,_ = self._ds.split_metadata(split=self._config.split,data=data_sample)
-            else:
-                train_data,val_data,_ = self._ds.split_metadata(self._config.split)
             
         if self._verbose > 0 and (stats is None or stats):
             unique,count = np.unique(train_data[1],return_counts=True)
