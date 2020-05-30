@@ -8,7 +8,7 @@
 #echo commands to stdout
 #set -x
 
-DIRID="EN-62"
+DIRID="EN-66"
 export PYTHONPATH=$HOME/.local/lib/python3.6/site-packages:/pylon5/ac3uump/alsm/lib64/python3.6/site-packages:$PYTHONPATH
 
 if [ ! -d $LOCAL/test ]
@@ -33,7 +33,7 @@ module load cuda/9.0
 echo '[START] training'
 date +"%D %T"
 
-time python3 main.py -i -v --al -strategy EnsembleTrainer -predst $LOCAL/test/lym_cnn_training_data -split 0.85 0.05 0.10 -net Inception -data CellRep -init_train 500 -ac_steps 20  -emodels 3 -ac_function kmng_uncert -un_function ensemble_varratios -acquire 200 -d -e 50 -b 60 -tdim 240 240 -clusters 20 -f1 25 -out logs/ -cpu 6 -gpu 2 -tn -sv -nsw -wpath results/$DIRID -model_dir results/$DIRID -logdir results/$DIRID -cache results/$DIRID -pca 50 -sample 5000 -spool 5 -load_train
+time python3 main.py -i -v --al -strategy EnsembleTrainer -predst $LOCAL/test/lym_cnn_training_data -split 0.85 0.05 0.10 -net Inception -data CellRep -init_train 500 -ac_steps 20  -emodels 3 -ac_function kmng_uncert -un_function ensemble_varratios -acquire 200 -d -e 50 -b 62 -tdim 240 240 -clusters 20 -f1 25 -out logs/ -cpu 6 -gpu 2 -tn -sv -nsw -wpath results/$DIRID -model_dir results/$DIRID -logdir results/$DIRID -cache results/$DIRID -pca 50 -sample 3000 -load_train -spool 3
 
 echo '[FINAL] done training'
 

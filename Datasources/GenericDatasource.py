@@ -321,7 +321,7 @@ class GenericDS(ABC):
             for k in range(len(s_x)):
                 idx, = np.where(X == s_x[k])
                 if idx.shape[0] > 0:
-                    samples[k] = idx[0][0]
+                    samples[k] = idx[0]
             print("[GenericDatasource] Sample indexes regeneration: \n{}".format(samples))
 
             return samples

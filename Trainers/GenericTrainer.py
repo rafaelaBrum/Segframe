@@ -323,7 +323,7 @@ class Trainer(object):
         ##LearningRateScheduler
         callbacks.append(LearningRateScheduler(_reduce_lr_on_epoch,verbose=self._verbose))
         ##EarlyStopping
-        callbacks.append(EarlyStopping(monitor='acc',mode='max',min_delta=0.001,patience=3))
+        #callbacks.append(EarlyStopping(monitor='acc',mode='max',min_delta=0.01,patience=5,baseline=0.9,verbose=1))
         ## CalculateF1Score
         if self._config.f1period > 0:
             callbacks.append(CalculateF1Score(val_generator,self._config.f1period,self._config.batch_size,self._config.info))
