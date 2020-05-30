@@ -5,10 +5,10 @@ import importlib
 import os,sys
 from tqdm import tqdm
 import numpy as np
-import math
 
 from Datasources.CellRep import CellRep
 from .BatchGenerator import ThreadedGenerator
+from .DataSetup import split_test
 from Utils import SaveLRCallback
 from Utils import Exitcodes,CacheManager,PrintConfusionMatrix
 
@@ -133,6 +133,9 @@ class Predictor(object):
             net_module = importlib.import_module('Models',net_name)
             net_model = getattr(net_module,net_name)(self._config,self._ds)
 
+        if x_test is None or y_test is None:
+            x_test,y_test,_,_ = split_test(self._config,self._ds)
+
         self.run_test(net_model,x_test,y_test,load_full)
         
     def run_test(self,model,x_test=None,y_test=None,load_full=True):
@@ -225,7 +228,7 @@ class Predictor(object):
             return None
 
         bsize = self._config.batch_size
-        stp = math.ceil(len(X) / bsize)
+        stp = int(np.ceil(len(X) / bsize))
 
         image_generator = ImageDataGenerator(samplewise_center=self._config.batch_norm, 
                                             samplewise_std_normalization=self._config.batch_norm)

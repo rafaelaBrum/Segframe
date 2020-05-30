@@ -15,6 +15,7 @@ from keras.preprocessing.image import ImageDataGenerator
 #Local
 from .GenericTrainer import Trainer
 from .Predictions import Predictor
+from .DataSetup import split_test
 
 #Module
 from Utils import Exitcodes,CacheManager
@@ -101,41 +102,6 @@ class ActiveLearningTrainer(Trainer):
         return nX,nY
 
 
-    def _split_origins(self,x_data,t_idx):
-        """
-        Separates patches of a predefined number of WSIs to be used as test set
-        """
-
-        cache_m = CacheManager()
-        if cache_m.checkFileExistence('testset.pik'):
-            full_id,samples = cache_m.load('testset.pik')
-            if not samples is None and self._config.info:
-                print("[ALTrainer] Using cached TEST SET. This is DANGEROUS. Use the metadata correspondent to the set.")
-            return full_id,samples
-            
-        wsis = set()
-
-        for k in x_data:
-            wsis.add(k.getOrigin())
-
-        wsis = list(wsis)
-        selected = set(random.choices(wsis,k=self._config.wsi_split))
-        selected_idx = []
-
-        if self._config.info:
-            print("[ALTrainer] WSIs selected to provide test patches:\n{}".format("\n".join(selected)))
-            
-        for i in range(len(x_data)):
-            if x_data[i].getOrigin() in selected:
-                selected_idx.append(i)
-
-        t_idx = min(len(selected_idx),t_idx)
-        samples = np.random.choice(selected_idx,t_idx,replace=False)
-        full_id = np.asarray(selected_idx,dtype=np.int32)
-        cache_m.dump((full_id,samples),'testset.pik')
-        
-        return full_id,samples
-
     def _refresh_pool(self,r,name):
         if self.superp_x is None or self.superp_y is None:
             return None
@@ -178,43 +144,7 @@ class ActiveLearningTrainer(Trainer):
         All sets are kept as NP arrays
         """
 
-        #Test set is extracted from the last items of the full DS or from a test dir and is not changed for the whole run
-        fX,fY = self._ds.load_metadata()
-        tsp = self._config.split[-1:][0]
-        t_idx = 0
-        if tsp > 1.0:
-            t_idx = int(tsp)
-        else:
-            t_idx = int(tsp * len(fX))
-
-        #Configuration option that limits test set size
-        t_idx = min(self._config.pred_size,t_idx) if self._config.pred_size > 0 else t_idx
-
-        if self._config.testdir is None or not os.path.isdir(self._config.testdir):
-            if self._config.wsi_split > 0:
-                full_id,samples = self._split_origins(fX,t_idx)
-                self.test_x = fX[samples]
-                self.test_y = fY[samples]
-                X = np.delete(fX,full_id)
-                Y = np.delete(fY,full_id)
-            else:
-                self.test_x = fX[- t_idx:]
-                self.test_y = fY[- t_idx:]
-                X,Y = fX[:-t_idx],fY[:-t_idx]
-            self._ds.check_paths(self.test_x,self._config.predst)
-        else:
-            x_test,y_test = self._ds.run_dir(self._config.testdir)
-            t_idx = min(len(x_test),t_idx)
-            samples = np.random.choice(len(x_test),t_idx,replace=False)
-            self.test_x = [x_test[s] for s in samples]
-            self.test_y = [y_test[s] for s in samples]
-            del(x_test)
-            del(y_test)
-            del(samples)
-            X,Y = fX,fY
-
-        del(fX)
-        del(fY)
+        self.test_x,self.test_y,X,Y = split_test(self._config,self._ds)
         
         #Use a sample of the metadata if so instructed
         if self._config.sample != 1.0:
