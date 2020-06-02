@@ -8,7 +8,7 @@
 #echo commands to stdout
 #set -x
 
-DIRID="DB-13"
+DIRID="DB-14"
 export PYTHONPATH=$HOME/.local/lib/python3.6/site-packages:/pylon5/ac3uump/alsm/lib64/python3.6/site-packages:$PYTHONPATH
 
 if [ ! -d $LOCAL/test ]
@@ -33,7 +33,7 @@ module load cuda/9.0
 echo '[START] training'
 date +"%D %T"
 
-time python3 main.py -i -v --train --pred -predst /pylon5/ac3uump/alsm/active-learning/data/nds300 -split 0.92 0.01 0.07 -net Inception -data CellRep -d -e 50 -b 60 -tdim 240 240 -f1 10 -out logs/ -cpu 9 -gpu 2 -tn -sv -nsw -wpath results/$DIRID -model_dir results/$DIRID -logdir results/$DIRID -cache results/$DIRID 
+time python3 main.py -i -v --train --pred -predst /pylon5/ac3uump/alsm/active-learning/data/nds300 -split 0.92 0.01 0.07 -net Inception -data CellRep -d -e 50 -b 62 -tdim 240 240 -f1 10 -out logs/ -cpu 9 -gpu 2 -tn -sv -nsw -wpath results/$DIRID -model_dir results/$DIRID -logdir results/$DIRID -cache results/$DIRID -sample 100000 -wsi_split 5 -pred_size 15000 
 
 echo '[FINAL] done training'
 
