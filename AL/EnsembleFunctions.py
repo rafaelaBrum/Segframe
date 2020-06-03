@@ -185,7 +185,7 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
     if 'model' in kwargs:
         model = kwargs['model']
     else:
-        print("[ensemble_varratios] GenericModel is needed by ensemble_varratios. Set model kw argument")
+        print("[ensemble_bald] GenericModel is needed by ensemble_bald. Set model kw argument")
         return None
     
     #If sw_thread was provided, we should check the availability of model weights
@@ -247,6 +247,7 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
         All_Entropy_Dropout = All_Entropy_Dropout + Entropy_Per_Dropout 
         del(proba)
         del(dropout_score_log)
+        del(Entropy_Compute)
 
     Avg_Pi = np.divide(score_All, emodels)
     Log_Avg_Pi = np.log2(Avg_Pi)

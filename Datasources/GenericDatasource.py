@@ -317,7 +317,6 @@ class GenericDS(ABC):
         """
 
         def regen_idx(s_x,X):
-            print("Pool index regeneration")
             samples = np.zeros(len(s_x),dtype=np.int32)
             for k in range(len(s_x)):
                 idx, = np.where(X == s_x[k])
