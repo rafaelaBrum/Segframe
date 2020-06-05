@@ -359,7 +359,7 @@ class Plotter(object):
                     
                 color += 1
 
-        fig.legend(bbox_to_anchor=(0.87,0.16),loc=4,ncol=2,labels=config.labels,prop=dict(weight='bold'))
+        fig.legend(bbox_to_anchor=(0.5,0.8),loc=4,ncol=2,labels=config.labels,prop=dict(weight='bold'))
         ax1.set_xticks(np.arange(data['trainset'].min(), data['trainset'].max()+1, xtick))
         if data['trainset'].max() > 1000:
             plt.setp(ax1.get_xticklabels(),rotation=30)
@@ -893,7 +893,7 @@ if __name__ == "__main__":
             
         p = Plotter()
 
-        if not config.metrics is None:
+        if not config.metrics is None and len(config.ids) == 1:
             ex_dir = "{}-{}".format(exp_type,str(config.ids[0]))
             data = p.parseMetrics(p.parseSlurm(ex_dir,config.maxx),config.ids[0],config.metrics)
             p.draw_multilabel(data,config.title,config.xtick,config.metrics,config.labels)

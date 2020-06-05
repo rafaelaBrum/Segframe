@@ -391,7 +391,11 @@ def process_wsi_metadata(config):
     total_pos = 0
     discarded = 0
     positives = []
-    
+
+    if not ac_imgs:
+        print("No metadata to analyze...quiting.")
+        sys.exit(1)
+        
     if config.ac_n is None or config.save:
         #Use all data if specific acquisitions were not defined
         config.ac_n = list(ac_imgs.keys())

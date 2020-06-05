@@ -71,7 +71,7 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
             fidp = 'al-probs-{1}-r{0}.pik'.format(r,config.ac_function)
             cache_m.registerFile(os.path.join(config.logdir,fidp),fidp)
         
-    All_Dropout_Classes = np.zeros(shape=(data_size,1))
+    All_Dropout_Classes = np.zeros(shape=(data_size,1),dtype=np.float32)
 
     #If sw_thread was provided, we should check the availability of model weights
     if not sw_thread is None:
@@ -90,14 +90,14 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
     #Keep probabilities for analysis
     all_probs = None
     if config.debug:
-        all_probs = np.zeros(shape=(emodels,data_size,generator.classes))
+        all_probs = np.zeros(shape=(emodels,data_size,generator.classes),dtype=np.float32)
 
+    single,parallel = model.build(preload_w=False)
     for d in l:
         if not pbar and config.info:
             print("Step {0}/{1}".format(d+1,emodels))
 
         model.register_ensemble(d)
-        single,parallel = model.build(preload_w=False)
             
         pred_model = load_model_weights(config,model,single,parallel)
         
@@ -113,13 +113,14 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
         dropout_classes = proba.argmax(axis=-1)    
         dropout_classes = np.array([dropout_classes]).T
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
+        del(dropout_classes)
 
-    if verbose > 0:
+    if verbose > 1:
         print("Variation array {0}:".format(All_Dropout_Classes.shape))
         for i in np.random.choice(All_Dropout_Classes.shape[0],100,replace=False):
             print("Predictions for image ({0}): {1}".format(i,All_Dropout_Classes[i]))
     
-    Variation = np.zeros(shape=(data_size))
+    Variation = np.zeros(shape=(data_size),dtype=np.float32)
 
     for t in range(data_size):
         L = np.array([0])
