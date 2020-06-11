@@ -12,8 +12,8 @@ figure(num=None, figsize=(12, 6), dpi=100, facecolor='w', edgecolor='k')
 import pandas as pd
 from matplotlib.ticker import MaxNLocator
 from matplotlib.colors import ListedColormap
+from matplotlib.ticker import FuncFormatter
 
-import matplotlib.dates as mdates
 import datetime
 import numpy as np
 import os
@@ -222,13 +222,6 @@ class Plotter(object):
         plt.show()
         
     def draw_data(self,data,title='',xlabel='Trainset size',metric=None):
-        from matplotlib.ticker import FuncFormatter
-        def format_func(x, pos):
-            hours = int(x//3600)
-            minutes = int((x%3600)//60)
-            seconds = int(x%60)
-
-            return "{:d}:{:02d}:{:02d}".format(hours, minutes, seconds)
 
         fig = plt.figure(1)
         fig.suptitle(title)
@@ -258,16 +251,16 @@ class Plotter(object):
             plt.axis([data['trainset'][0]-100,data['trainset'].max()+100,0.0,tdata.max()+.2])
             fig.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
             #ax.yaxis_date()
-            formatter = FuncFormatter(format_func)
+            formatter = FuncFormatter(self.format_func)
             ax.yaxis.set_major_formatter(formatter)
             #plt.gcf().autofmt_xdate()
             plt.xlabel(xlabel)
             if metric == 'time':
-                plt.ylabel('AL step time (hh:min:sec)')
+                plt.ylabel('AL step time \n(hh:min:sec)')
             elif metric == 'acqtime':
-                plt.ylabel('Acquisition step time (hh:min:sec)')
+                plt.ylabel('Acquisition step time \n(hh:min:sec)')
             elif metric == 'traintime':
-                plt.ylabel('Training step time (hh:min:sec)')
+                plt.ylabel('Training step time \n(hh:min:sec)')
             else:
                 plt.ylabel('Time frame not defined')
 
@@ -402,9 +395,9 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
         
-    def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False):
+    def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False,other=None):
         
-        print("Colors: {}".format(len(palette.colors)))
+        #print("Colors: {}".format(len(palette.colors)))
             
         color = 0
         line = 0
@@ -417,6 +410,7 @@ class Plotter(object):
         lbcount = 0
 
         plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
+        ax = plt.subplot(111)
         for k in data:
             if pos and data[k]['labels'].shape[0] > 0:
                 #Repeat last point if needed
@@ -476,6 +470,43 @@ class Plotter(object):
                 min_y.append(data[k]['auc'].min())
                 max_y.append(data[k]['auc'].max())
                 print(data[k]['trainset'])
+            elif not other is None:
+                if len(other) > 1:
+                    print("Multilibe plot only supports a single metric. Using the first one provided ({})".format(other[0]))
+                metric = other[0]
+                if not metric in data[k]:
+                    print("Requested metric not available: {}".format(metric))
+                    return None
+                else:
+                    tdata = data[k][metric]
+
+                #Repeat last point if needed
+                if data[k]['trainset'].shape[0] > tdata.shape[0]:
+                    print("Shape mismatch:\n Trainset: {}; {}:{}".format(data[k]['trainset'].shape,tdata.shape,metric))
+                    tdata = np.hstack((tdata,tdata[-1:]))
+
+                if labels is None:
+                    lb = k
+                else:
+                    lb = labels[lbcount]
+                    lbcount += 1
+                    
+                if 'color' in data[k]:
+                    color = data[k]['color']
+                    line = color%len(linestyle)
+                    marker = color%len(markers)
+                    color = color % len(palette.colors)
+                    
+                plt.plot(data[k]['trainset'],tdata,'bo',marker=markers[marker],linestyle='',color=palette(color),alpha=0.9,label=lb)
+                plt.axis([data[k]['trainset'][0]-100,data[k]['trainset'].max()+100,0.0,tdata.max()+.2])
+                #fig.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+                #ax.yaxis_date()
+                formatter = FuncFormatter(self.format_func)
+                ax.yaxis.set_major_formatter(formatter)
+                min_x.append(data[k]['trainset'].min())
+                max_x.append(data[k]['trainset'].max())
+                min_y.append(tdata.min())
+                max_y.append(tdata.max())
             else:
                 #Repeat last point if needed
                 if data[k]['trainset'].shape[0] > data[k]['accuracy'].shape[0]:
@@ -508,18 +539,31 @@ class Plotter(object):
         plt.xticks(np.arange(min(min_x), max(max_x)+1, xtick))
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
+            
         if pos:
             plt.yticks(np.arange(max(0,min(min_y)-10), min(100,10+max(max_y)), 5))
+        elif not other is None:
+            pass
         else:
             plt.yticks(np.arange(min(0.6,min(min_y)), 1.05, 0.05))
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         plt.xlabel("Training set size")
-        if plotAUC:
-            plt.ylabel("AUC")
-        elif pos:
-            plt.ylabel("% Positive")
+
+        if not other is None:
+            metric = other[0]
+            if metric == 'time':
+                plt.ylabel('AL step time \n(hh:min:sec)')
+            elif metric == 'acqtime':
+                plt.ylabel('Acquisition step time \n(hh:min:sec)')
+            elif metric == 'traintime':
+                plt.ylabel('Training step time \n(hh:min:sec)')
         else:
-            plt.ylabel("Accuracy")
+            if plotAUC:
+                plt.ylabel("AUC")
+            elif pos:
+                plt.ylabel("% Positive")
+            else:
+                plt.ylabel("Accuracy")
 
         plt.tight_layout()
         plt.grid(True)
@@ -568,6 +612,14 @@ class Plotter(object):
             return parseDirs(path,al_dirs)
 
 
+        
+    def format_func(self,x, pos):
+        hours = int(x//3600)
+        minutes = int((x%3600)//60)
+        seconds = int(x%60)
+
+        return "{:d}:{:02d}:{:02d}".format(hours, minutes, seconds)
+    
     def extractNPData(self,path):
         if not os.path.isfile(path):
             print("Given file path is incorrect. Check that.")
@@ -964,7 +1016,7 @@ if __name__ == "__main__":
             if len(data) == 0:
                 print("Something is wrong with your command options. No data to plot")
                 sys.exit(1)        
-            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos,config.auc_only)
+            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos,config.auc_only,config.metrics)
                 
     elif config.single:
         p = Plotter(path=config.sdir)
