@@ -41,14 +41,21 @@ def _process_al_metadata(config):
         with open(acfiles[k],'rb') as fd:
             try:
                 train,val,test = pickle.load(fd)
+
+            #Needed when inital training data is requested
             except ValueError:
                 fd.seek(0)
                 idx = pickle.load(fd)
                 fd.close()
+                print('Grabing metadata from sample indexes.')
                 mt = os.path.join(config.sdir,'{}-sampled_metadata.pik'.format(config.ds))
                 if os.path.isfile(mt):
                    fd = open(mt,'rb')
-                   tx,ty,_ = pickle.load(fd)
+                   sd = pickle.load(fd)
+                   if len(sd) == 3:
+                       tx,ty,_ = sd
+                   else:
+                       tx,ty,_,_ = sd
                    fd.close()
                    tx = np.asarray(tx)[idx]
                    train = (tx,ty)
@@ -228,7 +235,11 @@ def _dataset_wsi_metadata(cache_file,wsis,pos_patches,title="DATASET"):
     print("\n\n"+" "*10+"{} PATCHES STATISTICS".format(title))
     if not cache_file is None:
         with open(cache_file,'rb') as fd:
-            X,Y,_ = pickle.load(fd)
+            dt = pickle.load(fd)
+        if len(dt) == 3:
+            X,Y,_ = dt
+        else:
+            X,Y,_,_ = dt
         ac_patches = len(X)
         for ic in range(ac_patches):
             img = X[ic]

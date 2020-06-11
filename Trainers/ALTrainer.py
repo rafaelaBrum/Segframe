@@ -5,7 +5,9 @@ import os,sys
 import numpy as np
 import importlib
 import random
-
+import time
+from datetime import timedelta
+        
 #Filter warnings
 import warnings
 warnings.filterwarnings('ignore')
@@ -200,7 +202,8 @@ class ActiveLearningTrainer(Trainer):
         self.pool_y = np.delete(self.pool_y,remove)
         if self._config.spool > 0:
             self.acq_idx = self.sample_idx[remove]
-        self.sample_idx = np.delete(self.sample_idx,remove)
+        if self._config.sample != 1.0:
+            self.sample_idx = np.delete(self.sample_idx,remove)
 
         
     def run(self):
@@ -208,8 +211,6 @@ class ActiveLearningTrainer(Trainer):
         Coordenates the AL process
         """
         from keras import backend as K
-        import time
-        from datetime import timedelta
         
         #Loaded CNN model and Datasource
         model = self.load_modules()
@@ -230,6 +231,7 @@ class ActiveLearningTrainer(Trainer):
 
         stime = None
         etime = None
+        train_time = None
         sw_thread = None
         end_train = False
                     
@@ -242,8 +244,12 @@ class ActiveLearningTrainer(Trainer):
             fid = 'al-metadata-{1}-r{0}.pik'.format(r,model.name)
             cache_m.registerFile(os.path.join(self._config.logdir,fid),fid)
             cache_m.dump(((self.train_x,self.train_y),(self.val_x,self.val_y),(self.test_x,self.test_y)),fid)
-                
-            sw_thread = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))            
+
+            #Track training time
+            train_time = time.time()
+            sw_thread = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))
+            if self._config.info:
+                print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
                 
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
@@ -265,7 +271,7 @@ class ActiveLearningTrainer(Trainer):
             if self._config.info:
                 etime = time.time()
                 td = timedelta(seconds=(etime-stime))
-                print("Acquisition step took: {0}".format(td))
+                print("AL step took: {0}".format(td))
                 
             if end_train:
                 return None
@@ -332,8 +338,12 @@ class ActiveLearningTrainer(Trainer):
 
         if self._config.verbose > 1:
             print("Starting acquisition using model: {0}".format(hex(id(pred_model))))
-        
+
+        #Track acquisition time
+        ac_time = time.time()
         pooled_idx = function(pred_model,generator,self.pool_x.shape[0],**kwargs)
+        if self._config.info:
+            print("Acquisition step took: {}".format(timedelta(seconds=time.time() - ac_time)))
 
         if pooled_idx is None:
             if self._config.info:

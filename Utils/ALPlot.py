@@ -6,10 +6,14 @@
 #matplotlib.use('macosx')
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from matplotlib.pyplot import figure
+figure(num=None, figsize=(12, 6), dpi=100, facecolor='w', edgecolor='k')
+
 import pandas as pd
 from matplotlib.ticker import MaxNLocator
 from matplotlib.colors import ListedColormap
 
+import matplotlib.dates as mdates
 import datetime
 import numpy as np
 import os
@@ -168,12 +172,15 @@ class Plotter(object):
         plots = []
         up = 0.0
         low = 1.0
+
+        plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
         for d in data:
             x_data,y_data,ci,y_label,color = d
             color = 0 if color < 0 else color
             line = color%len(linestyle)
             marker = color%len(markers)
-                    
+            color = color % len(palette.colors)
+            
             if auc_only and y_label != 'AUC':
                 continue
             
@@ -214,30 +221,55 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
         
-    def draw_data(self,data,title='',xlabel='Trainset size'):
+    def draw_data(self,data,title='',xlabel='Trainset size',metric=None):
+        from matplotlib.ticker import FuncFormatter
+        def format_func(x, pos):
+            hours = int(x//3600)
+            minutes = int((x%3600)//60)
+            seconds = int(x%60)
+
+            return "{:d}:{:02d}:{:02d}".format(hours, minutes, seconds)
 
         fig = plt.figure(1)
         fig.suptitle(title)
         fig.subplots_adjust(top=0.5)
-        
+
+        if metric is None:
+            tdata = data['time']
+            metric = 'time'
+        elif metric in data:
+            tdata = data[metric]
+        else:
+            tdata = None
+            
         #Train size x Acquisition step time (if that was logged)
-        if 'time' in data:
+        if not tdata is None:
             fig_pos = 211
-            if data['time'].shape != data['trainset'].shape:
-                maxi = min(data['time'].shape[0],data['trainset'].shape[0])
+            if tdata.shape != data['trainset'].shape:
+                maxi = min(tdata.shape[0],data['trainset'].shape[0])
             else:
-                maxi = max(data['time'].shape[0],data['trainset'].shape[0])
+                maxi = max(tdata.shape[0],data['trainset'].shape[0])
         else:
             fig_pos = 110
 
-        if 'time' in data and data['time'].shape[0] > 0:
-            plt.subplot(fig_pos)
-            plt.plot(data['trainset'][:maxi],data['time'][:maxi],'bo')
-            plt.axis([data['trainset'][0]-100,data['trainset'].max()+100,0.0,data['time'].max()+.2])
+        if tdata.shape[0] > 0:
+            ax = plt.subplot(fig_pos)
+            plt.plot(data['trainset'][:maxi],tdata[:maxi],'bo')
+            plt.axis([data['trainset'][0]-100,data['trainset'].max()+100,0.0,tdata.max()+.2])
             fig.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
+            #ax.yaxis_date()
+            formatter = FuncFormatter(format_func)
+            ax.yaxis.set_major_formatter(formatter)
             #plt.gcf().autofmt_xdate()
             plt.xlabel(xlabel)
-            plt.ylabel('Acquisition step time (hours)')
+            if metric == 'time':
+                plt.ylabel('AL step time (hh:min:sec)')
+            elif metric == 'acqtime':
+                plt.ylabel('Acquisition step time (hh:min:sec)')
+            elif metric == 'traintime':
+                plt.ylabel('Training step time (hh:min:sec)')
+            else:
+                plt.ylabel('Time frame not defined')
 
         #Train size x AUC
         if 'auc' in data and data['auc'].shape[0] > data['trainset'].shape[0]:
@@ -275,6 +307,7 @@ class Plotter(object):
             print("Trainset should be provided as X axis")
             sys.exit(1)
 
+        plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
         fig, ax1 = plt.subplots()
         ax2 = None
 
@@ -382,7 +415,8 @@ class Plotter(object):
         min_y = []
         max_y = []
         lbcount = 0
-        
+
+        plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
         for k in data:
             if pos and data[k]['labels'].shape[0] > 0:
                 #Repeat last point if needed
@@ -401,6 +435,7 @@ class Plotter(object):
                     color = data[k]['color']
                     line = color%len(linestyle)
                     marker = color%len(markers)
+                    color = color % len(palette.colors)
                     
                 plt.plot(data[k]['trainset'],yd, marker=markers[marker],color=palette(color),linewidth=1.5,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                 color += 1
@@ -429,6 +464,7 @@ class Plotter(object):
                     color = data[k]['color']
                     line = color%len(linestyle)
                     marker = color%len(markers)
+                    color = color % len(palette.colors)
                     
                 plt.plot(data[k]['trainset'],data[k]['auc'], marker=markers[marker],color=palette(color),linewidth=1.5,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                 color += 1
@@ -456,6 +492,7 @@ class Plotter(object):
                     color = data[k]['color']
                     line = color%len(linestyle)
                     marker = color%len(markers)
+                    color = color % len(palette.colors)
                     
                 plt.plot(data[k]['trainset'],data[k]['accuracy'], marker=markers[marker],color=palette(color),linewidth=2.0,linestyle=linestyle[line][1],alpha=0.9,label=k)
                 color += 1
@@ -567,13 +604,17 @@ class Plotter(object):
             return None
         
         data = {'time':[],
+                'acqtime':[],
+                'traintime':[],
                 'auc':[],
                 'trainset':[],
                 'accuracy':[],
                 'labels':[],
                 'cluster':{}}
         start_line = 0
-        timerex = r'Acquisition step took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
+        timerex = r'AL step took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
+        trainrex = r'Training step took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
+        acqrex = r'Acquisition step took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
         aucrex = r'AUC: (?P<auc>0.[0-9]+)'
         accrex = r'Accuracy: (?P<acc>0.[0-9]+)'
         trainsetrex = r'Train set: (?P<set>[0-9]+) items'
@@ -582,8 +623,10 @@ class Plotter(object):
         colorrex = r'ColorCode: (?P<code>[0-9]+)'
         
         timerc = re.compile(timerex)
+        trainrc = re.compile(trainrex)
+        acqrc = re.compile(acqrex)
         aucrc = re.compile(aucrex)
-        trainrc = re.compile(trainsetrex)
+        trainsetrc = re.compile(trainsetrex)
         accrc = re.compile(accrex)
         clusterrc = re.compile(clusterrex)
         labelrc = re.compile(labelrex)
@@ -593,11 +636,15 @@ class Plotter(object):
             lines = fd.readlines()
 
         #Set a time reference
+        #zero = datetime.datetime(2020,1,1)
+        #zero_num = mdates.date2num(zero)
         for line in lines:
             lstrip = line.strip()
+            trainmatch = trainrc.fullmatch(lstrip)
+            acqmatch = acqrc.fullmatch(lstrip)
             tmatch = timerc.fullmatch(lstrip)
             aucmatch = aucrc.fullmatch(lstrip)
-            trmatch = trainrc.fullmatch(lstrip)
+            trmatch = trainsetrc.fullmatch(lstrip)
             accmatch = accrc.fullmatch(lstrip)
             clustermatch = clusterrc.fullmatch(lstrip)
             labelmatch = labelrc.fullmatch(lstrip)
@@ -605,6 +652,13 @@ class Plotter(object):
             if tmatch:
                 td = datetime.timedelta(hours=int(tmatch.group('hours')),minutes=int(tmatch.group('min')),seconds=round(float(tmatch.group('sec'))))
                 data['time'].append(td.total_seconds()/3600.0)
+            if trainmatch:
+                print(lstrip)
+                td = datetime.timedelta(hours=int(trainmatch.group('hours')),minutes=int(trainmatch.group('min')),seconds=round(float(trainmatch.group('sec'))))
+                data['traintime'].append(td.total_seconds())
+            if acqmatch:
+                td = datetime.timedelta(hours=int(acqmatch.group('hours')),minutes=int(acqmatch.group('min')),seconds=round(float(acqmatch.group('sec'))))
+                data['acqtime'].append(td.total_seconds())
             if aucmatch:
                 data['auc'].append(float(aucmatch.group('auc')))
             if trmatch:
@@ -629,6 +683,8 @@ class Plotter(object):
                 
 
         #Use NP arrays
+        data['traintime'] = np.asarray(data['traintime'])
+        data['acqtime'] = np.asarray(data['acqtime'])
         data['time'] = np.asarray(data['time'])
         data['auc'] = np.asarray(data['auc'])
         data['trainset'] = np.asarray(data['trainset'])
@@ -644,15 +700,19 @@ class Plotter(object):
                 upl += 1
             
             data['time'] = data['time'][:upl]
+            data['traintime'] = data['traintime'][:upl]
+            data['acqtime'] = data['acqtime'][:upl]
             data['auc'] = data['auc'][:upl]
             data['trainset'] = data['trainset'][:upl]
             data['accuracy'] = data['accuracy'][:upl]
             data['labels'] = data['labels'][:upl]
 
         if data['auc'].shape[0] > 0:
-            print("Min AUC: {0}; Max AUC: {1}".format(data['auc'].min(),data['auc'].max()))            
+            print("Experiment {}:".format(os.path.basename(path)))
+            print("Min AUC: {0}; Max AUC: {1}; Mean AUC: {2:.3f}\n".format(data['auc'].min(),data['auc'].max(),data['auc'].mean()))
         if data['accuracy'].shape[0] > 0:
-            print("Min accuracy: {0}; Max accuracy: {1}".format(data['accuracy'].min(),data['accuracy'].max()))
+            print("Experiment {}:".format(os.path.basename(path)))
+            print("Min accuracy: {0}; Max accuracy: {1}; Mean accuracy: {2:.3f}\n".format(data['accuracy'].min(),data['accuracy'].max(),data['accuracy'].mean()))
 
         return data
 
@@ -823,11 +883,13 @@ if __name__ == "__main__":
         help='Figure title.')
     parser.add_argument('-metrics', dest='metrics', type=str, nargs='+',
         help='Metrics to plot: \n \
-        time - Aquisition iteration time; \n \
+        time - AL iteration time; \n \
+        traintime - Train step time; \n \
+        acqtime - Acquisition step time; \n \
         auc - AUC; \n \
         acc - Accuracy; \n \
         labels - Positive labeled patches acquired,',
-       choices=['time','auc','acc','labels'],default=None)    
+       choices=['time','auc','acc','labels','traintime','acqtime'],default=None)    
     parser.add_argument('-type', dest='tmode', type=str, nargs='+',
         help='Experiment type: \n \
         AL - General active learning experiment; \n \
@@ -906,7 +968,10 @@ if __name__ == "__main__":
                 
     elif config.single:
         p = Plotter(path=config.sdir)
-        p.draw_data(p.parseSlurm(),config.title)
+        if not config.metrics is None:
+            p.draw_data(p.parseSlurm(),config.title,metric=config.metrics[0])
+        else:
+            p.draw_data(p.parseSlurm(),config.title)
 
     elif config.unc:
         p = Plotter()

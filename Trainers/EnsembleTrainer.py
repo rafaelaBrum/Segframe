@@ -5,7 +5,8 @@ import os,sys
 import numpy as np
 import importlib
 import random
-from multiprocessing import Pool, Queue
+import time
+from datetime import timedelta
 
 #Filter warnings
 import warnings
@@ -105,8 +106,6 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         Coordenates the AL process
         """
         from keras import backend as K
-        import time
-        from datetime import timedelta
         
         #Loaded CNN model and Datasource
         model = self.load_modules()
@@ -127,6 +126,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
 
         stime = None
         etime = None
+        train_time = None
         end_train = False
         self._initializer(self._config.gpu_count,self._config.cpu_count)
         
@@ -142,6 +142,8 @@ class EnsembleALTrainer(ActiveLearningTrainer):
 
             self._print_stats((self.train_x,self.train_y),(self.val_x,self.val_y))
             sw_thread = None
+            #Track training time
+            train_time = time.time()
             for m in range(self._config.emodels):
                 #Some models may take too long to save weights
                 if not sw_thread is None:
@@ -174,7 +176,10 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                     sw_thread = [st]
                 else:
                     sw_thread.append(st)
-            
+
+            if self._config.info:
+                print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
+                
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
                     print("[EnsembleTrainer] No more acquisitions are in order")
@@ -196,7 +201,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             if self._config.info:
                 etime = time.time()
                 td = timedelta(seconds=(etime-stime))
-                print("Acquisition step took: {0}".format(td))
+                print("AL step took: {0}".format(td))
                 
             if end_train:
                 return None
@@ -262,8 +267,13 @@ class EnsembleALTrainer(ActiveLearningTrainer):
 
         if self._config.debug:
             print("GC stats:\n {}".format(gc.get_stats()))
-            
+
+        #Track acquisition time
+        ac_time = time.time()            
         pooled_idx = function(None,generator,self.pool_x.shape[0],**kwargs)
+        if self._config.info:
+            print("Acquisition step took: {}".format(timedelta(seconds=time.time() - ac_time)))
+            
         if pooled_idx is None:
             if self._config.info:
                 print("[EnsembleTrainer] No indexes returned. Something is wrong.")
