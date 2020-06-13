@@ -184,7 +184,7 @@ class Plotter(object):
             if auc_only and y_label != 'AUC':
                 continue
             
-            c = plt.plot(x_data, y_data, lw = 2.0, marker=markers[marker],linestyle=linestyle[line][1], color = palette(color), alpha = 1)
+            c = plt.plot(x_data, y_data, lw = 2.0, marker=markers[marker],linestyle=linestyle[line][1],color=palette(color), alpha = 1)
             plots.append(c)
             # Shade the confidence interval
             if not np.isnan(ci).any():
@@ -407,6 +407,8 @@ class Plotter(object):
         max_x = []
         min_y = []
         max_y = []
+        min_t = []
+        max_t = []
         lbcount = 0
 
         plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
@@ -431,7 +433,7 @@ class Plotter(object):
                     marker = color%len(markers)
                     color = color % len(palette.colors)
                     
-                plt.plot(data[k]['trainset'],yd, marker=markers[marker],color=palette(color),linewidth=1.5,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                plt.plot(data[k]['trainset'],yd, marker=markers[marker],color=palette(color),linewidth=1.8,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                 color += 1
                 line = (line+1)%len(linestyle)
                 marker = color%len(markers)
@@ -460,7 +462,7 @@ class Plotter(object):
                     marker = color%len(markers)
                     color = color % len(palette.colors)
                     
-                plt.plot(data[k]['trainset'],data[k]['auc'], marker=markers[marker],color=palette(color),linewidth=1.5,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                plt.plot(data[k]['trainset'],data[k]['auc'], marker=markers[marker],color=palette(color),linewidth=1.8,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                 color += 1
                 line = (line+1)%len(linestyle)
                 marker = color%len(markers)
@@ -496,17 +498,14 @@ class Plotter(object):
                     line = color%len(linestyle)
                     marker = color%len(markers)
                     color = color % len(palette.colors)
-                    
+
                 plt.plot(data[k]['trainset'],tdata,'bo',marker=markers[marker],linestyle='',color=palette(color),alpha=0.9,label=lb)
-                plt.axis([data[k]['trainset'][0]-100,data[k]['trainset'].max()+100,0.0,tdata.max()+.2])
-                #fig.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
-                #ax.yaxis_date()
                 formatter = FuncFormatter(self.format_func)
                 ax.yaxis.set_major_formatter(formatter)
                 min_x.append(data[k]['trainset'].min())
                 max_x.append(data[k]['trainset'].max())
-                min_y.append(tdata.min())
-                max_y.append(tdata.max())
+                min_t.append(tdata.min())
+                max_t.append(tdata.max())
             else:
                 #Repeat last point if needed
                 if data[k]['trainset'].shape[0] > data[k]['accuracy'].shape[0]:
@@ -525,7 +524,7 @@ class Plotter(object):
                     marker = color%len(markers)
                     color = color % len(palette.colors)
                     
-                plt.plot(data[k]['trainset'],data[k]['accuracy'], marker=markers[marker],color=palette(color),linewidth=2.0,linestyle=linestyle[line][1],alpha=0.9,label=k)
+                plt.plot(data[k]['trainset'],data[k]['accuracy'], marker=markers[marker],color=palette(color),linewidth=1.8,linestyle=linestyle[line][1],alpha=0.9,label=k)
                 color += 1
                 line = (line+1)%len(linestyle)
                 marker = color%len(markers)
@@ -539,11 +538,10 @@ class Plotter(object):
         plt.xticks(np.arange(min(min_x), max(max_x)+1, xtick))
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
-            
         if pos:
             plt.yticks(np.arange(max(0,min(min_y)-10), min(100,10+max(max_y)), 5))
         elif not other is None:
-            pass
+            plt.yticks(np.arange(max(0,min(min_t)-319), min(10800,max(max_t)),1200))
         else:
             plt.yticks(np.arange(min(0.6,min(min_y)), 1.05, 0.05))
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
@@ -554,7 +552,7 @@ class Plotter(object):
             if metric == 'time':
                 plt.ylabel('AL step time \n(hh:min:sec)')
             elif metric == 'acqtime':
-                plt.ylabel('Acquisition step time \n(hh:min:sec)')
+                plt.ylabel('AL step time \n(hh:min:sec)')
             elif metric == 'traintime':
                 plt.ylabel('Training step time \n(hh:min:sec)')
         else:
@@ -703,9 +701,8 @@ class Plotter(object):
             colormatch = colorrc.fullmatch(lstrip)
             if tmatch:
                 td = datetime.timedelta(hours=int(tmatch.group('hours')),minutes=int(tmatch.group('min')),seconds=round(float(tmatch.group('sec'))))
-                data['time'].append(td.total_seconds()/3600.0)
+                data['time'].append(td.total_seconds())
             if trainmatch:
-                print(lstrip)
                 td = datetime.timedelta(hours=int(trainmatch.group('hours')),minutes=int(trainmatch.group('min')),seconds=round(float(trainmatch.group('sec'))))
                 data['traintime'].append(td.total_seconds())
             if acqmatch:

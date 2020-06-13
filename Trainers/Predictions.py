@@ -199,6 +199,8 @@ class Predictor(object):
             if hasattr(model,'build_ensemble'):
                 single,parallel = model.build_ensemble(training=False,npfile=True,new=True)
                 if parallel:
+                    if self._config.info:
+                        print("Using multigpu model for predictions.")
                     pred_model = parallel
                 else:
                     pred_model = single

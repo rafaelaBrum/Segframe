@@ -134,6 +134,12 @@ def _km_uncert(bayesian_model,generator,data_size,**kwargs):
                                                 workers=4*cpu_count,
                                                 max_queue_size=100*gpu_count,
                                                 verbose=0)
+
+        del(model)
+        del(pred_model)
+        del(parallel_m)
+        del(single_m)
+        
         features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
 
         if config.info:

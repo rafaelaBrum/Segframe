@@ -235,8 +235,9 @@ class GenericEnsemble(GenericModel):
                 parallel.load_weights(self.get_mgpu_weights_cache(),by_name=True)
                 if self._config.info:
                     print("[{}] loaded ensemble weights: {}".format(self.name,self.get_mgpu_weights_cache()))
-        else:
-            parallel = None
+                    
+            return single,parallel
+
 
         if npfile:
             single.set_weights(np.load(self.get_npweights_cache(add_ext=True),allow_pickle=True))
