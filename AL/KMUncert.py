@@ -135,7 +135,6 @@ def _km_uncert(bayesian_model,generator,data_size,**kwargs):
                                                 max_queue_size=100*gpu_count,
                                                 verbose=0)
 
-        del(model)
         del(pred_model)
         del(parallel_m)
         del(single_m)
@@ -182,6 +181,7 @@ def _km_uncert(bayesian_model,generator,data_size,**kwargs):
         cache_m.registerFile(os.path.join(config.logdir,fid),fid)
         cache_m.dump((generator.returnDataAsArray(),un_clusters,un_indexes),fid)
 
+    del(model)
     #Check uncertainty by the indexes, lower indexes correspond to greater uncertainty
     ind = None
     posa = {}
