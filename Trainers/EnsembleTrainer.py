@@ -296,5 +296,8 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         
         if self._config.debug:
             print("GC stats:\n {}".format(gc.get_stats()))
-            
+
+        #Clear some memory after acquisitions
+        gc.collect()
+        
         return True        

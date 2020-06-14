@@ -111,7 +111,7 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
             all_probs[d] = proba
             
         dropout_classes = proba.argmax(axis=-1)    
-        dropout_classes = np.array([dropout_classes]).T
+        dropout_classes = dropout_classes.reshape(-1,1)
         All_Dropout_Classes = np.append(All_Dropout_Classes, dropout_classes, axis=1)
         del(dropout_classes)
 
@@ -238,17 +238,18 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
             all_probs[d] = proba
             
         #computing G_X
-        score_All = score_All + proba
+        score_All = np.add(score_All,proba,out=score_All)
 
         #computing F_X
         dropout_score_log = np.log2(proba)
         Entropy_Compute = - np.multiply(proba, dropout_score_log,out=dropout_score_log)
         Entropy_Per_Dropout = np.sum(Entropy_Compute, axis=1)
+        All_Entropy_Dropout = np.add(All_Entropy_Dropout, Entropy_Per_Dropout,out=All_Entropy_Dropout)
         
-        All_Entropy_Dropout = All_Entropy_Dropout + Entropy_Per_Dropout 
         del(proba)
         del(dropout_score_log)
         del(Entropy_Compute)
+        del(pred_model)
 
     Avg_Pi = np.divide(score_All, emodels)
     Log_Avg_Pi = np.log2(Avg_Pi)
@@ -256,20 +257,22 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
     Entropy_Average_Pi = np.sum(Entropy_Avg_Pi, axis=1)
 
     G_X = Entropy_Average_Pi
-    
-    Average_Entropy = np.divide(All_Entropy_Dropout, emodels)
 
-    F_X = Average_Entropy
+    #Average entropy
+    FX = np.divide(All_Entropy_Dropout, emodels)
 
+    #F_X = Average_Entropy
     U_X = G_X - F_X
-
-    #Release memory
-    del(score_All)
-    del(All_Entropy_Dropout)
-
     a_1d = U_X.flatten()
     x_pool_index = a_1d.argsort()[-query:][::-1]    
 
+    #Release memory - there's a leak somewhere
+    del(score_All)
+    del(All_Entropy_Dropout)
+    del(U_X)
+    del(G_X)
+    del(F_X)
+    
     if save_var:
         cache_m.dump((x_pool_index,a_1d),fid)
 
