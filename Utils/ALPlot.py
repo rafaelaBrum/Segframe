@@ -162,7 +162,7 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
         
-    def draw_stats(self,data,xticks,auc_only,labels=None,spread=1,title=''):
+    def draw_stats(self,data,xticks,auc_only,labels=None,spread=1,title='',colors=None):
         """
         @param data <list>: a list as returned by calculate_stats
         """
@@ -172,11 +172,17 @@ class Plotter(object):
         plots = []
         up = 0.0
         low = 1.0
+        lbcount = 0
 
         plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
         for d in data:
             x_data,y_data,ci,y_label,color = d
-            color = 0 if color < 0 else color
+            if not colors is None and colors[lbcount] >= 0:
+                color = colors[lbcount]
+                lbcount += 1
+            elif color < 0:
+                color = 0
+                
             line = color%len(linestyle)
             marker = color%len(markers)
             color = color % len(palette.colors)
@@ -208,11 +214,11 @@ class Plotter(object):
         # Label the axes and provide a title
         if labels is None:
             labels = ['Mean','{} STD'.format(confidence)]
-        plt.legend(plots,labels=labels,loc=4,ncol=2)
+        plt.legend(plots,labels=labels,loc=4,ncol=2,prop=dict(weight='bold'))
         plt.xticks(np.arange(min(x_data), max(x_data)+xticks, xticks))
-        ydelta = (1.0 - low)/15
+        ydelta = (1.0 - low)/10
         rg = np.clip(np.arange(max(low,0.0), up if up <= 1.05 else 1.05, ydelta),0.0,1.0)
-        np.around(rg,3,rg)
+        np.around(rg,2,rg)
         plt.yticks(rg)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         if max(x_data) > 1000:
@@ -264,14 +270,11 @@ class Plotter(object):
             else:
                 plt.ylabel('Time frame not defined')
 
-        #Train size x AUC
-        if 'auc' in data and data['auc'].shape[0] > data['trainset'].shape[0]:
-            print("AUC results are too many")
-            print(data['auc'])
-            print(data['trainset'])
-            data['auc'] = data['auc'][:-1]
-
         if 'auc' in data and data['auc'].shape[0] > 0:
+            #Repeat last point if needed
+            if data['trainset'].shape[0] > data['auc'].shape[0]:
+                print("Shape mismatch:\n Trainset: {}; Labels:{}".format(data['trainset'].shape,data['auc'].shape))
+                data['auc'] = np.hstack((data['auc'],data['auc'][-1:]))            
             plt.subplot(fig_pos+1)
             min_auc = data['auc'].min()
             plt.plot(data['trainset'],data['auc'],'y-')
@@ -395,7 +398,7 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
         
-    def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False,other=None):
+    def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False,other=None,colors=None):
         
         #print("Colors: {}".format(len(palette.colors)))
             
@@ -409,7 +412,9 @@ class Plotter(object):
         max_y = []
         min_t = []
         max_t = []
+        metric_label = []
         lbcount = 0
+        nexp = len(data)
 
         plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
         ax = plt.subplot(111)
@@ -420,6 +425,14 @@ class Plotter(object):
                     print("Shape mismatch:\n Trainset: {}; Labels:{}".format(data[k]['trainset'].shape,data[k]['labels'].shape))
                     data[k]['labels'] = np.hstack((data[k]['labels'],data[k]['labels'][-1:]))
 
+                if not colors is None and colors[lbcount] >= 0:
+                    color = colors[lbcount]
+                elif 'color' in data[k]:
+                    color = data[k]['color']
+                line = color%len(linestyle)
+                marker = color%len(markers)
+                color = color % len(palette.colors)
+                
                 if labels is None:
                     lb = k
                 else:
@@ -427,16 +440,7 @@ class Plotter(object):
                     lbcount += 1
 
                 yd = [100*(data[k]['labels'][z][0]/data[k]['trainset'][z]) for z in range(data[k]['trainset'].shape[0])]
-                if 'color' in data[k]:
-                    color = data[k]['color']
-                    line = color%len(linestyle)
-                    marker = color%len(markers)
-                    color = color % len(palette.colors)
-                    
-                plt.plot(data[k]['trainset'],yd, marker=markers[marker],color=palette(color),linewidth=1.8,linestyle=linestyle[line][1],alpha=0.9,label=lb)
-                color += 1
-                line = (line+1)%len(linestyle)
-                marker = color%len(markers)
+                plt.plot(data[k]['trainset'],yd, marker=markers[marker],color=palette(color),linewidth=2.1,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                 
                 plotAUC = False
                 min_x.append(data[k]['trainset'].min())
@@ -450,22 +454,21 @@ class Plotter(object):
                     print("Shape mismatch:\n Trainset: {}; AUC:{}".format(data[k]['trainset'].shape,data[k]['auc'].shape))
                     data[k]['auc'] = np.hstack((data[k]['auc'],data[k]['auc'][-1:]))
 
+                if not colors is None and colors[lbcount] >= 0:
+                    color = colors[lbcount]
+                elif 'color' in data[k]:
+                    color = data[k]['color']
+                line = color%len(linestyle)
+                marker = color%len(markers)
+                color = color % len(palette.colors)
+
                 if labels is None:
                     lb = k
                 else:
                     lb = labels[lbcount]
                     lbcount += 1
-
-                if 'color' in data[k]:
-                    color = data[k]['color']
-                    line = color%len(linestyle)
-                    marker = color%len(markers)
-                    color = color % len(palette.colors)
                     
-                plt.plot(data[k]['trainset'],data[k]['auc'], marker=markers[marker],color=palette(color),linewidth=1.8,linestyle=linestyle[line][1],alpha=0.9,label=lb)
-                color += 1
-                line = (line+1)%len(linestyle)
-                marker = color%len(markers)
+                plt.plot(data[k]['trainset'],data[k]['auc'], marker=markers[marker],color=palette(color),linewidth=2.1,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                 plotAUC = True
                 min_x.append(data[k]['trainset'].min())
                 max_x.append(data[k]['trainset'].max())
@@ -482,24 +485,34 @@ class Plotter(object):
                 else:
                     tdata = data[k][metric]
 
+                #Do nothing if requested metric is not available
+                if tdata.shape[0] == 0:
+                    lbcount += 1
+                    continue
+                
                 #Repeat last point if needed
                 if data[k]['trainset'].shape[0] > tdata.shape[0]:
                     print("Shape mismatch:\n Trainset: {}; {}:{}".format(data[k]['trainset'].shape,tdata.shape,metric))
                     tdata = np.hstack((tdata,tdata[-1:]))
 
+                if not colors is None and colors[lbcount] >= 0:
+                    color = colors[lbcount]
+                elif 'color' in data[k]:
+                    color = data[k]['color']
+                line = color%len(linestyle)
+                marker = color%len(markers)
+                color = color % len(palette.colors)
+                
                 if labels is None:
                     lb = k
                 else:
                     lb = labels[lbcount]
                     lbcount += 1
-                    
-                if 'color' in data[k]:
-                    color = data[k]['color']
-                    line = color%len(linestyle)
-                    marker = color%len(markers)
-                    color = color % len(palette.colors)
 
-                plt.plot(data[k]['trainset'],tdata,'bo',marker=markers[marker],linestyle='',color=palette(color),alpha=0.9,label=lb)
+                bar_x = data[k]['trainset'] + (lbcount-(nexp/2))*30
+                metric_label.append(lb)
+                plt.bar(bar_x,tdata,width=30,color=palette(color),label=lb)
+                #plt.plot(data[k]['trainset'],tdata,'bo',marker=markers[marker],linestyle='',color=palette(color),alpha=0.9,label=lb)
                 formatter = FuncFormatter(self.format_func)
                 ax.yaxis.set_major_formatter(formatter)
                 min_x.append(data[k]['trainset'].min())
@@ -512,36 +525,45 @@ class Plotter(object):
                     print("Shape mismatch:\n Trainset: {}; ACC:{}".format(data[k]['trainset'].shape,data[k]['accuracy'].shape))
                     data[k]['accuracy'] = np.hstack((data[k]['accuracy'],data[k]['accuracy'][-1:]))
 
+                if not colors is None and colors[lbcount] >= 0:
+                    color = colors[lbcount]
+                elif 'color' in data[k]:
+                    color = data[k]['color']
+                line = color%len(linestyle)
+                marker = color%len(markers)
+                color = color % len(palette.colors)
+                
                 if labels is None:
                     lb = k
                 else:
                     lb = labels[lbcount]
                     lbcount += 1
 
-                if 'color' in data[k]:
-                    color = data[k]['color']
-                    line = color%len(linestyle)
-                    marker = color%len(markers)
-                    color = color % len(palette.colors)
                     
-                plt.plot(data[k]['trainset'],data[k]['accuracy'], marker=markers[marker],color=palette(color),linewidth=1.8,linestyle=linestyle[line][1],alpha=0.9,label=k)
-                color += 1
-                line = (line+1)%len(linestyle)
-                marker = color%len(markers)
+                plt.plot(data[k]['trainset'],data[k]['accuracy'], marker=markers[marker],color=palette(color),linewidth=2.1,linestyle=linestyle[line][1],alpha=0.9,label=k)
                 min_x.append(data[k]['trainset'].min())
                 max_x.append(data[k]['trainset'].max())                
                 min_y.append(data[k]['accuracy'].min())
                 max_y.append(data[k]['accuracy'].max())
                 print(data[k]['trainset'])
-                
-        plt.legend(loc=0,ncol=2,labels=config.labels,prop=dict(weight='bold'))
+
+            color += 1
+            line = (line+1)%len(linestyle)
+            marker = color%len(markers)
+
+
+        if not other is None:
+            plt.legend(loc=0,ncol=2,labels=metric_label,prop=dict(weight='bold'))
+        else:
+            plt.legend(loc=0,ncol=2,labels=config.labels,prop=dict(weight='bold'))
+            
         plt.xticks(np.arange(min(min_x), max(max_x)+1, xtick))
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
         if pos:
             plt.yticks(np.arange(max(0,min(min_y)-10), min(100,10+max(max_y)), 5))
         elif not other is None:
-            plt.yticks(np.arange(max(0,min(min_t)-319), min(10800,max(max_t)),1200))
+            plt.yticks(np.arange(max(0,min(min_t)-319), max(min(min_t)+3600,max(max_t)),1200))
         else:
             plt.yticks(np.arange(min(0.6,min(min_y)), 1.05, 0.05))
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
@@ -549,13 +571,15 @@ class Plotter(object):
 
         if not other is None:
             metric = other[0]
+            plt.grid(True, linestyle='--', which='major',color='grey', alpha=.25,axis='y')
             if metric == 'time':
                 plt.ylabel('AL step time \n(hh:min:sec)')
             elif metric == 'acqtime':
-                plt.ylabel('AL step time \n(hh:min:sec)')
+                plt.ylabel('Acquisition step time \n(hh:min:sec)')
             elif metric == 'traintime':
                 plt.ylabel('Training step time \n(hh:min:sec)')
         else:
+            plt.grid(True)
             if plotAUC:
                 plt.ylabel("AUC")
             elif pos:
@@ -564,7 +588,6 @@ class Plotter(object):
                 plt.ylabel("Accuracy")
 
         plt.tight_layout()
-        plt.grid(True)
         plt.show()
 
     def plotFromExec(self,data):
@@ -644,6 +667,7 @@ class Plotter(object):
             return None
 
         dir_contents = os.listdir(path)
+        dir_contents.sort()
         slurm_path = None
         for fi in dir_contents:
             if fi.startswith('slurm'):
@@ -743,7 +767,8 @@ class Plotter(object):
         if not maxx is None:
             if maxx > np.max(data['trainset']):
                 print("Slurm file ({}) does not have that many samples ({}). Maximum is {}.".format(slurm_path,maxx,np.max(data['trainset'])))
-                sys.exit(1)
+                #sys.exit(1)
+                upl = data['trainset'].shape[0]
             else:
                 upl = np.where(data['trainset'] >= maxx)[0][0]
                 upl += 1
@@ -897,16 +922,16 @@ class Plotter(object):
                 
             i += 1
 
-        if not auc_value is None:
-            stats.append((auc_value,"AUC"))
-        if not acc_value is None:
-            stats.append((acc_value,"Accuracy"))
+        #if not auc_value is None:
+        #    stats.append((auc_value,"AUC"))
+        #if not acc_value is None:
+        #    stats.append((acc_value,"Accuracy"))
 
         #Return mean and STD dev
         if auc_only:
             return [(trainset[:max_samples],np.mean(auc_value.transpose(),axis=1),calc_ci(auc_value.transpose(),ci),"AUC",color)]
         else:
-            return [(trainset[:max_samples],np.mean(arr[0].transpose(),axis=1),np.std(arr[0].transpose(),axis=1),arr[1],color) for arr in stats]
+            return [(trainset[:max_samples],np.mean(acc_value.transpose(),axis=1),calc_ci(acc_value.transpose(),ci),"Accuracy",color)]
                                                                                                               
     
 if __name__ == "__main__":
@@ -924,12 +949,16 @@ if __name__ == "__main__":
         help='Plot percentage of positive patches during aquisition.')    
     parser.add_argument('-ids', dest='ids', nargs='+', type=int, 
         help='Experiment IDs to plot.', default=None,required=False)
+    parser.add_argument('-colors', dest='colors', nargs='+', type=int, 
+        help='Line colors. Follow the order of the IDs.', default=None,required=False)
     parser.add_argument('-xtick', dest='xtick', nargs=1, type=int, 
         help='xtick interval.', default=200,required=False)
     parser.add_argument('-maxx', dest='maxx', type=int, 
         help='Plot maximum X.', default=None,required=False)
     parser.add_argument('-t', dest='title', type=str,default='AL Experiment', 
         help='Figure title.')
+    parser.add_argument('-labels', dest='labels', nargs='+', type=str, 
+        help='Curve labels.',default=None,required=False)    
     parser.add_argument('-metrics', dest='metrics', type=str, nargs='+',
         help='Metrics to plot: \n \
         time - AL iteration time; \n \
@@ -961,8 +990,6 @@ if __name__ == "__main__":
     parser.add_argument('-n', dest='n_exp', nargs='+', type=int, 
         help='N experiments for each curve (allows plotting 2 curves together).',
         default=(3,3),required=False)
-    parser.add_argument('-labels', dest='labels', nargs='+', type=str, 
-        help='Curve labels.',default=None,required=False)
     
     ##Draw uncertainties
     parser.add_argument('--uncertainty', action='store_true', dest='unc', default=False, 
@@ -1013,7 +1040,7 @@ if __name__ == "__main__":
             if len(data) == 0:
                 print("Something is wrong with your command options. No data to plot")
                 sys.exit(1)        
-            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos,config.auc_only,config.metrics)
+            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos,config.auc_only,config.metrics,config.colors)
                 
     elif config.single:
         p = Plotter(path=config.sdir)
@@ -1077,7 +1104,7 @@ if __name__ == "__main__":
             print("Something is wrong with your command options. No data to plot")
             sys.exit(1)
 
-        p.draw_stats(data,config.xtick,config.auc_only,config.labels,config.spread,config.title)
+        p.draw_stats(data,config.xtick,config.auc_only,config.labels,config.spread,config.title,config.colors)
 
     elif config.debug:
 
