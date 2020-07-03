@@ -80,25 +80,36 @@ class Plotter(object):
         plots = []
         maxu = 0.0
         pl1,pl2 = None,None
+        if xticks is None:
+            xticks = list(range(len(data)+spread))
         for k in range(len(data)):
             indexes,unc = data[k]
+            unique,count = np.unique(indexes,return_counts=True)
+            print("Uncertainties: {}".format(unc.shape[0]))
             selected = unc[indexes]
             unselected = np.delete(unc,indexes)
-            mk = np.max(unselected)
+            smean = np.mean(selected)
+            print("Acquisition # {}".format(k))
+            print("Selected patches mean uncertainty ({}): {:.3f}".format(selected.shape[0],smean))
+            print("Unselected patches mean uncertainty ({}): {:.3f}\n****".format(unselected.shape[0],np.mean(unselected)))
+            mk = np.max(unc)
             if mk > maxu:
                 maxu = mk
-            pl1 = plt.plot(np.random.rand(selected.shape[0])*spread+xticks[k],selected, 'oc',alpha=0.6)
+
             pl2 = plt.plot(np.random.rand(n_points)*spread+xticks[k],np.random.choice(unselected,n_points),
-                         'oy',markersize=2,alpha=0.5)
+                         'oy',markersize=2,alpha=0.5)                
+            pl1 = plt.plot(np.random.rand(selected.shape[0])*spread+xticks[k],selected, 'oc',alpha=0.4)
+            pl3 = plt.plot(0.5*spread+xticks[k],smean, 'or',alpha=0.6)
             
         plots.append(pl1)
         plots.append(pl2)
+        plots.append(pl3)
 
-        labels = ['Selected images','Unselected images']
-        plt.legend(plots,labels=labels,loc=4,ncol=2)
+        labels = ['Unselected patches','Selected patches','Selected mean']
+        plt.legend(plots,labels=labels,loc=2,ncol=2,prop=dict(weight='bold'))
         plt.xticks(xticks)
-        plt.yticks(np.arange(0.0, maxu+0.1, 0.2))
-        plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
+        plt.yticks(np.arange(0.0, maxu+0.1, 0.05))
+        plt.title(title, loc='center', fontsize=12, fontweight=0, pad=2.0, color='orange')
         plt.xlabel("Acquisition #")
         plt.ylabel("Uncertainty")
 
@@ -840,26 +851,87 @@ class Plotter(object):
 
     def retrieveUncertainty(self,config):
         unc_files = []
+        cluster_files = []
         import pickle
 
+        def extract_acq(f):
+            if f.startswith('al-'):
+                return f.split('.')[0].split('-')[3][1:]
+            else:
+                return -1
+
+        def sort_key(f):
+            return int(extract_acq(f))        
+        
+        def kmuncert_acquire(fc,fu,config):
+            #Check uncertainty by the indexes, lower indexes correspond to greater uncertainty
+            ind = None
+            posa = {}
+            with open(os.path.join(config.sdir,fc),'rb') as fd:
+                _,un_clusters,un_indexes = pickle.load(fd)
+            with open(os.path.join(config.sdir,fu),'rb') as fd:
+                _,uncertainties = pickle.load(fd)
+
+            for k in range(config.kmclusters):
+                ind = np.asarray(un_clusters[k],dtype=np.int32)
+                posa[k] = []
+                for ii in range(min(ind.shape[0],config.query)):
+                    posa[k].append(np.where(un_indexes == ind[ii])[0][0])
+                posa[k] = np.asarray(posa[k],dtype=np.int32)
+
+            #Selection
+            ac_count = 0
+            acquired = []
+            j = 0
+            cmean = np.asarray([np.mean(posa[k]) for k in range(config.kmclusters)])
+            glb = np.sum(cmean)
+            frac = (glb/cmean)/np.sum(glb/cmean)
+            while ac_count < config.query:
+                cln = j % config.kmclusters
+                q = un_clusters[cln]
+                cl_aq = int(np.ceil(frac[cln]*config.query))
+                if len(q) >= cl_aq:
+                    acquired.extend(q[:cl_aq])
+                    ac_count += cl_aq
+                else:
+                    print("Cluster {} exausted, will try to acquire patches from cluster {}".format(cln,(cln+1)%config.kmclusters))
+                j += 1
+            
+            acquired = np.asarray(acquired[:config.query],dtype=np.int32)
+            return acquired,uncertainties
+        ####
+        
         if not config.all:
             for i in config.ac_n:
+                unc_file = 'al-clustermetadata-Inception-r{}.pik'.format(i)
+                if os.path.isfile(os.path.join(config.sdir,unc_file)):
+                    cluster_files.append(unc_file)
+                
                 unc_file = 'al-uncertainty-{}-r{}.pik'.format(config.ac_func,i)
                 if os.path.isfile(os.path.join(config.sdir,unc_file)):
                     unc_files.append(unc_file)
         else:
             items = os.listdir(config.sdir)            
             for f in items:
-                if f.startswith('al-uncertainty'):
+                if f.startswith('al-clustermetadata'):
+                    cluster_files.append(f)
+                elif f.startswith('al-uncertainty'):
                     unc_files.append(f)
 
         data = []
-
-        for f in unc_files:
-            with open(os.path.join(config.sdir,f),'rb') as fd:
-                indexes,uncertainties = pickle.load(fd)
-            data.append((indexes,uncertainties))
-
+        cluster_files.sort(key=sort_key)
+        unc_files.sort(key=sort_key)
+        
+        if len(cluster_files) == 0:
+            for f in unc_files:
+                with open(os.path.join(config.sdir,f),'rb') as fd:
+                    indexes,uncertainties = pickle.load(fd)
+                data.append((indexes,uncertainties))
+        else:
+            for k in range(len(cluster_files)):
+                indexes,uncertainties = kmuncert_acquire(cluster_files[k],unc_files[k],config)
+                data.append((indexes,uncertainties))
+            
         return data
 
     def calculate_stats(self,data,auc_only,ci):
@@ -1002,6 +1074,12 @@ if __name__ == "__main__":
         help='Function to look for uncertainties.')
     parser.add_argument('-sp', dest='spread', nargs=1, type=int, 
         help='Spread points in interval.', default=10,required=False)
+    parser.add_argument('-kmu', action='store_true', dest='kmu', default=False, 
+        help='Extract selected patches with KM Uncert NG.')
+    parser.add_argument('-query', dest='query', nargs=1, type=int, 
+        help='If KMUncert, number of acquired patches.', default=200,required=False)
+    parser.add_argument('-kmclusters', dest='kmclusters', nargs=1, type=int, 
+        help='If KMUncert, number of clusters used.', default=20,required=False)
 
     ##Plot debugging data
     parser.add_argument('--debug', action='store_true', dest='debug', default=False, 
@@ -1057,6 +1135,8 @@ if __name__ == "__main__":
             sys.exit(1)
             
         data = p.retrieveUncertainty(config)
+        if isinstance(config.spread,list):
+            config.spread = config.spread[0]
         if len(data) == 0:
             print("Something is wrong with your command options. No data to plot")
             sys.exit(1)
