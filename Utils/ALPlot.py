@@ -7,7 +7,7 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
-figure(num=None, figsize=(12, 6), dpi=100, facecolor='w', edgecolor='k')
+figure(num=1, figsize=(12, 6), dpi=100, facecolor='w', edgecolor='k')
 
 import pandas as pd
 from matplotlib.ticker import MaxNLocator
@@ -23,17 +23,18 @@ import argparse
 
 font = {'family' : 'DejaVu Sans',
         'weight' : 'normal',
-        'size'   : 13}
+        'size'   : 15}
 
 mpl.rc('font',**font)
 
 palette = plt.get_cmap('Dark2')
-newcolors = np.ones((5,4))
+newcolors = np.ones((6,4))
 newcolors[0,0:3] = np.array([29/256,39/256,125/256])
 newcolors[1,0:3] = np.array([110/256,29/256,5/256])
 newcolors[2,0:3] = np.array([0/256,5/256,105/256])
 newcolors[3,0:3] = np.array([159/256,32/256,54/256])
 newcolors[4,0:3] = np.array([76/256,0/256,153/256])
+newcolors[5,0:3] = np.array([0.0,0.0,0.0])
 newcolors = np.vstack((palette(np.linspace(0,1,len(palette.colors))),
                            newcolors))
    
@@ -70,25 +71,31 @@ class Plotter(object):
         else:
             self.path = None            
 
-    def draw_uncertainty(self,data,xticks,spread=1,title=''):
+    def draw_uncertainty(self,data,xticks,spread=1,title='',subfig=False,sub_acq=None):
         """
         Data: list of tuples in the form (indexes,uncertainties), where both indexes and uncertainties are numpy
         arrays.
         """
         mpl.rcParams['agg.path.chunksize'] = 1000000
-        n_points = 20000
-        plots = []
+        max_points = 20000
         maxu = 0.0
-        pl1,pl2 = None,None
+        plots = None
+        ax = plt.gca()
         if xticks is None:
             xticks = list(range(len(data)+spread))
+        if subfig and not sub_acq is None:
+            sub_acq = sub_acq[0] if isinstance(sub_acq,list) else sub_acq
         for k in range(len(data)):
-            indexes,unc = data[k]
-            unique,count = np.unique(indexes,return_counts=True)
-            print("Uncertainties: {}".format(unc.shape[0]))
+            if subfig:
+                indexes,unc,clusters = data[k]
+            elif len(data[k]) == 3:
+                indexes,unc,_ = data[k]
+            else:
+                indexes,unc = data[k]
             selected = unc[indexes]
             unselected = np.delete(unc,indexes)
             smean = np.mean(selected)
+            usmean = np.mean(unselected)
             print("Acquisition # {}".format(k))
             print("Selected patches mean uncertainty ({}): {:.3f}".format(selected.shape[0],smean))
             print("Unselected patches mean uncertainty ({}): {:.3f}\n****".format(unselected.shape[0],np.mean(unselected)))
@@ -96,25 +103,46 @@ class Plotter(object):
             if mk > maxu:
                 maxu = mk
 
-            pl2 = plt.plot(np.random.rand(n_points)*spread+xticks[k],np.random.choice(unselected,n_points),
-                         'oy',markersize=2,alpha=0.5)                
-            pl1 = plt.plot(np.random.rand(selected.shape[0])*spread+xticks[k],selected, 'oc',alpha=0.4)
-            pl3 = plt.plot(0.5*spread+xticks[k],smean, 'or',alpha=0.6)
+            n_points = min(max_points,unselected.shape[0])
+            pl1 = ax.plot(np.random.rand(n_points)*spread+xticks[k],np.random.choice(unselected,n_points,replace=False),
+                         'oy',markersize=2,alpha=0.8)                
+            pl2 = ax.plot(np.random.rand(selected.shape[0])*spread+xticks[k],selected, 'oc',alpha=0.3,markersize=6)
+            pl3 = ax.plot(0.5*spread+xticks[k],smean,'or',alpha=0.6,markersize=8)
+            pl3e = ax.errorbar(0.5*spread+xticks[k],smean, yerr=np.std(selected), fmt='none',color='r',alpha=0.6,markersize=8,zorder=10)
+            pl4 = ax.plot(0.5*spread+xticks[k],usmean,'og',alpha=0.6,markersize=10)
+            pl4e = ax.errorbar(0.5*spread+xticks[k],usmean,yerr=np.std(unselected),fmt='none',color='g',alpha=0.6,markersize=10,zorder=10)
             
-        plots.append(pl1)
-        plots.append(pl2)
-        plots.append(pl3)
+            plots = [pl1,pl2,pl3,pl4]
+            cmax = 0.0
+            if k == sub_acq and subfig:
+                from mpl_toolkits.axes_grid.inset_locator import inset_axes
+                #ax = fig.add_subplot(111)
+                palette = plt.get_cmap('tab20')
+                inset_ax = inset_axes(ax, 
+                    width="45%", # width = 30% of parent_bbox
+                    height="35%") # height : 35%
 
-        labels = ['Unselected patches','Selected patches','Selected mean']
-        plt.legend(plots,labels=labels,loc=2,ncol=2,prop=dict(weight='bold'))
-        plt.xticks(xticks)
-        plt.yticks(np.arange(0.0, maxu+0.1, 0.05))
-        plt.title(title, loc='center', fontsize=12, fontweight=0, pad=2.0, color='orange')
-        plt.xlabel("Acquisition #")
-        plt.ylabel("Uncertainty")
+                for c in clusters:
+                    inset_ax.plot(np.random.rand(clusters[c].shape[0])+c,clusters[c], 'o',color=palette(c),alpha=0.6,markersize=2)
+                    lmax = np.max(clusters[c])
+                    if cmax < lmax:
+                        cmax = lmax
+                inset_ax.text(0,cmax-0.01,"Acquisition #{}".format(sub_acq),fontsize=8)
+                inset_ax.set_xlabel("Cluster #")
+                inset_ax.set_xticks(list(clusters.keys()))
+                inset_ax.xaxis.set_tick_params(rotation=-30)
+                inset_ax.set_yticks(np.arange(0.0, cmax, 0.05))
+            
+        labels = ['Unsel. patches','Sel. patches','Sel. mean','Unsel. mean']
+        ax.legend(plots,labels=labels,loc=2,ncol=2,prop=dict(weight='bold'))
+        ax.set_xticks(xticks)
+        ax.set_yticks(np.arange(0.0, maxu+0.1, 0.05))
+        ax.set_title(title, loc='center', fontsize=12, fontweight=0, pad=2.0, color='orange')
+        ax.set_xlabel("Acquisition #")
+        ax.set_ylabel("Uncertainty")
 
         plt.tight_layout()
-        plt.grid(True)
+        ax.grid(True)
         plt.show()
 
     def draw_cluster_distribution(self,data,spread=1.0,title=''):
@@ -190,9 +218,10 @@ class Plotter(object):
             x_data,y_data,ci,y_label,color = d
             if not colors is None and colors[lbcount] >= 0:
                 color = colors[lbcount]
-                lbcount += 1
             elif color < 0:
                 color = 0
+                
+            lbcount += 1
                 
             line = color%len(linestyle)
             marker = color%len(markers)
@@ -451,7 +480,7 @@ class Plotter(object):
                     lbcount += 1
 
                 yd = [100*(data[k]['labels'][z][0]/data[k]['trainset'][z]) for z in range(data[k]['trainset'].shape[0])]
-                plt.plot(data[k]['trainset'],yd, marker=markers[marker],color=palette(color),linewidth=2.1,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                plt.plot(data[k]['trainset'],yd, marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                 
                 plotAUC = False
                 min_x.append(data[k]['trainset'].min())
@@ -479,7 +508,7 @@ class Plotter(object):
                     lb = labels[lbcount]
                     lbcount += 1
                     
-                plt.plot(data[k]['trainset'],data[k]['auc'], marker=markers[marker],color=palette(color),linewidth=2.1,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                plt.plot(data[k]['trainset'],data[k]['auc'], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                 plotAUC = True
                 min_x.append(data[k]['trainset'].min())
                 max_x.append(data[k]['trainset'].max())
@@ -551,7 +580,7 @@ class Plotter(object):
                     lbcount += 1
 
                     
-                plt.plot(data[k]['trainset'],data[k]['accuracy'], marker=markers[marker],color=palette(color),linewidth=2.1,linestyle=linestyle[line][1],alpha=0.9,label=k)
+                plt.plot(data[k]['trainset'],data[k]['accuracy'], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=k)
                 min_x.append(data[k]['trainset'].min())
                 max_x.append(data[k]['trainset'].max())                
                 min_y.append(data[k]['accuracy'].min())
@@ -854,6 +883,7 @@ class Plotter(object):
         cluster_files = []
         import pickle
 
+        acq = 0
         def extract_acq(f):
             if f.startswith('al-'):
                 return f.split('.')[0].split('-')[3][1:]
@@ -863,22 +893,26 @@ class Plotter(object):
         def sort_key(f):
             return int(extract_acq(f))        
         
-        def kmuncert_acquire(fc,fu,config):
+        def kmuncert_acquire(fc,fu,config,acq):
             #Check uncertainty by the indexes, lower indexes correspond to greater uncertainty
             ind = None
             posa = {}
+            un_clusters = {}
+            #print('ACQ {} ****************************'.format(acq))
             with open(os.path.join(config.sdir,fc),'rb') as fd:
-                _,un_clusters,un_indexes = pickle.load(fd)
+                _,clusters,un_indexes = pickle.load(fd)
             with open(os.path.join(config.sdir,fu),'rb') as fd:
                 _,uncertainties = pickle.load(fd)
 
             for k in range(config.kmclusters):
-                ind = np.asarray(un_clusters[k],dtype=np.int32)
+                ind = np.asarray(clusters[k],dtype=np.int32)
                 posa[k] = []
                 for ii in range(min(ind.shape[0],config.query)):
                     posa[k].append(np.where(un_indexes == ind[ii])[0][0])
                 posa[k] = np.asarray(posa[k],dtype=np.int32)
-
+                un_clusters[k] = uncertainties[ind]
+                #print(posa[k])
+            
             #Selection
             ac_count = 0
             acquired = []
@@ -888,17 +922,20 @@ class Plotter(object):
             frac = (glb/cmean)/np.sum(glb/cmean)
             while ac_count < config.query:
                 cln = j % config.kmclusters
-                q = un_clusters[cln]
+                q = clusters[cln]
                 cl_aq = int(np.ceil(frac[cln]*config.query))
                 if len(q) >= cl_aq:
                     acquired.extend(q[:cl_aq])
                     ac_count += cl_aq
                 else:
-                    print("Cluster {} exausted, will try to acquire patches from cluster {}".format(cln,(cln+1)%config.kmclusters))
+                    #acquired.extend(q)
+                    #ac_count += len(q)
+                    print("Cluster {} exausted. Required {} patches. Will try to acquire patches from cluster {}".format(cln,cl_aq,(cln+1)%config.kmclusters))
                 j += 1
-            
+
+            #print("Total selected: {}".format(len(acquired)))
             acquired = np.asarray(acquired[:config.query],dtype=np.int32)
-            return acquired,uncertainties
+            return acquired,uncertainties,un_clusters
         ####
         
         if not config.all:
@@ -929,8 +966,9 @@ class Plotter(object):
                 data.append((indexes,uncertainties))
         else:
             for k in range(len(cluster_files)):
-                indexes,uncertainties = kmuncert_acquire(cluster_files[k],unc_files[k],config)
-                data.append((indexes,uncertainties))
+                indexes,uncertainties,un_clusters = kmuncert_acquire(cluster_files[k],unc_files[k],config,acq)
+                data.append((indexes,uncertainties,un_clusters))
+                acq += 1
             
         return data
 
@@ -1001,9 +1039,13 @@ class Plotter(object):
 
         #Return mean and STD dev
         if auc_only:
-            return [(trainset[:max_samples],np.mean(auc_value.transpose(),axis=1),calc_ci(auc_value.transpose(),ci),"AUC",color)]
+            d = (trainset[:max_samples],np.mean(auc_value.transpose(),axis=1),calc_ci(auc_value.transpose(),ci),"AUC",color)
+            print("Max AUC: {:1.3f}; Mean AUC ({} acquisitions): {:1.3f}".format(np.max(d[1]), d[1].shape[0],np.mean(d[1])))
+            return [d]
         else:
-            return [(trainset[:max_samples],np.mean(acc_value.transpose(),axis=1),calc_ci(acc_value.transpose(),ci),"Accuracy",color)]
+            d = (trainset[:max_samples],np.mean(acc_value.transpose(),axis=1),calc_ci(acc_value.transpose(),ci),"Accuracy",color)
+            print("Mean Accuracy ({} acquisitions): {}".format(d[1].shape[0],np.mean(d[1])))
+            return [d]
                                                                                                               
     
 if __name__ == "__main__":
@@ -1075,11 +1117,13 @@ if __name__ == "__main__":
     parser.add_argument('-sp', dest='spread', nargs=1, type=int, 
         help='Spread points in interval.', default=10,required=False)
     parser.add_argument('-kmu', action='store_true', dest='kmu', default=False, 
-        help='Extract selected patches with KM Uncert NG.')
+        help='Plot cluster patch uncertainties.')
     parser.add_argument('-query', dest='query', nargs=1, type=int, 
         help='If KMUncert, number of acquired patches.', default=200,required=False)
     parser.add_argument('-kmclusters', dest='kmclusters', nargs=1, type=int, 
         help='If KMUncert, number of clusters used.', default=20,required=False)
+    parser.add_argument('-plt_cluster', dest='plt_cluster', nargs=1, type=int, 
+        help='Plot cluster patch uncertainty for this acquisition.', default=10,required=False)
 
     ##Plot debugging data
     parser.add_argument('--debug', action='store_true', dest='debug', default=False, 
@@ -1140,7 +1184,7 @@ if __name__ == "__main__":
         if len(data) == 0:
             print("Something is wrong with your command options. No data to plot")
             sys.exit(1)
-        p.draw_uncertainty(data,config.ac_n,config.spread,config.title)
+        p.draw_uncertainty(data,config.ac_n,config.spread,config.title,config.kmu,config.plt_cluster)
 
     elif config.stats:
         p = Plotter()
