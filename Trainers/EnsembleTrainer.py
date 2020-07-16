@@ -129,10 +129,15 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         train_time = None
         end_train = False
         self._initializer(self._config.gpu_count,self._config.cpu_count)
-        
-        for r in range(self._config.acquisition_steps):
+
+        #Starting from scratch or restoring?
+        if self.initial_acq > 0:
+            self.initial_acq += 1
+
+        final_acq = self.initial_acq+self._config.acquisition_steps
+        for r in range(self.initial_acq,final_acq):
             if self._config.info:
-                print("[EnsembleTrainer] Starting acquisition step {0}/{1}".format(r+1,self._config.acquisition_steps))
+                print("[EnsembleTrainer] Starting acquisition step {0}/{1}".format(r+1,final_acq))
                 stime = time.time()
 
             #Save current dataset and report partial result (requires multi load for reading)

@@ -58,6 +58,7 @@ class ActiveLearningTrainer(Trainer):
         self.val_y = None
         self.test_x = None
         self.test_y = None
+        self.initial_acq = 0
         if self._config.spool > 0:
             self.superp_x = None
             self.superp_y = None
@@ -104,6 +105,59 @@ class ActiveLearningTrainer(Trainer):
         return nX,nY
 
 
+    def _restore_last_train(self):
+        """
+        Restore the last training set used in a previous experiment
+        """
+        cache_m = CacheManager()
+        files = filter(lambda f:f.startswith('al-metadata'),os.listdir(self._config.logdir))
+        metadata = {}
+        for f in files:
+            ac_id = int(f.split('.')[0].split('-')[3][1:])
+            metadata[ac_id] = os.path.join(self._config.logdir,f)
+        last = max(metadata.keys())
+        name = os.path.basename(metadata[last]).split('.')[0].split('-')[2]
+        train,_,_ = cache_m.load_file(metadata[last])
+
+        return train[0],train[1],name,last
+        
+    def _restore_superpool(self):
+        """
+        Remove all past acquisitions from superpool. It's considerd that past acquisitions are aleready loaded
+        into self.train_x
+        """
+        cache_m = CacheManager()
+        #files = list(filter(lambda f:f.startswith('al-pool'),os.listdir(self._config.logdir)))
+        #sk = lambda f:int(f.split('.')[0].split('-')[3][1:])
+        #files.sort(key=sk)
+
+        #Start from initial sample if pools were saved in cache files else, run in superpool directly
+        #if len(files) > 0:
+        #    files.insert(0,self.sample_idx)
+        count = self.superp_x.shape[0]
+        if self._config.info:
+            print("Starting superpool regeneration...({})".format(count))
+            
+        pool_dct = {self.superp_x[k]:k for k in range(count)}
+        indexes = np.zeros((self.train_x.shape[0],),dtype=np.int32)
+        for k in range(self.train_x.shape[0]):
+            s = self.train_x[k]
+            indexes[k] = pool_dct[s] if s in pool_dct else 0
+
+        un_indexes = np.nonzero(indexes)[0]
+        if self._config.info:
+            print("Found {} patches in superpool:".format(len(un_indexes)))
+            print(" - Removing from superpool (current size: {})".format(count))
+
+        #indexes = np.asarray(indexes,dtype=np.int32)
+        self.superp_x = np.delete(self.superp_x,indexes)
+        self.superp_y = np.delete(self.superp_y,indexes)
+        if self._config.info:
+            print(" - Regenerated superpool (new size {})".format(self.superp_x.shape[0]))
+            removed = count-self.superp_x.shape[0]
+            print(" - Removed {} patches from superpool".format(removed))
+            print(" - Train set had {} duplicated patches.".format(self.train_x.shape[0]-removed))
+    
     def _refresh_pool(self,r,name):
         if self.superp_x is None or self.superp_y is None:
             return None
@@ -119,21 +173,23 @@ class ActiveLearningTrainer(Trainer):
         if self._config.info:
             print("[ALTrainer] Regenerating pool from superpool ({} patches available)".format(self.superp_x.shape[0]))
         if self._config.verbose > 0:
-            print("[ALTrainer] Removed from super pool ({1}): {0}".format(self.acq_idx,self.acq_idx.shape[0]))
+            to_remove = self.acq_idx.shape[0] if not self.acq_idx is None else 0
+            print("[ALTrainer] To be removed from super pool ({1}): {0}".format(self.acq_idx,to_remove))
             
-        self.superp_x = np.delete(self.superp_x,self.acq_idx)
-        self.superp_y = np.delete(self.superp_y,self.acq_idx)
         if cache_m.checkFileExistence(fid):
-            self.sample_idx,_ = cache_m.load(fid)
+            self.pool_x,self.pool_y,_ = cache_m.load(fid)
             if self._config.info:
                 print("[ALTrainer] Loaded resampled pool from: {}".format(cache_m.fileLocation(fid)))
         else:
+            if not self.acq_idx is None:
+                self.superp_x = np.delete(self.superp_x,self.acq_idx)
+                self.superp_y = np.delete(self.superp_y,self.acq_idx)
             self.sample_idx = np.random.choice(self.superp_x.shape[0],self.pool_size,replace=False)
-            cache_m.dump((self.sample_idx,name),fid)
             
-        self.pool_x = self.superp_x[self.sample_idx]
-        self.pool_y = self.superp_y[self.sample_idx]
-        self.acq_idx = None
+            self.pool_x = self.superp_x[self.sample_idx]
+            self.pool_y = self.superp_y[self.sample_idx]
+            cache_m.dump((self.pool_x,self.pool_y,name),fid)
+            self.acq_idx = None
         self._ds.check_paths(self.pool_x,self._config.predst)
         
         if self._config.info:
@@ -173,7 +229,12 @@ class ActiveLearningTrainer(Trainer):
 
         #Initial training set will be choosen at random from pool if a default is not provided
         cache_m = CacheManager()
-        if self._config.load_train and not self._config.balance and cache_m.checkFileExistence('initial_train.pik'):
+        if self._config.restore:
+            train_idx = None
+            self.train_x, self.train_y, name, self.initial_acq = self._restore_last_train()
+            self._restore_superpool()
+            self._refresh_pool(self.initial_acq,name)
+        elif self._config.load_train and not self._config.balance and cache_m.checkFileExistence('initial_train.pik'):
             train_idx = cache_m.load('initial_train.pik')
             if not train_idx is None and self._config.info:
                 print("[ALTrainer] Using initial training set from cache. This is DANGEROUS. Use the metadata correspondent to the initial set.")
@@ -189,15 +250,16 @@ class ActiveLearningTrainer(Trainer):
         val_samples = max(val_samples,100)
         val_idx = np.random.choice(np.setdiff1d(np.arange(self.pool_x.shape[0]),train_idx),val_samples,replace=False)
 
-        self.train_x = self.pool_x[train_idx]
-        self.train_y = self.pool_y[train_idx]
+        if not train_idx is None:
+            self.train_x = self.pool_x[train_idx]
+            self.train_y = self.pool_y[train_idx]
         
         #Initial validation set - keeps the same split ratio for train/val as defined in the configuration
         self.val_x = self.pool_x[val_idx]
         self.val_y = self.pool_y[val_idx]
 
-        #Remove the selected items from pool and superset
-        remove = np.concatenate((train_idx,val_idx),axis=0)
+        #Remove the selected items from pool and set superset indexes to be removed when regenerating
+        remove = val_idx if train_idx is None else np.concatenate((train_idx,val_idx),axis=0) 
         self.pool_x = np.delete(self.pool_x,remove)
         self.pool_y = np.delete(self.pool_y,remove)
         if self._config.spool > 0:
@@ -234,10 +296,15 @@ class ActiveLearningTrainer(Trainer):
         train_time = None
         sw_thread = None
         end_train = False
-                    
-        for r in range(self._config.acquisition_steps):
+
+        #Starting from scratch or restoring?
+        if self.initial_acq > 0:
+            self.initial_acq += 1
+
+        final_acq = self.initial_acq+self._config.acquisition_steps
+        for r in range(self.initial_acq,final_acq):
             if self._config.info:
-                print("[ALTrainer] Starting acquisition step {0}/{1}".format(r+1,self._config.acquisition_steps))
+                print("[ALTrainer] Starting acquisition step {0}/{1}".format(r+1,final_acq))
                 stime = time.time()
 
             #Save current dataset and report partial result (requires multi load for reading)

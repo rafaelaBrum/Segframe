@@ -240,7 +240,9 @@ if __name__ == "__main__":
     al_args.add_argument('-load_train', dest='load_train', action='store_true', default=False,
         help='Use the same initial training set as produced by a previous experiment.')
     al_args.add_argument('-spool', dest='spool', type=int, 
-        help='Regenerate the pool every spool acquisitions. Default = 0 (do not regenerate).',default=0)    
+        help='Regenerate the pool every spool acquisitions. Default = 0 (do not regenerate).',default=0)
+    al_args.add_argument('-restore', dest='restore', action='store_true', default=False,
+        help='Restore a previous experimet data and continue from where it left of.')
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')
