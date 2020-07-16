@@ -1091,7 +1091,7 @@ if __name__ == "__main__":
     ##Single experiment plot
     parser.add_argument('--single', action='store_true', dest='single', default=False, 
         help='Plot data from a single experiment.')
-    parser.add_argument('-sd', dest='sdir', type=str,default=None, 
+    parser.add_argument('-sd', dest='sdir', type=str,default=None, required=True,
         help='Experiment result path (should contain an slurm file).')
 
     ##Make stats
