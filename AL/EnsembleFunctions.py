@@ -259,7 +259,7 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
     G_X = Entropy_Average_Pi
 
     #Average entropy
-    FX = np.divide(All_Entropy_Dropout, emodels)
+    F_X = np.divide(All_Entropy_Dropout, emodels)
 
     #F_X = Average_Entropy
     U_X = G_X - F_X
