@@ -706,17 +706,21 @@ class Plotter(object):
             print("Parse a single file at a time")
             return None
 
-        dir_contents = os.listdir(path)
-        dir_contents.sort()
+        dir_contents = list(filter(lambda f:f.startswith('slurm'),os.listdir(path)))
+        sk = lambda f:int(f.split('.')[0].split('-')[1])
+        dir_contents.sort(key=sk)        
         slurm_path = None
-        for fi in dir_contents:
-            if fi.startswith('slurm'):
-                slurm_path = os.path.join(path,fi)
 
-        if slurm_path is None:
+        if not dir_contents:
             print("No slurm file in path: {0}".format(path))
             return None
-        
+
+        lines = []
+        for fi in dir_contents:
+            slurm_path = os.path.join(path,fi)        
+            with open(slurm_path,'r') as fd:
+                lines.extend(fd.readlines())
+            
         data = {'time':[],
                 'acqtime':[],
                 'traintime':[],
@@ -745,9 +749,6 @@ class Plotter(object):
         clusterrc = re.compile(clusterrex)
         labelrc = re.compile(labelrex)
         colorrc = re.compile(colorrex)
-
-        with open(slurm_path,'r') as fd:
-            lines = fd.readlines()
 
         #Set a time reference
         #zero = datetime.datetime(2020,1,1)

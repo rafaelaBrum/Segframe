@@ -589,12 +589,17 @@ def process_cluster_metadata(config):
         if not os.path.isdir(ac_path):
             os.makedirs(ac_path)
         img_name = os.path.basename(img.getPath())
+        img_class = img_name.split('.')[0].split('_')
+        if len(im_class) > 1:
+            im_class = im_class[1]
+        else:
+            im_class = 'X'
         if orig is None:
-            shutil.copy(img.getPath(),os.path.join(ac_path,'{}.{}'.format(img_in,img_name.split('.')[1])))
+            shutil.copy(img.getPath(),os.path.join(ac_path,'{}_{}.{}'.format(img_in,img_class,img_name.split('.')[1])))
         else:
             subdir = os.path.split(os.path.dirname(img.getPath()))[1]
             orig_img = os.path.join(orig,subdir,os.path.basename(img.getPath()))
-            shutil.copy(orig_img,os.path.join(ac_path,'{}.{}'.format(img_in,img_name.split('.')[1])))
+            shutil.copy(orig_img,os.path.join(ac_path,'{}_{}.{}'.format(img_in,img_class,img_name.split('.')[1])))
             
     if not os.path.isdir(config.out_dir):
         os.mkdir(config.out_dir)

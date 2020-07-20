@@ -127,13 +127,7 @@ class ActiveLearningTrainer(Trainer):
         into self.train_x
         """
         cache_m = CacheManager()
-        #files = list(filter(lambda f:f.startswith('al-pool'),os.listdir(self._config.logdir)))
-        #sk = lambda f:int(f.split('.')[0].split('-')[3][1:])
-        #files.sort(key=sk)
 
-        #Start from initial sample if pools were saved in cache files else, run in superpool directly
-        #if len(files) > 0:
-        #    files.insert(0,self.sample_idx)
         count = self.superp_x.shape[0]
         if self._config.info:
             print("Starting superpool regeneration...({})".format(count))
@@ -149,7 +143,6 @@ class ActiveLearningTrainer(Trainer):
             print("Found {} patches in superpool:".format(len(un_indexes)))
             print(" - Removing from superpool (current size: {})".format(count))
 
-        #indexes = np.asarray(indexes,dtype=np.int32)
         self.superp_x = np.delete(self.superp_x,indexes)
         self.superp_y = np.delete(self.superp_y,indexes)
         if self._config.info:
