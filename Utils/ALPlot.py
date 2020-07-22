@@ -212,6 +212,7 @@ class Plotter(object):
         up = 0.0
         low = 1.0
         lbcount = 0
+        xmax = 0
 
         plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
         for d in data:
@@ -226,7 +227,9 @@ class Plotter(object):
             line = color%len(linestyle)
             marker = color%len(markers)
             color = color % len(palette.colors)
-            
+
+            local_max = np.max(x_data)
+            xmax = local_max if local_max > xmax else xmax
             if auc_only and y_label != 'AUC':
                 continue
             
@@ -255,7 +258,7 @@ class Plotter(object):
         if labels is None:
             labels = ['Mean','{} STD'.format(confidence)]
         plt.legend(plots,labels=labels,loc=4,ncol=2,prop=dict(weight='bold'))
-        plt.xticks(np.arange(min(x_data), max(x_data)+xticks, xticks))
+        plt.xticks(np.arange(min(x_data), xmax+xticks, xticks))
         ydelta = (1.0 - low)/10
         rg = np.clip(np.arange(max(low,0.0), up if up <= 1.05 else 1.05, ydelta),0.0,1.0)
         np.around(rg,2,rg)
@@ -645,9 +648,9 @@ class Plotter(object):
 
         return split_data
 
-    def parseResults(self,path,al_dirs,n_ids=None,maxx=None):
+    def parseResults(self,path,al_dirs,n_ids=None,maxx=None,concat=False):
 
-        def parseDirs(path,al_dirs):
+        def parseDirs(path,al_dirs,concat):
             data = {}
             for d in range(len(al_dirs)):
                 if isinstance(path,list):
@@ -655,7 +658,7 @@ class Plotter(object):
                 else:
                     d_path = "{0}-{1}".format(path,al_dirs[d])
                 if os.path.isdir(d_path):
-                    data[al_dirs[d]] = self.parseSlurm(d_path,maxx=maxx)
+                    data[al_dirs[d]] = self.parseSlurm(d_path,maxx=maxx,concat=concat)
                 else:
                     print("Results dir not found: {}".format(d_path))
             return data
@@ -666,11 +669,11 @@ class Plotter(object):
                 return parseDirs(path,al_dirs)
             li = 0
             for k in range(len(path)):
-                data.update(parseDirs(path[k],al_dirs[li:li+n_ids[k]]))
+                data.update(parseDirs(path[k],al_dirs[li:li+n_ids[k]],concat))
                 li += n_ids[k]
             return data
         else:
-            return parseDirs(path,al_dirs)
+            return parseDirs(path,al_dirs,concat)
 
 
         
@@ -695,7 +698,7 @@ class Plotter(object):
         """
         return np.asarray(range(start,(size*step)+start,step))
                               
-    def parseSlurm(self,path=None,maxx=None):
+    def parseSlurm(self,path=None,maxx=None,concat=False):
 
         if path is None and self.path is None:
             print("No directory found")
@@ -716,10 +719,15 @@ class Plotter(object):
             return None
 
         lines = []
-        for fi in dir_contents:
-            slurm_path = os.path.join(path,fi)        
+        if concat:
+            for fi in dir_contents:
+                slurm_path = os.path.join(path,fi)
+                with open(slurm_path,'r') as fd:
+                    lines.extend(fd.readlines())
+        else:
+            slurm_path = os.path.join(path,dir_contents[0])
             with open(slurm_path,'r') as fd:
-                lines.extend(fd.readlines())
+                lines = fd.readlines()
             
         data = {'time':[],
                 'acqtime':[],
@@ -764,6 +772,12 @@ class Plotter(object):
             clustermatch = clusterrc.fullmatch(lstrip)
             labelmatch = labelrc.fullmatch(lstrip)
             colormatch = colorrc.fullmatch(lstrip)
+            if trmatch:
+                ssize = int(trmatch.group('set'))
+                if ssize in data['trainset']:
+                    continue
+                else:
+                    data['trainset'].append(ssize)
             if tmatch:
                 td = datetime.timedelta(hours=int(tmatch.group('hours')),minutes=int(tmatch.group('min')),seconds=round(float(tmatch.group('sec'))))
                 data['time'].append(td.total_seconds())
@@ -775,8 +789,6 @@ class Plotter(object):
                 data['acqtime'].append(td.total_seconds())
             if aucmatch:
                 data['auc'].append(float(aucmatch.group('auc')))
-            if trmatch:
-                data['trainset'].append(int(trmatch.group('set')))
             if accmatch:
                 data['accuracy'].append(float(accmatch.group('acc')))
             if labelmatch:
@@ -1073,7 +1085,9 @@ if __name__ == "__main__":
     parser.add_argument('-t', dest='title', type=str,default='AL Experiment', 
         help='Figure title.')
     parser.add_argument('-labels', dest='labels', nargs='+', type=str, 
-        help='Curve labels.',default=None,required=False)    
+        help='Curve labels.',default=None,required=False)
+    parser.add_argument('-concat', action='store_true', dest='concat', default=False, 
+        help='Concatenate multiple slurm files if more then one is present.')    
     parser.add_argument('-metrics', dest='metrics', type=str, nargs='+',
         help='Metrics to plot: \n \
         time - AL iteration time; \n \
@@ -1159,7 +1173,7 @@ if __name__ == "__main__":
             data = p.parseMetrics(p.parseSlurm(ex_dir,config.maxx),config.ids[0],config.metrics)
             p.draw_multilabel(data,config.title,config.xtick,config.metrics,config.labels)
         else:
-            data = p.parseResults(exp_type,config.ids,maxx=config.maxx)
+            data = p.parseResults(exp_type,config.ids,maxx=config.maxx,concat=config.concat)
             if len(data) == 0:
                 print("Something is wrong with your command options. No data to plot")
                 sys.exit(1)        
@@ -1204,7 +1218,7 @@ if __name__ == "__main__":
             print("You should define a set of experiment IDs (-id).")
             sys.exit(1)
 
-        data = p.parseResults(exp_type,config.ids,config.n_exp,config.maxx)
+        data = p.parseResults(exp_type,config.ids,config.n_exp,config.maxx,config.concat)
 
         if isinstance(config.confidence,list):
             config.confidence = config.confidence[0]
