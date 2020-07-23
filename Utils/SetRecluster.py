@@ -113,8 +113,9 @@ def run_clustering(config,data,net_model,nclasses):
     unique,count = np.unique(ms.labels_,return_counts=True)
     print("Number of clusters: {}".format(unique.shape[0]))
     l_count = dict(zip(unique,count))
+    count = len(data)
     print("Cluster sizes:")
-    print("\n".join(["Cluster # {0}: {1} items" .format(key,l_count[key]) for key in unique]))
+    print("\n".join(["Cluster # {0}: {1} items ({2:2.2f}% of total)" .format(key,l_count[key],l_count[key]/count) for key in unique]))
     
 if __name__ == "__main__":
 
