@@ -53,6 +53,7 @@ def restore_last_train(logdir):
 
 def run_clustering(config,data,net_model,nclasses):
     from Trainers import ThreadedGenerator
+    from keras.preprocessing.image import ImageDataGenerator
 
     if hasattr(net_model,'build_extractor'):
         single_m,parallel_m = net_model.build_extractor(training=False,feature=True,parallel=False)
@@ -61,10 +62,12 @@ def run_clustering(config,data,net_model,nclasses):
             print("Model is not prepared to produce features. No feature extractor")
         return None    
 
-    
+    train_prep = ImageDataGenerator(
+                samplewise_center=config.batch_norm,
+                samplewise_std_normalization=config.batch_norm)    
     generator = ThreadedGenerator(dps=data,
                                       classes=nclasses,
-                                      dim=fix_dim,
+                                      dim=config.tdim,
                                       batch_size=config.batch_size,
                                       image_generator=train_prep,
                                       extra_aug=False,
@@ -101,11 +104,11 @@ def run_clustering(config,data,net_model,nclasses):
         features = pca.fit_transform(features)
 
     if config.bandwidth == 0:
-        bw = estimate_bandwidth(data, quantile=0.3)
+        bw = estimate_bandwidth(features, quantile=0.3)
         print("Estimated bandwidth: {}".format(bw))
     else:
         bw = config.bandwidth
-    ms = MeanShift(bandwidth = bw, cluster_all=True,n_jobs=max(int(cpu_count/2),1)).fit(features)
+    ms = MeanShift(bandwidth = bw, cluster_all=True,n_jobs=max(int(config.cpu_count/2),1)).fit(features)
 
     unique,count = np.unique(ms.labels_,return_counts=True)
     print("Number of clusters: {}".format(unique.shape[0]))
@@ -157,6 +160,8 @@ if __name__ == "__main__":
         help='Return general info about data input, the CNN, etc.')
     parser.add_argument('-k', action='store_true', dest='keepimg', default=False, 
         help='Keep loaded images in memory.')
+    parser.add_argument('-tnorm', action='store_true', dest='batch_norm',
+        help='Applies batch normalization during training.',default=False)
     parser.add_argument('-pb', action='store_true', dest='progressbar', default=False, 
         help='Print progress bars of processing execution.')    
     parser.add_argument('-logdir', dest='logdir', type=str,default='logs', 

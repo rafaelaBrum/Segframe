@@ -590,10 +590,10 @@ def process_cluster_metadata(config):
             os.makedirs(ac_path)
         img_name = os.path.basename(img.getPath())
         img_class = img_name.split('.')[0].split('_')
-        if len(im_class) > 1:
-            im_class = im_class[1]
+        if len(img_class) > 1:
+            img_class = img_class[1]
         else:
-            im_class = 'X'
+            img_class = 'X'
         if orig is None:
             shutil.copy(img.getPath(),os.path.join(ac_path,'{}_{}.{}'.format(img_in,img_class,img_name.split('.')[1])))
         else:
