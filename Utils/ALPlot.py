@@ -666,7 +666,7 @@ class Plotter(object):
         if isinstance(path,list):
             data = {}
             if n_ids is None:
-                return parseDirs(path,al_dirs)
+                return parseDirs(path,al_dirs,concat)
             li = 0
             for k in range(len(path)):
                 data.update(parseDirs(path[k],al_dirs[li:li+n_ids[k]],concat))

@@ -20,7 +20,7 @@ class GenericDS(ABC):
         if isinstance(data_path,str) and os.path.isdir(data_path):
             self.path = data_path
         else:
-            raise ValueError("[GenericImage] Path does not correspond to a file ({0}).".format(data_path))
+            raise ValueError("[GenericDatasource] Path does not correspond to a directory ({0}).".format(data_path))
 
         self.X = None
         self.Y = None

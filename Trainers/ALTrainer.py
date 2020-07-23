@@ -121,18 +121,24 @@ class ActiveLearningTrainer(Trainer):
 
         return train[0],train[1],name,last
         
-    def _restore_superpool(self):
+    def _restore_pools(self,sp):
         """
         Remove all past acquisitions from superpool. It's considerd that past acquisitions are aleready loaded
         into self.train_x
         """
         cache_m = CacheManager()
+        pool_x, pool_y = None, None
 
-        count = self.superp_x.shape[0]
-        if self._config.info:
-            print("Starting superpool regeneration...({})".format(count))
+        if sp:
+            pool_x,pool_y = self.superp_x,self.superp_y
+        else:
+            pool_x,pool_y = self.pool_x, self.pool_y
             
-        pool_dct = {self.superp_x[k]:k for k in range(count)}
+        count = pool_x.shape[0]
+        if self._config.info:
+            print("Starting pool regeneration...({})".format(count))
+            
+        pool_dct = {pool_x[k]:k for k in range(count)}
         indexes = np.zeros((self.train_x.shape[0],),dtype=np.int32)
         for k in range(self.train_x.shape[0]):
             s = self.train_x[k]
@@ -140,16 +146,21 @@ class ActiveLearningTrainer(Trainer):
 
         un_indexes = np.nonzero(indexes)[0]
         if self._config.info:
-            print("Found {} patches in superpool:".format(len(un_indexes)))
-            print(" - Removing from superpool (current size: {})".format(count))
+            print("Found {} patches in pool:".format(len(un_indexes)))
+            print(" - Removing from pool (current size: {})".format(count))
 
-        self.superp_x = np.delete(self.superp_x,indexes)
-        self.superp_y = np.delete(self.superp_y,indexes)
+        pool_x = np.delete(pool_x,indexes)
+        pool_y = np.delete(pool_y,indexes)
         if self._config.info:
-            print(" - Regenerated superpool (new size {})".format(self.superp_x.shape[0]))
-            removed = count-self.superp_x.shape[0]
+            print(" - Regenerated pool (new size {})".format(pool_x.shape[0]))
+            removed = count - pool_x.shape[0]
             print(" - Removed {} patches from superpool".format(removed))
             print(" - Train set had {} duplicated patches.".format(self.train_x.shape[0]-removed))
+
+        if sp:
+            self.superp_x, self.superp_y = pool_x, pool_y
+        else:
+            self.pool_x, self.pool_y = pool_x, pool_y
     
     def _refresh_pool(self,r,name):
         if self.superp_x is None or self.superp_y is None:
@@ -225,8 +236,11 @@ class ActiveLearningTrainer(Trainer):
         if self._config.restore:
             train_idx = None
             self.train_x, self.train_y, name, self.initial_acq = self._restore_last_train()
-            self._restore_superpool()
-            self._refresh_pool(self.initial_acq,name)
+            if self._config.spool > 0:
+                self._restore_pools(sp=True)
+                self._refresh_pool(self.initial_acq,name)
+            else:
+                self._restore_pools(sp=False)
         elif self._config.load_train and not self._config.balance and cache_m.checkFileExistence('initial_train.pik'):
             train_idx = cache_m.load('initial_train.pik')
             if not train_idx is None and self._config.info:
