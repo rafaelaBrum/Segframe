@@ -16,7 +16,7 @@ def _split_origins(config,x_data,t_idx):
     if cache_m.checkFileExistence('testset.pik'):
         full_id,samples = cache_m.load('testset.pik')
         if not samples is None and config.info:
-            print("[ALTrainer] Using cached TEST SET. This is DANGEROUS. Use the metadata correspondent to the set.")
+            print("[DataSetup] Using cached TEST SET. This is DANGEROUS. Use the metadata correspondent to the set.")
         return full_id,samples
             
     wsis = set()
@@ -29,7 +29,7 @@ def _split_origins(config,x_data,t_idx):
     selected_idx = []
 
     if self._config.info:
-        print("[ALTrainer] WSIs selected to provide test patches:\n{}".format("\n".join(selected)))
+        print("[DataSetup] WSIs selected to provide test patches:\n{}".format("\n".join(selected)))
             
     for i in range(len(x_data)):
         if x_data[i].getOrigin() in selected:
