@@ -38,7 +38,8 @@ def run_prediction(config,locations=None):
     if config.print_pred:
         print_prediction(config)
     else:
-        predictor = Predictor(config)
+        build_ensemble = True if config.strategy == "EnsembleTrainer" else False
+        predictor = Predictor(config,build_ensemble=build_ensemble)
         predictor.run()
 
 def print_prediction(config):
