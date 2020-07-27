@@ -34,7 +34,7 @@ def load_modules(config):
 
     return net_model,ds
 
-def restore_last_train(logdir):
+def restore_last_train(logdir,acq):
     """
     Restore the last training set used in a previous experiment
     """
@@ -44,7 +44,10 @@ def restore_last_train(logdir):
     for f in files:
         ac_id = int(f.split('.')[0].split('-')[3][1:])
         metadata[ac_id] = os.path.join(config.logdir,f)
-    last = max(metadata.keys())
+    if acq > 0 and acq in metadata:
+        last = acq
+    else:
+        last = max(metadata.keys())
     name = os.path.basename(metadata[last]).split('.')[0].split('-')[2]
     with open(metadata[last],'rb') as fd:
         train,_,_ = pickle.load(fd)
@@ -176,6 +179,8 @@ if __name__ == "__main__":
     parser.add_argument('-model_dir', dest='model_path',
         help='Save trained models in dir (Default: TrainedModels).',
         default='')
+    parser.add_argument('-acq', dest='acq', type=int, 
+        help='Use trainset from this acquisition (Default: -1, means last one).', default=-1)
 
     config, unparsed = parser.parse_known_args()
 
@@ -201,5 +206,5 @@ if __name__ == "__main__":
     cache_m = CacheManager(locations=files)
     
     net_model,ds = load_modules(config)
-    train_x,train_y,_,_ = restore_last_train(config.logdir)
+    train_x,train_y,_,_ = restore_last_train(config.logdir,config.acq)
     run_clustering(config,(train_x,train_y),net_model,ds.nclasses)
