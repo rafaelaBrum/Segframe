@@ -221,7 +221,7 @@ class Plotter(object):
                 color = colors[lbcount]
             elif color < 0:
                 color = 0
-                
+
             lbcount += 1
                 
             line = color%len(linestyle)
