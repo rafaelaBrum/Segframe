@@ -350,7 +350,6 @@ class Plotter(object):
         fig, ax1 = plt.subplots()
         ax2 = None
 
-        print(data['trainset'])
         for k in metrics:
             if k == 'labels' and data[k].shape[0] > 0:
                 #Repeat last point if needed
@@ -440,6 +439,151 @@ class Plotter(object):
         plt.tight_layout()
         plt.grid(True)
         plt.show()
+
+    def draw_wsi_stat(self,data,title,labels=None,metrics=None,colors=None,ytick=None,err_bar=False):
+        from matplotlib.legend import Legend
+        
+        color = 0
+        line = 0
+        marker = 0
+        min_x = 0
+        max_x = 0
+        min_y = 0
+        max_y = 0
+        lbcount = 0
+        multi_label = False
+        
+        experiments = sorted(list(data.keys()))
+        if len(metrics) > 2:
+            print("WSI plotting suports only 2 Y axis. X axis is always acquisition #")
+            return None
+        elif len(metrics) == 2:
+            if len(data) > 1:
+                print("Multilabel plot will be done only in the first experiment: {}".format(experiments[0]))
+                experiments = experiments[:1]
+            multi_label = True
+        
+        plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
+        ax1 = plt.gca()
+        ax2 = None
+
+        for k in experiments:
+            if not colors is None and colors[lbcount] >= 0:
+                color = colors[lbcount]
+            elif 'color' in data[k]:
+                color = data[k]['color']
+                
+            if not multi_label:
+                if labels is None:
+                    lb = k
+                else:
+                    lb = labels[lbcount]
+                    lbcount += 1
+
+            line = color%len(linestyle)
+            marker = color%len(markers)
+            color = color % len(palette.colors)
+
+            lmax = data[k]['trainset'].max()
+            max_x = max_x if lmax < max_x else lmax
+
+            y_color = '#000000'
+            for m in metrics:
+                if not m in data[k]:
+                    print("No such metric in data: {}".format(m))
+                    continue
+                if multi_label:
+                    if labels is None:
+                        lb = k
+                    else:
+                        lb = labels[lbcount]
+                        lbcount += 1
+                #Repeat last point if needed
+                if data[k]['trainset'].shape[0] > data[k][m].shape[0]:
+                    print("Shape mismatch:\n Trainset: {}; {}:{}".format(data[k]['trainset'].shape,m,data[k][m].shape))
+                    data[k][m] = np.hstack((data[k][m],data[k][m][-1:]))
+                    
+                if multi_label:
+                    y_color = palette(color)
+                    
+                if m == 'pmean':
+                    maxerr = (data[k]['pdp'] + data[k][m]).max()
+                    max_y = max_y if maxerr < max_y else maxerr
+                    yticks = np.arange(0.0, max_y, ytick)
+                    #This limits lower error bars so it won't go below 0
+                    yerr = [data[k]['pdp']-(np.clip(data[k]['pdp']-data[k][m],0.0,maxerr)),np.clip(data[k]['pdp'],0.0,100)]
+                    if ax2 is None:
+                        ax1.set_ylabel("Mean # of patches\nper WSI",color=y_color)
+                        random_displace = 0.0
+                        if not multi_label:
+                            random_displace = np.random.rand()
+                        pl=ax1.plot(data[k]['trainset']+random_displace,data[k][m],
+                                        marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                        if err_bar:
+                            ax1.errorbar(data[k]['trainset']+random_displace,data[k][m], yerr=yerr, fmt='none',color=palette(color),alpha=0.6,markersize=8,zorder=10)
+                        ax1.tick_params(axis='y', labelcolor=y_color)
+                        ax1.set_yticks(yticks)
+                        if multi_label:
+                            ax2 = ax1.twinx()
+                    else:
+                        ax2.set_ylabel("Mean # of patches\nper WSI",color=y_color)
+                        pl=ax2.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                        if err_bar:
+                            ax2.errorbar(data[k]['trainset'],data[k][m], yerr=yerr, fmt='none',color=palette(color),alpha=0.6,markersize=8,zorder=10)
+                        ax2.tick_params(axis='y', labelcolor=y_color)
+                        ax2.set_yticks(yticks)
+                        
+                elif m == 'wsicount':
+                    if multi_label:
+                        ytick = 10
+                    if ax2 is None:
+                        ax1.set_ylabel("WSI #",color=y_color)
+                        pl=ax1.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                        ax1.tick_params(axis='y', labelcolor=y_color)
+                        ax1.set_yticks(np.arange(data[k][m].min(), data[k][m].max(), ytick))
+                        if multi_label:
+                            ax2 = ax1.twinx()
+                    else:
+                        ax2.set_ylabel("WSI #",color=y_color)
+                        pl=ax2.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                        ax2.tick_params(axis='y', labelcolor=y_color)
+                        ax2.set_yticks(np.arange(data[k][m].min(), data[k][m].max(), ytick))
+
+                elif m == 'wsimeandis':
+                    if multi_label:
+                        ytick = 200
+                    if ax2 is None:
+                        ax1.set_ylabel("Mean patch dispersion (pixels)",color=y_color)
+                        pl=ax1.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                        ax1.tick_params(axis='y', labelcolor=y_color)
+                        #print("Experiment ({}): {} - {} elements".format(k,data[k][m],data[k][m].shape[0]))
+                        ax1.set_yticks(np.arange(data[k][m].min(), data[k][m].max(), ytick))
+                        if multi_label:
+                            ax2 = ax1.twinx()
+                    else:
+                        ax2.set_ylabel("Mean patch dispersion (pixels)",color=y_color)
+                        pl=ax2.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                        ax2.tick_params(axis='y', labelcolor=y_color)
+                        ax2.set_yticks(np.arange(data[k][m].min(), data[k][m].max(), ytick))
+
+                if multi_label:
+                    color += 1
+        if not (len(labels) == 1 and labels[0] == ""):
+            lines,leg_lbl = ax1.get_legend_handles_labels()
+            if multi_label:
+                lines2,labels2 = ax2.get_legend_handles_labels()
+                lines += lines2
+            ax1.legend(lines,labels,loc=0,ncol=2,prop=dict(weight='bold'))
+
+            
+        ax1.set_xticks(np.arange(min_x, max_x+1,1))
+        if max_x > 1000:
+            plt.setp(ax1.get_xticklabels(),rotation=30)
+        ax1.set_title(title, loc='left', fontsize=12, fontweight=0, color='orange')
+        ax1.set_xlabel("Acquisition #")
+        plt.tight_layout()
+        ax1.grid(True)
+        plt.show()
         
     def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False,other=None,colors=None):
         
@@ -520,7 +664,7 @@ class Plotter(object):
                 print(data[k]['trainset'])
             elif not other is None:
                 if len(other) > 1:
-                    print("Multilibe plot only supports a single metric. Using the first one provided ({})".format(other[0]))
+                    print("Multilabel plot only supports a single metric. Using the first one provided ({})".format(other[0]))
                 metric = other[0]
                 if not metric in data[k]:
                     print("Requested metric not available: {}".format(metric))
@@ -648,7 +792,7 @@ class Plotter(object):
 
         return split_data
 
-    def parseResults(self,path,al_dirs,n_ids=None,maxx=None,concat=False):
+    def parseResults(self,path,al_dirs,n_ids=None,maxx=None,concat=False,wsi=False):
 
         def parseDirs(path,al_dirs,concat):
             data = {}
@@ -658,7 +802,10 @@ class Plotter(object):
                 else:
                     d_path = "{0}-{1}".format(path,al_dirs[d])
                 if os.path.isdir(d_path):
-                    data[al_dirs[d]] = self.parseSlurm(d_path,maxx=maxx,concat=concat)
+                    if wsi:
+                        data[al_dirs[d]] = self.compileWSIData(d_path,maxx=maxx,concat=concat)
+                    else:
+                        data[al_dirs[d]] = self.parseSlurm(d_path,maxx=maxx,concat=concat)
                 else:
                     print("Results dir not found: {}".format(d_path))
             return data
@@ -675,7 +822,44 @@ class Plotter(object):
         else:
             return parseDirs(path,al_dirs,concat)
 
+    def compileWSIData(self,path=None,maxx=None,concat=False):
+        import pickle
+        
+        if path is None and self.path is None:
+            print("No directory found")
+            sys.exit(1)
+        elif path is None:
+            path = self.path
+        elif isinstance(path,list):
+            print("Parse a single file at a time")
+            return None
 
+        stats_path = os.path.join(path,'acquisition_stats.pik')
+        if not os.path.isfile(stats_path):
+            print("No stats file in folder: {}".format(path))
+            sys.exit(1)
+
+        with open(stats_path,'rb') as fd:
+            wsis,wsi_means,patch_count = pickle.load(fd)
+
+        data = {}
+        data['trainset'] = np.asarray(sorted(list(patch_count.keys())))
+        data['pmean'] = np.asarray([np.mean(patch_count[k]) for k in data['trainset']])
+        data['pdp'] = np.asarray([np.std(patch_count[k]) for k in data['trainset']])
+        data['wsicount'] = np.asarray([len(wsi_means[k]) for k in data['trainset']])
+
+        wsimeandis = []
+        for k in data['trainset']:
+            distances = []
+            for w in wsi_means[k]:
+                if wsi_means[k][w] > 0.0:
+                    distances.append(wsi_means[k][w])
+            if len(distances) > 0:
+                wsimeandis.append(np.mean(distances))
+            else:
+                wsimeandis.append(0.0)
+        data['wsimeandis'] = np.asarray(wsimeandis)
+        return data
         
     def format_func(self,x, pos):
         hours = int(x//3600)
@@ -1080,6 +1264,8 @@ if __name__ == "__main__":
         help='Line colors. Follow the order of the IDs.', default=None,required=False)
     parser.add_argument('-xtick', dest='xtick', nargs=1, type=int, 
         help='xtick interval.', default=200,required=False)
+    parser.add_argument('-ytick', dest='ytick', type=int, 
+        help='ytick interval.', default=200,required=False)
     parser.add_argument('-maxx', dest='maxx', type=int, 
         help='Plot maximum X.', default=None,required=False)
     parser.add_argument('-t', dest='title', type=str,default='AL Experiment', 
@@ -1095,8 +1281,11 @@ if __name__ == "__main__":
         acqtime - Acquisition step time; \n \
         auc - AUC; \n \
         acc - Accuracy; \n \
-        labels - Positive labeled patches acquired,',
-       choices=['time','auc','acc','labels','traintime','acqtime'],default=None)    
+        labels - Positive labeled patches acquired; \n \
+        pmean - Mean # of patches acquired from each WSI; \n \
+        wsicount - # of WSIs used in each acquisition step; \n \
+        wsimeandis - Mean distance, in pixels, from patches to its cluster centers.',
+       choices=['time','auc','acc','labels','traintime','acqtime','pmean','wsicount','wsimeandis'],default=None)    
     parser.add_argument('-type', dest='tmode', type=str, nargs='+',
         help='Experiment type: \n \
         AL - General active learning experiment; \n \
@@ -1142,9 +1331,15 @@ if __name__ == "__main__":
 
     ##Plot debugging data
     parser.add_argument('--debug', action='store_true', dest='debug', default=False, 
-        help='Plot experiment uncertainties selected acquisitions.')
+        help='Plot experiment uncertainties selected acquisitions. Single or multiline.')
     parser.add_argument('-clusters', action='store_true', dest='clusters', default=False, 
         help='Plot cluster composition.')
+
+    ##Plot WSI metadata stats data
+    parser.add_argument('--wsi', action='store_true', dest='wsi', default=False, 
+        help='Plot data obtained by MetadataExtract.')
+    parser.add_argument('-err_bar', action='store_true', dest='err_bar', default=False, 
+        help='Plot error bars.')
     
     config, unparsed = parser.parse_known_args()
 
@@ -1268,7 +1463,29 @@ if __name__ == "__main__":
                     'AL trained':d2}
             p.draw_multiline(mdata,config.title,config.xtick)
         elif config.clusters:
-            #TODO: implement plotting function
             p.draw_cluster_distribution(data,config.spread,config.title)
         else:
             p.draw_data(data,config.title,'Acquisition #')
+
+    elif config.wsi:
+        if config.sdir is None:
+            print("You should specify an experiment directory (use -sd option).")
+            sys.exit(1)
+
+        if config.metrics is None:
+            print("Define WSI metrics to plot (at most 2)")
+            sys.exit(1)
+        elif len(config.metrics) > 2:
+            config.metrics = config.metrics[:2]
+            
+        if len(config.tmode) == 1:
+            exp_type = os.path.join(config.sdir,config.tmode[0],config.tmode[0])
+        else:
+            exp_type = [os.path.join(config.sdir,tmode,tmode) for tmode in config.tmode]
+            
+        p = Plotter()
+
+        data = p.parseResults(exp_type,config.ids,config.n_exp,config.maxx,config.concat,wsi=True)
+
+        p.draw_wsi_stat(data,config.title,config.labels,config.metrics,config.colors,config.ytick,config.err_bar)
+

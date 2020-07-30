@@ -96,7 +96,8 @@ def _process_wsi_cluster(km,s,members,config):
         count_m = 0
         c_count = 0
         mean_d = 0.0
-        print("Cluster {} center: {}".format(c,km.cluster_centers_[c]))
+        if config.info:
+            print("Cluster {} center: {}".format(c,km.cluster_centers_[c]))
         x2 = km.cluster_centers_[c]
         for p in idx:
             x1 = members[p].getCoord()
@@ -108,17 +109,21 @@ def _process_wsi_cluster(km,s,members,config):
             if dist < config.radius:
                 distances[members[p]] = dist
                 count_m += 1
-        print("    - patches in cluster: {}".format(idx.shape[0]))
-        print("    - {} patches are within {} pixels from cluster center".format(count_m,config.radius))
+        if config.info:
+            print("    - patches in cluster: {}".format(idx.shape[0]))
+            print("    - {} patches are within {} pixels from cluster center".format(count_m,config.radius))
         if c_count > 0:
             mean_d = mean_d / c_count
             wsi_mean += mean_d
-            print("    - {:2.2f} % of cluster patches are within range".format(100*count_m/c_count))
-        print("    - Mean distance from cluster center: {:.1f}".format(mean_d))
+            if config.info:
+                print("    - {:2.2f} % of cluster patches are within range".format(100*count_m/c_count))
+        if config.info:
+            print("    - Mean distance from cluster center: {:.1f}".format(mean_d))
         wrad += count_m        
     wsi_mean = wsi_mean/config.nc
-    print("{:2.2f}% of all WSI patches are within cluster center ranges".format(100*wrad/len(members)))
-    print("Mean distance of clustered patches to centers: {:.1f}".format(wsi_mean))
+    if config.info:
+        print("{:2.2f}% of all WSI patches are within cluster center ranges".format(100*wrad/len(members)))
+        print("Mean distance of clustered patches to centers: {:.1f}".format(wsi_mean))
 
     return wsi_mean
 
@@ -470,7 +475,13 @@ def process_wsi_metadata(config):
 
     if config.save:
         _save_wsi_stats(acquisitions,config.sdir,config.ac_save)
+
+    if config.info:
+        print_wsi_metadata(wsis,config,total_patches,total_pos)
         
+    return wsis,acquisitions
+
+def print_wsi_metadata(wsis,config,total_patches,total_pos):
     print("\n"+" "*10+"ACQUIRED PATCHES STATISTICS\n\n")
     #This dict will store, for each WSI, [#positive patches acquired, #total of positive patches]
     pos_patches = {}
@@ -487,7 +498,7 @@ def process_wsi_metadata(config):
             total_pos += l_count[1]
         else:
             pos_patches[s] = [0]
-            
+
         print("******   {} ({} total patches)  *******".format(s,n_patches))
         print("Positive patches acquired: {} ({:2.2f}%)".format(pos_patches[s][0],100*pos_patches[s][0]/n_patches))
         if config.nc > 0:
@@ -499,6 +510,7 @@ def process_wsi_metadata(config):
             if features.shape[0] > config.minp:
                 km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
                 wsi_means.append(_process_wsi_cluster(km,s,wsis[s][0],config))
+                
 
     print("-----------------------------------------------------")
     print("Total of acquired patches: {}".format(total_patches))
@@ -665,7 +677,58 @@ def process_train_set(config):
 
     print("{} patches were found in only one set.".format(miss_count))
     print("{} patches were in both sets".format(hit_count))
-    
+
+
+def process_wsi_plot(config,acqs):
+    """
+    @Params:
+    - acqs <dict>: the output of process_wsi_metadata
+
+    @Saves file:
+    acquisition_stats.pik with a tuple: wsis, wsi_means,patch_count
+    - wsis <dict>: keys -> slide names; values -> list of patches acquired from the slide
+    - wsi_means <dict>: keys -> acq number; values -> dictionary with slides as keys and list of mean distance in pixels to cluster centers
+    - patch_count <dict>: keys -> acq number; values -> list of number of patches acquired from each WSI in current acquisition
+    """
+
+    wsis = {}
+    total_patches = 0
+    #Acumulate patches in sequential acquisitions in this list
+    wsi_means = {}
+    patch_count = {}
+    sorted_acq = sorted(list(acqs.keys()))
+    for k in sorted_acq:
+        wsi_means.setdefault(k,{})
+        patch_count[k] = []
+        for w in acqs[k]:
+            wsis.setdefault(w,[])
+            patch_count[k].append(len(acqs[k][w]))
+            wsis[w].extend(acqs[k][w])
+        total_patches += sum(patch_count[k])
+        print("Patches to cluster: {}".format(total_patches))
+        for s in wsis:
+            n_patches = len(wsis[s])
+            wsi_means[k].setdefault(s,0.0)
+            if config.nc > 0:
+                features = []
+                for p in range(n_patches):
+                    if not wsis[s][p].getCoord() is None:
+                        features.append(wsis[s][p].getCoord())
+                features = np.asarray(features)
+                if features.shape[0] > config.minp:
+                    km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
+                    wsi_means[k][s] = _process_wsi_cluster(km,s,wsis[s],config)
+
+    if config.save:
+        with open(os.path.join(config.sdir,'acquisition_stats.pik'),'wb') as fd:
+            pickle.dump((wsis,wsi_means,patch_count),fd)
+        slides = wsis.keys()
+        print("Slides ({}): {}".format(len(slides),"\n".join([" - {}".format(sn) for sn in slides])))
+        print("\n")
+        print(wsi_means)
+        print("\n")
+        print(patch_count)
+
 if __name__ == "__main__":
 
 
@@ -720,7 +783,11 @@ if __name__ == "__main__":
     parser.add_argument('-pinit', action='store_true', dest='pinit',
         help='Parse and extract initial training set, if it exists.',default=False)
     parser.add_argument('-ctest', action='store_true', dest='ctest',
-        help='Check acquired and sampled sets against test set.',default=False)    
+        help='Check acquired and sampled sets against test set.',default=False)
+    parser.add_argument('-ni', action='store_false', dest='info',
+        help='Do NOT display info.',default=True)
+    parser.add_argument('-bplot', action='store_true', dest='bplot',
+        help='Save plotable data.',default=False)    
     
     config, unparsed = parser.parse_known_args()
 
@@ -729,7 +796,9 @@ if __name__ == "__main__":
     elif config.cluster:
         process_cluster_metadata(config)
     elif config.wsi:
-        process_wsi_metadata(config)
+        wsis,acqs = process_wsi_metadata(config)
+        if config.bplot:
+            process_wsi_plot(config,acqs)
     elif not config.trainset is None:
         process_train_set(config)
     else:

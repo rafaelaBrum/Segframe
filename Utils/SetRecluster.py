@@ -74,7 +74,7 @@ def run_clustering(config,data,net_model,nclasses):
                                       batch_size=config.batch_size,
                                       image_generator=train_prep,
                                       extra_aug=False,
-                                      shuffle=True,
+                                      shuffle=False,
                                       verbose=config.verbose)
 
     if not net_model.is_ensemble():
