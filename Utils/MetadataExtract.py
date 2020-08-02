@@ -429,6 +429,10 @@ def process_wsi_metadata(config):
             continue
             
         ac_patches = len(ac_imgs[k][0])
+
+        if ac_patches == 0:
+            continue
+        
         total_patches += ac_patches
         pos_count = 0
         for ic in range(ac_patches):
@@ -720,7 +724,7 @@ def process_wsi_plot(config,acqs):
                     wsi_means[k][s] = _process_wsi_cluster(km,s,wsis[s],config)
 
     if config.save:
-        with open(os.path.join(config.sdir,'acquisition_stats.pik'),'wb') as fd:
+        with open(os.path.join(config.sdir,'acquisition_stats_NC-{}.pik'.format(config.nc)),'wb') as fd:
             pickle.dump((wsis,wsi_means,patch_count),fd)
         slides = wsis.keys()
         print("Slides ({}): {}".format(len(slides),"\n".join([" - {}".format(sn) for sn in slides])))

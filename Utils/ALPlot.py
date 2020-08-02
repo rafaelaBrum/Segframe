@@ -87,7 +87,7 @@ class Plotter(object):
             sub_acq = sub_acq[0] if isinstance(sub_acq,list) else sub_acq
         for k in range(len(data)):
             if subfig:
-                indexes,unc,clusters = data[k]
+                indexes,unc,clusters,_ = data[k]
             elif len(data[k]) == 3:
                 indexes,unc,_ = data[k]
             else:
@@ -145,7 +145,7 @@ class Plotter(object):
         ax.grid(True)
         plt.show()
 
-    def draw_cluster_distribution(self,data,spread=1.0,title=''):
+    def draw_cluster_distribution(self,clusters,spread=1.0,title=''):
         """
         Data is returned by parseSlurm. 'clusters' key refers to a dictionary with cluster number as keys. Values are lists:
         [(x,y),(...),...] -> x: number of positive samples; y: number of negative samples
@@ -153,48 +153,43 @@ class Plotter(object):
         mpl.rcParams['agg.path.chunksize'] = 1000000
         plots = []
         pl1,pl2 = None,None
-        clusters = data['cluster']
-        xticks = sorted(list(clusters.keys()))
-        selu = lambda x: x if x[0] > x[1] else None
-        sell = lambda x: x if x[0] < x[1] else None
-        
-        #Compute items total
-        total = 0
-        for c in clusters:
-            citems = np.asarray(clusters[c])
-            total += np.sum(citems)
+        xticks = range(0,len(clusters.keys())+1)
+        selu = lambda x: x if x[0] < x[1] else None
+        sell = lambda x: x if x[0] > x[1] else None
 
         xu,yu = [],[]
         xl,yl = [],[]
         a1,a2 = [],[]
-        for k in clusters:
-            upper = list(filter(lambda x: not x is None,[selu(x) for x in clusters[k]]))
-            lower = list(filter(lambda x: not x is None,[sell(x) for x in clusters[k]]))
-            a1.extend([50000*((i[0]+i[1])/total) for i in upper])
-            a2.extend([50000*((j[0]+j[1])/total) for j in lower])
+        for acq in clusters:
+            upper = list(filter(lambda x: not x is None,[selu(clusters[acq][x]) for x in clusters[acq]]))
+            lower = list(filter(lambda x: not x is None,[sell(clusters[acq][x]) for x in clusters[acq]]))
 
-            xu.extend(np.random.rand(len(upper))*spread+xticks[k])
-            yu.extend([x[0]/(x[0]+x[1]) for x in upper])
-            xl.extend(np.random.rand(len(lower))*spread+xticks[k])
-            yl.extend([x[1]/(x[0]+x[1]) for x in lower])
-            #pl1 = plt.plot(np.random.rand(len(upper))*spread+xticks[k],[x[0]/(x[0]+x[1]) for x in upper],
-            #                   'ob',markersize=5,alpha=0.5)
-            #pl2 = plt.plot(np.random.rand(len(lower))*spread+xticks[k],[x[1]/(x[0]+x[1]) for x in lower],
-            #                   'or',markersize=5,alpha=0.5)
+            #print("Upper ({}): {}".format(len(upper),upper))
+            #print("Lower ({}): {}".format(len(lower),lower))
+            total = sum([i[0] + i[1] for i in upper]) + sum([j[0] + j[1] for j in lower])
             
+            a1.extend([1200*((i[0]+i[1])/total) for i in upper])
+            a2.extend([1200*((j[0]+j[1])/total) for j in lower])
+
+            xu.extend(np.random.rand(len(upper))*spread+xticks[acq])
+            yu.extend([x[1]/(x[0]+x[1]) for x in upper])
+            xl.extend(np.random.rand(len(lower))*spread+xticks[acq])
+            yl.extend([x[0]/(x[0]+x[1]) for x in lower])
+
         pl1 = plt.scatter(xu,yu,s=a1,c='blue',alpha=0.5,label='Positive')
         pl2 = plt.scatter(xl,yl,s=a2,c='red',alpha=0.5,label='Negative')
             
         #Horizontal line at y=0.5
         plt.plot(xticks,[0.5]*len(xticks),'g--',markersize=3)
 
-        plt.legend(loc=4,ncol=2)
-        xticks = list(range(5,len(clusters)+5,5))
-        plt.axis([0,xticks[-1]+1,0.4,1.1])
+        plt.legend(loc=4,ncol=2,prop=dict(weight='bold'))
+        xticks = list(range(0,len(clusters)+spread,spread))
+        yticks = list(np.arange(0.3, 0.9, 0.2)).append(1.0)
+        plt.axis([xticks[0],xticks[-1],0.4,1.1])
         plt.xticks(xticks)
-        plt.yticks(np.arange(0.4, 1.1, 0.2))
+        plt.yticks(yticks)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
-        plt.xlabel("Cluster #")
+        plt.xlabel("Acquisition #")
         plt.ylabel("Percentage")
 
         plt.tight_layout()
@@ -540,14 +535,14 @@ class Plotter(object):
                         ax1.set_ylabel("WSI #",color=y_color)
                         pl=ax1.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                         ax1.tick_params(axis='y', labelcolor=y_color)
-                        ax1.set_yticks(np.arange(data[k][m].min(), data[k][m].max(), ytick))
+                        ax1.set_yticks(np.arange(min(data[k][m].min(),20), data[k][m].max()+ytick, ytick))
                         if multi_label:
                             ax2 = ax1.twinx()
                     else:
                         ax2.set_ylabel("WSI #",color=y_color)
                         pl=ax2.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                         ax2.tick_params(axis='y', labelcolor=y_color)
-                        ax2.set_yticks(np.arange(data[k][m].min(), data[k][m].max(), ytick))
+                        ax2.set_yticks(np.arange(min(data[k][m].min(),20), data[k][m].max()+ytick, ytick))
 
                 elif m == 'wsimeandis':
                     if multi_label:
@@ -792,7 +787,7 @@ class Plotter(object):
 
         return split_data
 
-    def parseResults(self,path,al_dirs,n_ids=None,maxx=None,concat=False,wsi=False):
+    def parseResults(self,path,al_dirs,n_ids=None,maxx=None,concat=False,wsi=False,ncf=20):
 
         def parseDirs(path,al_dirs,concat):
             data = {}
@@ -803,7 +798,7 @@ class Plotter(object):
                     d_path = "{0}-{1}".format(path,al_dirs[d])
                 if os.path.isdir(d_path):
                     if wsi:
-                        data[al_dirs[d]] = self.compileWSIData(d_path,maxx=maxx,concat=concat)
+                        data[al_dirs[d]] = self.compileWSIData(d_path,maxx=maxx,concat=concat,ncf=ncf)
                     else:
                         data[al_dirs[d]] = self.parseSlurm(d_path,maxx=maxx,concat=concat)
                 else:
@@ -822,7 +817,7 @@ class Plotter(object):
         else:
             return parseDirs(path,al_dirs,concat)
 
-    def compileWSIData(self,path=None,maxx=None,concat=False):
+    def compileWSIData(self,path=None,maxx=None,concat=False,ncf=20):
         import pickle
         
         if path is None and self.path is None:
@@ -834,7 +829,7 @@ class Plotter(object):
             print("Parse a single file at a time")
             return None
 
-        stats_path = os.path.join(path,'acquisition_stats.pik')
+        stats_path = os.path.join(path,'acquisition_stats_NC-{}.pik'.format(ncf))
         if not os.path.isfile(stats_path):
             print("No stats file in folder: {}".format(path))
             sys.exit(1)
@@ -1095,9 +1090,10 @@ class Plotter(object):
             ind = None
             posa = {}
             un_clusters = {}
+            cl_labels = {}
             #print('ACQ {} ****************************'.format(acq))
             with open(os.path.join(config.sdir,fc),'rb') as fd:
-                _,clusters,un_indexes = pickle.load(fd)
+                (X,Y),clusters,un_indexes = pickle.load(fd)
             with open(os.path.join(config.sdir,fu),'rb') as fd:
                 _,uncertainties = pickle.load(fd)
 
@@ -1109,6 +1105,25 @@ class Plotter(object):
                 posa[k] = np.asarray(posa[k],dtype=np.int32)
                 un_clusters[k] = uncertainties[ind]
                 #print(posa[k])
+
+                #If debug
+                if config.debug:
+                    expected = Y
+                    #print("Cluster {}, # of items: {}".format(k,ind.shape[0]))
+                    #print("Cluster {} first items positions in index array (first 30): {}".format(k,posa[k][:30]))
+                    #Check % of items of each class in cluster k
+                    c_labels = expected[ind]
+                    unique,count = np.unique(c_labels,return_counts=True)
+                    l_count = dict(zip(unique,count))
+                    if len(unique) > 2:
+                        print("Cluster {} items:".format(k))
+                        print("\n".join(["label {0}: {1} items" .format(key,l_count[key]) for key in unique]))
+                    else:
+                        if unique.shape[0] == 1:
+                            l_count[unique[0] ^ 1] = 0
+                        #print("Cluster {3} labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1])),k))
+                        cl_labels[k] = (l_count[0],l_count[1])
+                    del(expected)                
             
             #Selection
             ac_count = 0
@@ -1132,7 +1147,7 @@ class Plotter(object):
 
             #print("Total selected: {}".format(len(acquired)))
             acquired = np.asarray(acquired[:config.query],dtype=np.int32)
-            return acquired,uncertainties,un_clusters
+            return acquired,uncertainties,un_clusters,cl_labels
         ####
         
         if not config.all:
@@ -1163,8 +1178,8 @@ class Plotter(object):
                 data.append((indexes,uncertainties))
         else:
             for k in range(len(cluster_files)):
-                indexes,uncertainties,un_clusters = kmuncert_acquire(cluster_files[k],unc_files[k],config,acq)
-                data.append((indexes,uncertainties,un_clusters))
+                indexes,uncertainties,un_clusters,cl_labels = kmuncert_acquire(cluster_files[k],unc_files[k],config,acq)
+                data.append((indexes,uncertainties,un_clusters,cl_labels))
                 acq += 1
             
         return data
@@ -1334,12 +1349,16 @@ if __name__ == "__main__":
         help='Plot experiment uncertainties selected acquisitions. Single or multiline.')
     parser.add_argument('-clusters', action='store_true', dest='clusters', default=False, 
         help='Plot cluster composition.')
+    parser.add_argument('-meta', action='store_true', dest='meta', default=False, 
+        help='Extract cluster data from pik metafiles.')
 
     ##Plot WSI metadata stats data
     parser.add_argument('--wsi', action='store_true', dest='wsi', default=False, 
         help='Plot data obtained by MetadataExtract.')
     parser.add_argument('-err_bar', action='store_true', dest='err_bar', default=False, 
         help='Plot error bars.')
+    parser.add_argument('-ncf', dest='ncf', type=int, 
+        help='Use the acquisition file correspondent to this number of clusters.', default=20,required=False)    
     
     config, unparsed = parser.parse_known_args()
 
@@ -1447,8 +1466,20 @@ if __name__ == "__main__":
             sys.exit(1)
 
         p = Plotter(path=config.sdir)
-        if config.clusters:
-            data = p.parseSlurm()
+        data = None
+        if config.meta and config.clusters:
+            full_data = p.retrieveUncertainty(config)
+            data = {k:full_data[k][3] for k in range(len(full_data))}
+        elif config.clusters:
+            full_data = p.parseSlurm()
+            if 'cluster' in full_data:
+                data = {}
+                cldata = full_data['cluster']
+                for cl in cldata:
+                    for i in range(len(cldata[cl])):
+                        data.setdefault(i,{})
+                        data[i][cl] = cldata[cl][i]
+                        
         else:
             data = p.generateDataFromPik()
         
@@ -1462,10 +1493,12 @@ if __name__ == "__main__":
             mdata = {'AL selected':data,
                     'AL trained':d2}
             p.draw_multiline(mdata,config.title,config.xtick)
-        elif config.clusters:
-            p.draw_cluster_distribution(data,config.spread,config.title)
-        else:
+        elif config.clusters and not data is None:
+            p.draw_cluster_distribution(data,config.spread[0],config.title)
+        elif not data is None:
             p.draw_data(data,config.title,'Acquisition #')
+        else:
+            print("No data to plot.")
 
     elif config.wsi:
         if config.sdir is None:
@@ -1485,7 +1518,7 @@ if __name__ == "__main__":
             
         p = Plotter()
 
-        data = p.parseResults(exp_type,config.ids,config.n_exp,config.maxx,config.concat,wsi=True)
+        data = p.parseResults(exp_type,config.ids,config.n_exp,config.maxx,config.concat,wsi=True,ncf=config.ncf)
 
         p.draw_wsi_stat(data,config.title,config.labels,config.metrics,config.colors,config.ytick,config.err_bar)
 
