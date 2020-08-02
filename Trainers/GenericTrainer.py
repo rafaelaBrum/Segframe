@@ -115,7 +115,7 @@ class Trainer(object):
         train_data,val_data = None,None
         if self._config.sample != 1.0:
             X,Y,self.sample_idx = self._ds.sample_metadata(self._config.sample,data=(X,Y),pos_rt=self._config.pos_rt)
-            self._ds.check_paths(train_data,self._config.predst)
+            self._ds.check_paths(X,self._config.predst)
 
         #After test set is separated, after data sampling is done, now split train and val
         train_data,val_data = self._ds.split_metadata(self._config.split[:2],data=(X,Y))
