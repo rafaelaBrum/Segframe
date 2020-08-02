@@ -105,23 +105,20 @@ class Trainer(object):
         """
 
         net_model = self.load_modules()
-        
-        self._ds.load_metadata()
+
+        #Test set splitting done in the same code now, outside GenericDatasource
+        _,_,X,Y = split_test(self._config,self._ds)
 
         self._rex = self._rex.format(net_model.name)
 
         #Define training data
-        #TODO: if wsi_split extract test first, then do sampling with the remaining data
         train_data,val_data = None,None
         if self._config.sample != 1.0:
-            data_sample = self._ds.sample_metadata(self._config.sample,self._config.pos_rt)
-            train_data,val_data,_ = self._ds.split_metadata(split=self._config.split,data=data_sample)
+            X,Y,self.sample_idx = self._ds.sample_metadata(self._config.sample,data=(X,Y),pos_rt=self._config.pos_rt)
+            self._ds.check_paths(train_data,self._config.predst)
 
-        elif self._config.wsi_split > 0:
-            _,_,X,Y = split_test(self._config,self._ds)
-            train_data,val_data,_ = self._ds.split_metadata(split=self._config.split[:2],data=(X,Y))
-        else:
-            train_data,val_data,_ = self._ds.split_metadata(self._config.split)        
+        #After test set is separated, after data sampling is done, now split train and val
+        train_data,val_data = self._ds.split_metadata(self._config.split[:2],data=(X,Y))
 
         sw_thread = self.train_model(net_model,train_data,val_data)
         return sw_thread.join()
@@ -263,6 +260,8 @@ class Trainer(object):
                 print("Training items:")
                 print("\n".join(["label {0}: {1} items" .format(key,l_count[key]) for key in unique]))
             else:
+                if unique.shape[0] == 1:
+                    l_count[unique[0] ^ 1] = 0
                 print("Train labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
             
             unique,count = np.unique(val_data[1],return_counts=True)
