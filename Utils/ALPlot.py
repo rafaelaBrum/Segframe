@@ -196,7 +196,7 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
         
-    def draw_stats(self,data,xticks,auc_only,labels=None,spread=1,title='',colors=None):
+    def draw_stats(self,data,xticks,auc_only,labels=None,spread=1,title='',colors=None,yscale=False):
         """
         @param data <list>: a list as returned by calculate_stats
         """
@@ -210,6 +210,9 @@ class Plotter(object):
         xmax = 0
 
         plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
+        if labels is None:
+            labels = [l[3] for l in data]
+            
         for d in data:
             x_data,y_data,ci,y_label,color = d
             if not colors is None and colors[lbcount] >= 0:
@@ -250,12 +253,14 @@ class Plotter(object):
             plt.ylabel(y_label)
                 
         # Label the axes and provide a title
-        if labels is None:
-            labels = ['Mean','{} STD'.format(confidence)]
-        plt.legend(plots,labels=labels,loc=4,ncol=2,prop=dict(weight='bold'))
+        plt.legend(plots,labels=labels,loc=0,ncol=2,prop=dict(weight='bold'))
         plt.xticks(np.arange(min(x_data), xmax+xticks, xticks))
-        ydelta = (1.0 - low)/10
-        rg = np.clip(np.arange(max(low,0.0), up if up <= 1.05 else 1.05, ydelta),0.0,1.0)
+        #ydelta = (1.0 - low)/10
+        ydelta = 0.05
+        if yscale:
+            rg = np.clip(np.arange(max(low,0.0), up + ydelta, ydelta),0.0,1.0)
+        else:
+            rg = np.clip(np.arange(0.55, 0.9, ydelta),0.0,1.0)
         np.around(rg,2,rg)
         plt.yticks(rg)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
@@ -435,13 +440,13 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
 
-    def draw_wsi_stat(self,data,title,labels=None,metrics=None,colors=None,ytick=None,err_bar=False):
+    def draw_wsi_stat(self,data,title,labels=None,metrics=None,colors=None,ytick=None,xtick=None,err_bar=False):
         from matplotlib.legend import Legend
         
         color = 0
         line = 0
         marker = 0
-        min_x = 0
+        min_x = np.inf
         max_x = 0
         min_y = 0
         max_y = 0
@@ -480,8 +485,10 @@ class Plotter(object):
             color = color % len(palette.colors)
 
             lmax = data[k]['trainset'].max()
+            lmin = data[k]['trainset'].min()
             max_x = max_x if lmax < max_x else lmax
-
+            min_x = min_x if lmin > min_x else lmin
+            
             y_color = '#000000'
             for m in metrics:
                 if not m in data[k]:
@@ -505,6 +512,7 @@ class Plotter(object):
                     maxerr = (data[k]['pdp'] + data[k][m]).max()
                     max_y = max_y if maxerr < max_y else maxerr
                     yticks = np.arange(0.0, max_y, ytick)
+                    print(yticks)
                     #This limits lower error bars so it won't go below 0
                     yerr = [data[k]['pdp']-(np.clip(data[k]['pdp']-data[k][m],0.0,maxerr)),np.clip(data[k]['pdp'],0.0,100)]
                     if ax2 is None:
@@ -548,7 +556,7 @@ class Plotter(object):
                     if multi_label:
                         ytick = 200
                     if ax2 is None:
-                        ax1.set_ylabel("Mean patch dispersion (pixels)",color=y_color)
+                        ax1.set_ylabel("Mean patch distance (pixels)",color=y_color)
                         pl=ax1.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                         ax1.tick_params(axis='y', labelcolor=y_color)
                         #print("Experiment ({}): {} - {} elements".format(k,data[k][m],data[k][m].shape[0]))
@@ -570,12 +578,11 @@ class Plotter(object):
                 lines += lines2
             ax1.legend(lines,labels,loc=0,ncol=2,prop=dict(weight='bold'))
 
-            
-        ax1.set_xticks(np.arange(min_x, max_x+1,1))
+        ax1.set_xticks(np.arange(min_x, max_x+1,xtick))
         if max_x > 1000:
             plt.setp(ax1.get_xticklabels(),rotation=30)
         ax1.set_title(title, loc='left', fontsize=12, fontweight=0, color='orange')
-        ax1.set_xlabel("Acquisition #")
+        ax1.set_xlabel("Train set size")
         plt.tight_layout()
         ax1.grid(True)
         plt.show()
@@ -747,7 +754,7 @@ class Plotter(object):
         elif not other is None:
             plt.yticks(np.arange(max(0,min(min_t)-319), max(min(min_t)+3600,max(max_t)),1200))
         else:
-            plt.yticks(np.arange(min(0.6,min(min_y)), 1.05, 0.05))
+            plt.yticks(np.arange(min(0.6,min(min_y)), 1.0, 0.05))
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         plt.xlabel("Training set size")
 
@@ -817,7 +824,7 @@ class Plotter(object):
         else:
             return parseDirs(path,al_dirs,concat)
 
-    def compileWSIData(self,path=None,maxx=None,concat=False,ncf=20):
+    def compileWSIData(self,path=None,maxx=None,concat=False,ncf=20,init_train=500):
         import pickle
         
         if path is None and self.path is None:
@@ -838,13 +845,20 @@ class Plotter(object):
             wsis,wsi_means,patch_count = pickle.load(fd)
 
         data = {}
-        data['trainset'] = np.asarray(sorted(list(patch_count.keys())))
-        data['pmean'] = np.asarray([np.mean(patch_count[k]) for k in data['trainset']])
-        data['pdp'] = np.asarray([np.std(patch_count[k]) for k in data['trainset']])
-        data['wsicount'] = np.asarray([len(wsi_means[k]) for k in data['trainset']])
+        data['trainset'] = np.asarray([sum(patch_count[k]) for k in sorted(list(patch_count.keys()))])
+        #Workaround to get trainset size for each acquisition
+        csize = init_train
+        for i in range(data['trainset'].shape[0]):
+            acq = data['trainset'][i]
+            data['trainset'][i] = csize
+            csize += acq
+        data['acqn'] = np.asarray(sorted(list(patch_count.keys())))
+        data['pmean'] = np.asarray([np.mean(patch_count[k]) for k in data['acqn']])
+        data['pdp'] = np.asarray([np.std(patch_count[k]) for k in data['acqn']])
+        data['wsicount'] = np.asarray([len(wsi_means[k]) for k in data['acqn']])
 
         wsimeandis = []
-        for k in data['trainset']:
+        for k in data['acqn']:
             distances = []
             for w in wsi_means[k]:
                 if wsi_means[k][w] > 0.0:
@@ -854,6 +868,21 @@ class Plotter(object):
             else:
                 wsimeandis.append(0.0)
         data['wsimeandis'] = np.asarray(wsimeandis)
+
+        if not maxx is None:
+            if maxx > np.max(data['trainset']):
+                print("Stats file ({}) does not have that many samples ({}). Maximum is {}.".format(stats_path,maxx,np.max(data['trainset'])))
+                #sys.exit(1)
+                upl = data['trainset'].shape[0]
+            else:
+                upl = np.where(data['trainset'] >= maxx)[0][0]
+                upl += 1
+
+            data['trainset'] = data['trainset'][:upl]
+            data['wsicount'] = data['wsicount'][:upl]
+            data['pmean'] = data['pmean'][:upl]
+            data['pdp'] = data['pdp'][:upl]
+            data['wsimeandis'] = data['wsimeandis'][:upl]
         return data
         
     def format_func(self,x, pos):
@@ -1520,5 +1549,5 @@ if __name__ == "__main__":
 
         data = p.parseResults(exp_type,config.ids,config.n_exp,config.maxx,config.concat,wsi=True,ncf=config.ncf)
 
-        p.draw_wsi_stat(data,config.title,config.labels,config.metrics,config.colors,config.ytick,config.err_bar)
+        p.draw_wsi_stat(data,config.title,config.labels,config.metrics,config.colors,config.ytick,config.xtick[0],config.err_bar)
 
