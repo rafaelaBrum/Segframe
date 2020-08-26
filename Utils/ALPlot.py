@@ -145,52 +145,72 @@ class Plotter(object):
         ax.grid(True)
         plt.show()
 
-    def draw_cluster_distribution(self,clusters,spread=1.0,title=''):
+    def draw_cluster_distribution(self,data,draw_unc=False,spread=1.0,title=''):
         """
-        Data is returned by parseSlurm. 'clusters' key refers to a dictionary with cluster number as keys. Values are lists:
+        Data is returned by parseSlurm. 'labels' key refers to a dictionary with cluster number as keys. Values are lists:
         [(x,y),(...),...] -> x: number of positive samples; y: number of negative samples
         """
+        clusters = data['labels']
         mpl.rcParams['agg.path.chunksize'] = 1000000
         plots = []
         pl1,pl2 = None,None
         xticks = range(0,len(clusters.keys())+1)
-        selu = lambda x: x if x[0] < x[1] else None
-        sell = lambda x: x if x[0] > x[1] else None
+        selu = lambda x: x if clusters[acq][x][0] < clusters[acq][x][1] else None
+        sell = lambda x: x if clusters[acq][x][0] > clusters[acq][x][1] else None
 
         xu,yu = [],[]
         xl,yl = [],[]
         a1,a2 = [],[]
+            
         for acq in clusters:
-            upper = list(filter(lambda x: not x is None,[selu(clusters[acq][x]) for x in clusters[acq]]))
-            lower = list(filter(lambda x: not x is None,[sell(clusters[acq][x]) for x in clusters[acq]]))
+            upper = list(filter(lambda x: not x is None,[selu(x) for x in range(len(clusters[acq]))]))
+            lower = list(filter(lambda x: not x is None,[sell(x) for x in range(len(clusters[acq]))]))
 
             #print("Upper ({}): {}".format(len(upper),upper))
             #print("Lower ({}): {}".format(len(lower),lower))
-            total = sum([i[0] + i[1] for i in upper]) + sum([j[0] + j[1] for j in lower])
-            
-            a1.extend([1200*((i[0]+i[1])/total) for i in upper])
-            a2.extend([1200*((j[0]+j[1])/total) for j in lower])
+            total = sum([clusters[acq][i][0] + clusters[acq][i][1] for i in upper]) + sum([clusters[acq][j][0] + clusters[acq][j][1] for j in lower])
+
+            a1.extend([1200*((clusters[acq][i][0]+clusters[acq][i][1])/total) for i in upper])
+            a2.extend([1200*((clusters[acq][j][0]+clusters[acq][j][1])/total) for j in lower])
 
             xu.extend(np.random.rand(len(upper))*spread+xticks[acq])
-            yu.extend([x[1]/(x[0]+x[1]) for x in upper])
             xl.extend(np.random.rand(len(lower))*spread+xticks[acq])
-            yl.extend([x[0]/(x[0]+x[1]) for x in lower])
+            if draw_unc:
+                lyu = [np.mean(data['unc'][acq][x]) for x in upper]
+                lyl = [np.mean(data['unc'][acq][x]) for x in lower]
+                ll = lyu + lyl
+                umean = np.mean(ll)
+                yu.extend(lyu)
+                yl.extend(lyl)
+                del(ll)
+                plt.plot(list(np.arange(xticks[acq],xticks[acq]+spread,0.1)),[umean]*10,'g--',markersize=3)
+            else:
+                yu.extend([clusters[acq][x][1]/(clusters[acq][x][0]+clusters[acq][x][1]) for x in upper])
+                yl.extend([clusters[acq][x][0]/(clusters[acq][x][0]+clusters[acq][x][1]) for x in lower])
 
         pl1 = plt.scatter(xu,yu,s=a1,c='blue',alpha=0.5,label='Positive')
         pl2 = plt.scatter(xl,yl,s=a2,c='red',alpha=0.5,label='Negative')
             
         #Horizontal line at y=0.5
-        plt.plot(xticks,[0.5]*len(xticks),'g--',markersize=3)
+        if not draw_unc:
+            plt.plot(xticks,[0.5]*len(xticks),'g--',markersize=3)
 
-        plt.legend(loc=4,ncol=2,prop=dict(weight='bold'))
+        plt.legend(loc=0,ncol=2,prop=dict(weight='bold'))
         xticks = list(range(0,len(clusters)+spread,spread))
-        yticks = list(np.arange(0.3, 0.9, 0.2)).append(1.0)
-        plt.axis([xticks[0],xticks[-1],0.4,1.1])
+        if draw_unc:
+            maxy = max(max(yu,yl))
+            yticks = list(np.arange(0.0,maxy,0.01))
+            plt.ylabel("Uncertainty mean")
+            plt.axis([xticks[0],xticks[-1],0.01,maxy+0.001])
+        else:
+            yticks = list(np.arange(0.3, 0.9, 0.2)).append(1.0)
+            plt.ylabel("Percentage")
+            plt.axis([xticks[0],xticks[-1],0.4,1.1])
         plt.xticks(xticks)
         plt.yticks(yticks)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         plt.xlabel("Acquisition #")
-        plt.ylabel("Percentage")
+
 
         plt.tight_layout()
         plt.grid(True)
@@ -587,9 +607,9 @@ class Plotter(object):
         ax1.grid(True)
         plt.show()
         
-    def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False,other=None,colors=None):
+    def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False,other=None,colors=None,maxy=None):
         
-        #print("Colors: {}".format(len(palette.colors)))
+        import matplotlib.patches as mpatches
             
         color = 0
         line = 0
@@ -601,7 +621,7 @@ class Plotter(object):
         max_y = []
         min_t = []
         max_t = []
-        metric_label = []
+        metric_patches = None
         lbcount = 0
         nexp = len(data)
 
@@ -665,8 +685,9 @@ class Plotter(object):
                 max_y.append(data[k]['auc'].max())
                 print(data[k]['trainset'])
             elif not other is None:
-                if len(other) > 1:
-                    print("Multilabel plot only supports a single metric. Using the first one provided ({})".format(other[0]))
+                nmetrics = len(other)
+                if nmetrics > 1:
+                    print("Stacked bar plot selected. Using the first one provided ({}) as reference".format(other[0]))
                 metric = other[0]
                 if not metric in data[k]:
                     print("Requested metric not available: {}".format(metric))
@@ -678,7 +699,10 @@ class Plotter(object):
                 if tdata.shape[0] == 0:
                     lbcount += 1
                     continue
-                
+
+                if metric_patches is None:
+                    metric_patches = []
+                    
                 #Repeat last point if needed
                 if data[k]['trainset'].shape[0] > tdata.shape[0]:
                     print("Shape mismatch:\n Trainset: {}; {}:{}".format(data[k]['trainset'].shape,tdata.shape,metric))
@@ -699,8 +723,24 @@ class Plotter(object):
                     lbcount += 1
 
                 bar_x = data[k]['trainset'] + (lbcount-(nexp/2))*30
-                metric_label.append(lb)
-                plt.bar(bar_x,tdata,width=30,color=palette(color),label=lb)
+
+                if nmetrics > 1:
+                    bottom = np.zeros(len(tdata))
+                    colorf = 0.75
+                    for m in range(1,nmetrics):
+                        if m < nmetrics - 1:
+                            bottom += data[k][other[m+1]]
+                            colorf *= 0.75
+                        mcolor = np.asarray(palette(color)) * colorf
+                        #Repeat last point if needed
+                        bar_y = data[k][other[m]]
+                        if bar_x.shape[0] > bar_y.shape[0]:
+                            bar_y = np.hstack((bar_y,bar_y[-1:]))
+                        plt.bar(bar_x,bar_y,width=30,color=mcolor,bottom=bottom)
+                    plt.bar(bar_x,tdata-bar_y,width=30,color=palette(color),label=lb,bottom=bar_y)
+                else:
+                    plt.bar(bar_x,tdata,width=30,color=palette(color),label=lb)
+                metric_patches.append(mpatches.Patch(color=palette(color),label=lb))
                 #plt.plot(data[k]['trainset'],tdata,'bo',marker=markers[marker],linestyle='',color=palette(color),alpha=0.9,label=lb)
                 formatter = FuncFormatter(self.format_func)
                 ax.yaxis.set_major_formatter(formatter)
@@ -742,7 +782,7 @@ class Plotter(object):
 
 
         if not other is None:
-            plt.legend(loc=0,ncol=2,labels=metric_label,prop=dict(weight='bold'))
+            plt.legend(handles=metric_patches,loc=0,ncol=2,prop=dict(weight='bold'))
         else:
             plt.legend(loc=0,ncol=2,labels=config.labels,prop=dict(weight='bold'))
             
@@ -754,7 +794,7 @@ class Plotter(object):
         elif not other is None:
             plt.yticks(np.arange(max(0,min(min_t)-319), max(min(min_t)+3600,max(max_t)),1200))
         else:
-            plt.yticks(np.arange(min(0.6,min(min_y)), 1.0, 0.05))
+            plt.yticks(np.arange(min(0.6,min(min_y)), maxy, 0.05))
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         plt.xlabel("Training set size")
 
@@ -1133,7 +1173,6 @@ class Plotter(object):
                     posa[k].append(np.where(un_indexes == ind[ii])[0][0])
                 posa[k] = np.asarray(posa[k],dtype=np.int32)
                 un_clusters[k] = uncertainties[ind]
-                #print(posa[k])
 
                 #If debug
                 if config.debug:
@@ -1189,17 +1228,20 @@ class Plotter(object):
                 if os.path.isfile(os.path.join(config.sdir,unc_file)):
                     unc_files.append(unc_file)
         else:
-            items = os.listdir(config.sdir)            
+            items = os.listdir(config.sdir)
             for f in items:
                 if f.startswith('al-clustermetadata'):
                     cluster_files.append(f)
                 elif f.startswith('al-uncertainty'):
                     unc_files.append(f)
+            if len(unc_files) == 0 and len(cluster_files) == 0:
+                print("No data to plot. Perhaps the wrong experiment dir was used.")
+                sys.exit(1)
 
         data = []
         cluster_files.sort(key=sort_key)
         unc_files.sort(key=sort_key)
-        
+
         if len(cluster_files) == 0:
             for f in unc_files:
                 with open(os.path.join(config.sdir,f),'rb') as fd:
@@ -1312,6 +1354,8 @@ if __name__ == "__main__":
         help='ytick interval.', default=200,required=False)
     parser.add_argument('-maxx', dest='maxx', type=int, 
         help='Plot maximum X.', default=None,required=False)
+    parser.add_argument('-maxy', dest='maxy', type=float, 
+        help='Plot maximum X.', default=0.9,required=False)
     parser.add_argument('-t', dest='title', type=str,default='AL Experiment', 
         help='Figure title.')
     parser.add_argument('-labels', dest='labels', nargs='+', type=str, 
@@ -1362,7 +1406,7 @@ if __name__ == "__main__":
         help='Plot all acquisitions.')
     parser.add_argument('-ac_func', dest='ac_func', type=str,default='bayesian_bald', 
         help='Function to look for uncertainties.')
-    parser.add_argument('-sp', dest='spread', nargs=1, type=int, 
+    parser.add_argument('-sp', dest='spread', type=int, 
         help='Spread points in interval.', default=10,required=False)
     parser.add_argument('-kmu', action='store_true', dest='kmu', default=False, 
         help='Plot cluster patch uncertainties.')
@@ -1380,6 +1424,8 @@ if __name__ == "__main__":
         help='Plot cluster composition.')
     parser.add_argument('-meta', action='store_true', dest='meta', default=False, 
         help='Extract cluster data from pik metafiles.')
+    parser.add_argument('-unc', action='store_true', dest='draw_unc', default=False, 
+        help='Use cluster uncertainties.')
 
     ##Plot WSI metadata stats data
     parser.add_argument('--wsi', action='store_true', dest='wsi', default=False, 
@@ -1420,7 +1466,7 @@ if __name__ == "__main__":
             if len(data) == 0:
                 print("Something is wrong with your command options. No data to plot")
                 sys.exit(1)        
-            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos,config.auc_only,config.metrics,config.colors)
+            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos,config.auc_only,config.metrics,config.colors,config.maxy)
                 
     elif config.single:
         p = Plotter(path=config.sdir)
@@ -1437,8 +1483,7 @@ if __name__ == "__main__":
             sys.exit(1)
             
         data = p.retrieveUncertainty(config)
-        if isinstance(config.spread,list):
-            config.spread = config.spread[0]
+
         if len(data) == 0:
             print("Something is wrong with your command options. No data to plot")
             sys.exit(1)
@@ -1495,19 +1540,20 @@ if __name__ == "__main__":
             sys.exit(1)
 
         p = Plotter(path=config.sdir)
-        data = None
+        data = {}
         if config.meta and config.clusters:
             full_data = p.retrieveUncertainty(config)
-            data = {k:full_data[k][3] for k in range(len(full_data))}
+            data['labels'] = {k:full_data[k][3] for k in range(len(full_data))}
+            data['unc'] = {k:full_data[k][2] for k in range(len(full_data))}
+            data['ind'] = {k:full_data[k][0] for k in range(len(full_data))}
         elif config.clusters:
             full_data = p.parseSlurm()
             if 'cluster' in full_data:
-                data = {}
                 cldata = full_data['cluster']
                 for cl in cldata:
                     for i in range(len(cldata[cl])):
-                        data.setdefault(i,{})
-                        data[i][cl] = cldata[cl][i]
+                        data['labels'].setdefault(i,{})
+                        data['labels'][i][cl] = cldata[cl][i]
                         
         else:
             data = p.generateDataFromPik()
@@ -1523,7 +1569,7 @@ if __name__ == "__main__":
                     'AL trained':d2}
             p.draw_multiline(mdata,config.title,config.xtick)
         elif config.clusters and not data is None:
-            p.draw_cluster_distribution(data,config.spread[0],config.title)
+            p.draw_cluster_distribution(data,config.draw_unc,config.spread,config.title)
         elif not data is None:
             p.draw_data(data,config.title,'Acquisition #')
         else:
