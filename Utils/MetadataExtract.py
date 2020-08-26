@@ -723,15 +723,12 @@ def process_wsi_plot(config,acqs):
                     km = KMeans(n_clusters = config.nc, init='k-means++',n_jobs=2).fit(features)
                     wsi_means[k][s] = _process_wsi_cluster(km,s,wsis[s],config)
 
-    if config.save:
-        with open(os.path.join(config.sdir,'acquisition_stats_NC-{}.pik'.format(config.nc)),'wb') as fd:
-            pickle.dump((wsis,wsi_means,patch_count),fd)
-        slides = wsis.keys()
-        print("Slides ({}): {}".format(len(slides),"\n".join([" - {}".format(sn) for sn in slides])))
-        print("\n")
-        print(wsi_means)
-        print("\n")
-        print(patch_count)
+
+    with open(os.path.join(config.sdir,'acquisition_stats_NC-{}.pik'.format(config.nc)),'wb') as fd:
+        pickle.dump((wsis,wsi_means,patch_count),fd)
+    slides = wsis.keys()
+    print("Slides ({}): {}".format(len(slides),"\n".join([" - {}".format(sn) for sn in slides])))
+
 
 if __name__ == "__main__":
 
