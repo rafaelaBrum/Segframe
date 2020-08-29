@@ -145,67 +145,72 @@ class Plotter(object):
         ax.grid(True)
         plt.show()
 
-    def draw_cluster_distribution(self,data,draw_unc=False,spread=1.0,title=''):
+    def draw_cluster_distribution(self,data,spread=1.0,title=''):
         """
         Data is returned by parseSlurm. 'labels' key refers to a dictionary with cluster number as keys. Values are lists:
-        [(x,y),(...),...] -> x: number of positive samples; y: number of negative samples
+        [(x,y),(...),...] -> x: number of negative samples; y: number of positive samples
         """
+        import scipy.stats as st
+        
         clusters = data['labels']
         mpl.rcParams['agg.path.chunksize'] = 1000000
         plots = []
         pl1,pl2 = None,None
         xticks = range(0,len(clusters.keys())+1)
-        selu = lambda x: x if clusters[acq][x][0] < clusters[acq][x][1] else None
-        sell = lambda x: x if clusters[acq][x][0] > clusters[acq][x][1] else None
 
-        xu,yu = [],[]
-        xl,yl = [],[]
-        a1,a2 = [],[]
-            
+        X,Y = [],[]
+        a = []
+        py = []
+        
+        #Number of clusters in each acquisition should be the same
+        cn = len(clusters[0])
         for acq in clusters:
-            upper = list(filter(lambda x: not x is None,[selu(x) for x in range(len(clusters[acq]))]))
-            lower = list(filter(lambda x: not x is None,[sell(x) for x in range(len(clusters[acq]))]))
 
-            #print("Upper ({}): {}".format(len(upper),upper))
-            #print("Lower ({}): {}".format(len(lower),lower))
-            total = sum([clusters[acq][i][0] + clusters[acq][i][1] for i in upper]) + sum([clusters[acq][j][0] + clusters[acq][j][1] for j in lower])
+            #Total elements per acquisition
+            total = sum([clusters[acq][i][0] + clusters[acq][i][1] for i in clusters[acq]])
 
-            a1.extend([1200*((clusters[acq][i][0]+clusters[acq][i][1])/total) for i in upper])
-            a2.extend([1200*((clusters[acq][j][0]+clusters[acq][j][1])/total) for j in lower])
+            #Scatter sizes
+            a.extend([1200*((clusters[acq][i][0]+clusters[acq][i][1])/total) for i in clusters[acq]])
 
-            xu.extend(np.random.rand(len(upper))*spread+xticks[acq])
-            xl.extend(np.random.rand(len(lower))*spread+xticks[acq])
-            if draw_unc:
-                lyu = [np.mean(data['unc'][acq][x]) for x in upper]
-                lyl = [np.mean(data['unc'][acq][x]) for x in lower]
-                ll = lyu + lyl
-                umean = np.mean(ll)
-                yu.extend(lyu)
-                yl.extend(lyl)
-                del(ll)
-                plt.plot(list(np.arange(xticks[acq],xticks[acq]+spread,0.1)),[umean]*10,'g--',markersize=3)
-            else:
-                yu.extend([clusters[acq][x][1]/(clusters[acq][x][0]+clusters[acq][x][1]) for x in upper])
-                yl.extend([clusters[acq][x][0]/(clusters[acq][x][0]+clusters[acq][x][1]) for x in lower])
+            X.extend(np.random.rand(cn)*spread+xticks[acq])
+            #Percentage of positives
+            py.extend([clusters[acq][c][1]/(clusters[acq][c][0]+clusters[acq][c][1]) for c in clusters[acq]])
 
-        pl1 = plt.scatter(xu,yu,s=a1,c='blue',alpha=0.5,label='Positive')
-        pl2 = plt.scatter(xl,yl,s=a2,c='red',alpha=0.5,label='Negative')
             
-        #Horizontal line at y=0.5
-        if not draw_unc:
-            plt.plot(xticks,[0.5]*len(xticks),'g--',markersize=3)
+            cur_y = [np.mean(data['unc'][acq][x]) for x in range(cn)]
+            Y.extend(cur_y)
+            umean = np.mean(cur_y)
+            plt.plot(list(np.arange(xticks[acq],xticks[acq]+spread,0.1)),[umean]*10,'g--',markersize=3)
 
-        plt.legend(loc=0,ncol=2,prop=dict(weight='bold'))
+        a = np.asarray(a)
+        py = np.asarray(py)
+        X = np.asarray(X)
+        Y = np.asarray(Y)
+        colors = np.zeros((len(X),3))
+        #Red scale
+        colors[:,0] = 1 - py 
+        #Green scale
+        colors[:,1] = py
+        #Blue scale
+        colors[:,2] = py
+        pl1 = plt.scatter(X,Y,s=a,c=colors,alpha=0.5,label='Positive')
+                        
         xticks = list(range(0,len(clusters)+spread,spread))
-        if draw_unc:
-            maxy = max(max(yu,yl))
-            yticks = list(np.arange(0.0,maxy,0.01))
-            plt.ylabel("Uncertainty mean")
-            plt.axis([xticks[0],xticks[-1],0.01,maxy+0.001])
-        else:
-            yticks = list(np.arange(0.3, 0.9, 0.2)).append(1.0)
-            plt.ylabel("Percentage")
-            plt.axis([xticks[0],xticks[-1],0.4,1.1])
+
+        fig = plt.gcf()
+        maxy = max(Y)
+        yticks = list(np.arange(0.0,maxy,0.01))
+        plt.ylabel("Uncertainty mean")
+        plt.axis([-0.5,xticks[-1],0.01,maxy+0.001])
+        sort_idx = py.argsort()
+        colors = colors[sort_idx]
+        #Drop first 200 colors, as they tend to be very similar
+        colors = colors[200:]
+        final_colors = np.array([(0.0,0.8,0.8),(0.0,0.85,0.85),(0.0,0.9,0.9),(0.0,0.95,0.95),(0.0,1.0,1.0)])
+        colors = np.vstack((colors,final_colors))
+        cmap = ListedColormap(colors,name='Heatm')
+        fig.colorbar(mpl.cm.ScalarMappable(norm=None,cmap=cmap),label='Positive %')
+
         plt.xticks(xticks)
         plt.yticks(yticks)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
@@ -724,9 +729,11 @@ class Plotter(object):
 
                 bar_x = data[k]['trainset'] + (lbcount-(nexp/2))*30
 
+                print("{}:\n - X:{};\n - Time (s):{}".format(lb,bar_x,tdata))
+
                 if nmetrics > 1:
                     bottom = np.zeros(len(tdata))
-                    colorf = 0.75
+                    colorf = np.asarray((1.4,1.4,1.4,0.85))
                     for m in range(1,nmetrics):
                         if m < nmetrics - 1:
                             bottom += data[k][other[m+1]]
@@ -736,8 +743,8 @@ class Plotter(object):
                         bar_y = data[k][other[m]]
                         if bar_x.shape[0] > bar_y.shape[0]:
                             bar_y = np.hstack((bar_y,bar_y[-1:]))
-                        plt.bar(bar_x,bar_y,width=30,color=mcolor,bottom=bottom)
-                    plt.bar(bar_x,tdata-bar_y,width=30,color=palette(color),label=lb,bottom=bar_y)
+                        plt.bar(bar_x,bar_y,width=30,color=mcolor,bottom=bottom,edgecolor='white')
+                    plt.bar(bar_x,tdata-bar_y,width=30,color=palette(color),label=lb,bottom=bar_y,edgecolor='white')
                 else:
                     plt.bar(bar_x,tdata,width=30,color=palette(color),label=lb)
                 metric_patches.append(mpatches.Patch(color=palette(color),label=lb))
@@ -1569,7 +1576,7 @@ if __name__ == "__main__":
                     'AL trained':d2}
             p.draw_multiline(mdata,config.title,config.xtick)
         elif config.clusters and not data is None:
-            p.draw_cluster_distribution(data,config.draw_unc,config.spread,config.title)
+            p.draw_cluster_distribution(data,config.spread,config.title)
         elif not data is None:
             p.draw_data(data,config.title,'Acquisition #')
         else:
