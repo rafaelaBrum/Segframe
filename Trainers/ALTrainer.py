@@ -181,19 +181,20 @@ class ActiveLearningTrainer(Trainer):
             print("[ALTrainer] To be removed from super pool ({1}): {0}".format(self.acq_idx,to_remove))
             
         if cache_m.checkFileExistence(fid):
-            self.pool_x,self.pool_y,_ = cache_m.load(fid)
+            #self.pool_x,self.pool_y,_ = cache_m.load(fid)
             if self._config.info:
-                print("[ALTrainer] Loaded resampled pool from: {}".format(cache_m.fileLocation(fid)))
-        else:
-            if not self.acq_idx is None:
-                self.superp_x = np.delete(self.superp_x,self.acq_idx)
-                self.superp_y = np.delete(self.superp_y,self.acq_idx)
-            self.sample_idx = np.random.choice(self.superp_x.shape[0],self.pool_size,replace=False)
+                print("Subpool restoration not available, resampling...")
+                #print("[ALTrainer] Loaded resampled pool from: {}".format(cache_m.fileLocation(fid)))
+
+        if not self.acq_idx is None:
+            self.superp_x = np.delete(self.superp_x,self.acq_idx)
+            self.superp_y = np.delete(self.superp_y,self.acq_idx)
+        self.sample_idx = np.random.choice(self.superp_x.shape[0],self.pool_size,replace=False)
             
-            self.pool_x = self.superp_x[self.sample_idx]
-            self.pool_y = self.superp_y[self.sample_idx]
-            cache_m.dump((self.pool_x,self.pool_y,name),fid)
-            self.acq_idx = None
+        self.pool_x = self.superp_x[self.sample_idx]
+        self.pool_y = self.superp_y[self.sample_idx]
+        cache_m.dump((self.pool_x,self.pool_y,name),fid)
+        self.acq_idx = None
         self._ds.check_paths(self.pool_x,self._config.predst)
         
         if self._config.info:
