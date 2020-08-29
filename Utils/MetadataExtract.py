@@ -72,6 +72,8 @@ def _process_al_metadata(config):
                 mask = np.isin(ctrain,initial_set,assume_unique=True,invert=False)
             else:
                 mask = np.isin(ctrain,initial_set,assume_unique=True,invert=True)
+
+            print(mask)
             imgs = train[0][mask]
             labels = train[1][mask]
             print("Acquired {} images in acquisition {}".format(imgs.shape[0],k-1))
@@ -574,18 +576,19 @@ def process_al_metadata(config):
         if not os.path.isdir(ac_path) and not config.keep:
             os.mkdir(ac_path)
             
-        for img in acquisitions[a]:
+        for k in range(len(acquisitions[a])):
+            img = acquisitions[a][k]
             img.setPath(change_root(img.getPath(),config.cp_orig))
+            img_name = os.path.basename(img.getPath())
             if not config.keep:
-                img_name = os.path.basename(img.getPath())
                 if img_name in same_name:
                     print("Images with the same name detected: {}\n{}\n{}".format(img_name,img.getPath(),same_name[img_name]))
                 else:
                     same_name[img_name] = img.getPath()
-                shutil.copy(img.getPath(),ac_path)
+                shutil.copy(img.getPath(),os.path.join(ac_path,"UN-{}-{}".format(k,img_name)))
             else:
                 cur_dir = os.path.split(os.path.dirname(img.getPath()))[-1]
-                copy_to = os.path.join(config.out_dir,cur_dir)
+                copy_to = os.path.join(config.out_dir,cur_dir,"UN-{}-{}".format(k,img_name))
                 if not os.path.isdir(copy_to):
                     os.mkdir(copy_to)
                 shutil.copy(img.getPath(),copy_to)
