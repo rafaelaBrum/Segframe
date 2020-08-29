@@ -209,7 +209,7 @@ class Plotter(object):
         final_colors = np.array([(0.0,0.8,0.8),(0.0,0.85,0.85),(0.0,0.9,0.9),(0.0,0.95,0.95),(0.0,1.0,1.0)])
         colors = np.vstack((colors,final_colors))
         cmap = ListedColormap(colors,name='Heatm')
-        fig.colorbar(mpl.cm.ScalarMappable(norm=None,cmap=cmap),label='Positive %')
+        fig.colorbar(mpl.cm.ScalarMappable(norm=None,cmap=cmap),label='Positive %',pad=0.1,fraction=0.05)
 
         plt.xticks(xticks)
         plt.yticks(yticks)
