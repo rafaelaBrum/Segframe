@@ -581,7 +581,7 @@ class Plotter(object):
                     if multi_label:
                         ytick = 200
                     if ax2 is None:
-                        ax1.set_ylabel("Mean patch distance (pixels)",color=y_color)
+                        ax1.set_ylabel("Mean intra-cluster distance (pixels)",color=y_color)
                         pl=ax1.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                         ax1.tick_params(axis='y', labelcolor=y_color)
                         #print("Experiment ({}): {} - {} elements".format(k,data[k][m],data[k][m].shape[0]))
@@ -589,7 +589,7 @@ class Plotter(object):
                         if multi_label:
                             ax2 = ax1.twinx()
                     else:
-                        ax2.set_ylabel("Mean patch dispersion (pixels)",color=y_color)
+                        ax2.set_ylabel("Mean intra-cluster distance (pixels)",color=y_color)
                         pl=ax2.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                         ax2.tick_params(axis='y', labelcolor=y_color)
                         ax2.set_yticks(np.arange(data[k][m].min(), data[k][m].max(), ytick))
@@ -729,7 +729,7 @@ class Plotter(object):
 
                 bar_x = data[k]['trainset'] + (lbcount-(nexp/2))*30
 
-                print("{}:\n - X:{};\n - Time (s):{}".format(lb,bar_x,tdata))
+                print("{}:\n - X:{};\n - Y:{}".format(lb,bar_x,tdata))
 
                 if nmetrics > 1:
                     bottom = np.zeros(len(tdata))
@@ -746,11 +746,12 @@ class Plotter(object):
                         plt.bar(bar_x,bar_y,width=30,color=mcolor,bottom=bottom,edgecolor='white')
                     plt.bar(bar_x,tdata-bar_y,width=30,color=palette(color),label=lb,bottom=bar_y,edgecolor='white')
                 else:
-                    plt.bar(bar_x,tdata,width=30,color=palette(color),label=lb)
+                    plt.bar(bar_x,tdata,width=30,color=palette(color),label=lb,edgecolor='white')
                 metric_patches.append(mpatches.Patch(color=palette(color),label=lb))
                 #plt.plot(data[k]['trainset'],tdata,'bo',marker=markers[marker],linestyle='',color=palette(color),alpha=0.9,label=lb)
-                formatter = FuncFormatter(self.format_func)
-                ax.yaxis.set_major_formatter(formatter)
+                if not metric == 'auc':
+                    formatter = FuncFormatter(self.format_func)
+                    ax.yaxis.set_major_formatter(formatter)
                 min_x.append(data[k]['trainset'].min())
                 max_x.append(data[k]['trainset'].max())
                 min_t.append(tdata.min())
@@ -797,9 +798,13 @@ class Plotter(object):
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
         if pos:
-            plt.yticks(np.arange(max(0,min(min_y)-10), min(100,10+max(max_y)), 5))
+            mtick = min(min(100,10+max(max_y)),maxy)
+            plt.yticks(np.linspace(max(0,min(min_y)-10), mtick, 10))
         elif not other is None:
-            plt.yticks(np.arange(max(0,min(min_t)-319), max(min(min_t)+3600,max(max_t)),1200))
+            mtick = 1.1*max(max_t) if maxy == 0.0 else maxy
+            ticks = np.linspace(0.2*min(min_t), mtick,10)
+            np.around(ticks,2,ticks)
+            plt.yticks(ticks)
         else:
             plt.yticks(np.arange(min(0.6,min(min_y)), maxy, 0.05))
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
@@ -814,6 +819,8 @@ class Plotter(object):
                 plt.ylabel('Acquisition step time \n(hh:min:sec)')
             elif metric == 'traintime':
                 plt.ylabel('Training step time \n(hh:min:sec)')
+            elif metric == 'auc':
+                plt.ylabel('AUC')
         else:
             plt.grid(True)
             if plotAUC:
@@ -1089,6 +1096,9 @@ class Plotter(object):
             data['accuracy'] = data['accuracy'][:upl]
             data['labels'] = data['labels'][:upl]
 
+        #Round AUC to 2 decimal places
+        np.around(data['auc'],2,data['auc'])
+        
         if data['auc'].shape[0] > 0:
             print("Experiment {}:".format(os.path.basename(path)))
             print("Min AUC: {0}; Max AUC: {1}; Mean AUC: {2:.3f}\n".format(data['auc'].min(),data['auc'].max(),data['auc'].mean()))
@@ -1473,7 +1483,7 @@ if __name__ == "__main__":
             if len(data) == 0:
                 print("Something is wrong with your command options. No data to plot")
                 sys.exit(1)        
-            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos,config.auc_only,config.metrics,config.colors,config.maxy)
+            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos,config.auc_only,config.metrics,config.colors,maxy=config.maxy)
                 
     elif config.single:
         p = Plotter(path=config.sdir)
