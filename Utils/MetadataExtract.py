@@ -73,7 +73,6 @@ def _process_al_metadata(config):
             else:
                 mask = np.isin(ctrain,initial_set,assume_unique=True,invert=True)
 
-            print(mask)
             imgs = train[0][mask]
             labels = train[1][mask]
             print("Acquired {} images in acquisition {}".format(imgs.shape[0],k-1))

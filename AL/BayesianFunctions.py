@@ -24,7 +24,7 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     Bayesian convolutional neural networks with Bernoulli approximate variational inference
 
     Function needs to extract the following configuration parameters:
-    model <keras.Model>: model to use for predictions
+    pred_model <keras.Model>: model to use for predictions
     generator <keras.Sequence>: data generator for predictions
     data_size <int>: number of data samples
     mc_dp <int>: number of dropout iterations

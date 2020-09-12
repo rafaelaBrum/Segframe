@@ -28,8 +28,7 @@ def kmng_uncert(bayesian_model,generator,data_size,**kwargs):
 
 def _km_uncert(bayesian_model,generator,data_size,**kwargs):
     """
-    Cluster in K centroids and extract N samples from each cluster, based on maximum bayesian_varratios
-    uncertainty.
+    Cluster in K centroids and extract samples from each cluster, according to selection logic (ng or not).
 
     Function needs to extract the following configuration parameters:
     model <keras.Model>: model to use for predictions
