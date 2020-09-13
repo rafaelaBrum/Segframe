@@ -237,7 +237,7 @@ def core_set(bayesian_model,generator,data_size,**kwargs):
         print("Done extraction...starting CoreSet")
         stime = time.time()
 
-    acquired = __select_batch(already_selected=[], features, query)
+    acquired = __select_batch([], features, query)
 
     print("Acquired ({}): {}".format(acquired.shape,acquired))
 
