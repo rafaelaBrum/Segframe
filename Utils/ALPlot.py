@@ -7,7 +7,7 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
-figure(num=1, figsize=(12, 6), dpi=100, facecolor='w', edgecolor='k')
+figure(num=1, figsize=(14, 7), dpi=100, facecolor='w', edgecolor='k')
 
 import pandas as pd
 from matplotlib.ticker import MaxNLocator
@@ -23,7 +23,7 @@ import argparse
 
 font = {'family' : 'DejaVu Sans',
         'weight' : 'normal',
-        'size'   : 15}
+        'size'   : 21}
 
 mpl.rc('font',**font)
 
@@ -279,15 +279,17 @@ class Plotter(object):
                 
         # Label the axes and provide a title
         plt.legend(plots,labels=labels,loc=0,ncol=2,prop=dict(weight='bold'))
-        plt.xticks(np.arange(min(x_data), xmax+xticks, xticks))
         #ydelta = (1.0 - low)/10
         ydelta = 0.05
         if yscale:
-            rg = np.clip(np.arange(max(low,0.0), up + ydelta, ydelta),0.0,1.0)
+            yrg = np.clip(np.arange(max(low,0.0), up + ydelta, ydelta),0.0,1.0)
         else:
-            rg = np.clip(np.arange(0.55, 0.9, ydelta),0.0,1.0)
-        np.around(rg,2,rg)
-        plt.yticks(rg)
+            yrg = np.clip(np.arange(0.55, 0.9, ydelta),0.0,1.0)
+        np.around(yrg,2,yrg)
+        plt.yticks(yrg)
+        xrg = np.arange(min(x_data), xmax+xticks, xticks)
+        plt.xticks(xrg)
+        plt.axis([min(xrg),max(xrg),min(yrg),max(yrg)])
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         if max(x_data) > 1000:
             plt.xticks(rotation=30)
@@ -738,7 +740,7 @@ class Plotter(object):
                         if m < nmetrics - 1:
                             bottom += data[k][other[m+1]]
                             colorf *= 0.75
-                        mcolor = np.asarray(palette(color)) * colorf
+                        mcolor = np.clip(np.asarray(palette(color)) * colorf,0.0,1.0)
                         #Repeat last point if needed
                         bar_y = data[k][other[m]]
                         if bar_x.shape[0] > bar_y.shape[0]:
@@ -753,7 +755,7 @@ class Plotter(object):
                     formatter = FuncFormatter(self.format_func)
                     ax.yaxis.set_major_formatter(formatter)
                 min_x.append(data[k]['trainset'].min())
-                max_x.append(data[k]['trainset'].max())
+                max_x.append(bar_x.max())
                 min_t.append(tdata.min())
                 max_t.append(tdata.max())
             else:
@@ -794,19 +796,32 @@ class Plotter(object):
         else:
             plt.legend(loc=0,ncol=2,labels=config.labels,prop=dict(weight='bold'))
             
-        plt.xticks(np.arange(min(min_x), max(max_x)+1, xtick))
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
+
+        #Defining ticks
+        axis_t = []
+        mtick = np.arange(min(min_x), max(max_x)+1, xtick)
+        axis_t.extend([mtick.min()*0.8,mtick.max()+xtick])
+        plt.xticks(mtick)
         if pos:
             mtick = min(min(100,10+max(max_y)),maxy)
-            plt.yticks(np.linspace(max(0,min(min_y)-10), mtick, 10))
+            ticks = np.linspace(max(0,min(min_y)-10), mtick, 10)
+            axis_t.extend([ticks.min(),ticks.max()])
+            plt.yticks(ticks)
         elif not other is None:
             mtick = 1.1*max(max_t) if maxy == 0.0 else maxy
             ticks = np.linspace(0.2*min(min_t), mtick,10)
             np.around(ticks,2,ticks)
+            axis_t.extend([ticks.min(),ticks.max()])
             plt.yticks(ticks)
         else:
-            plt.yticks(np.arange(min(0.6,min(min_y)), maxy, 0.05))
+            ticks = np.arange(min(0.6,min(min_y)), maxy, 0.05)
+            axis_t.extend([ticks.min(),ticks.max()])
+            plt.yticks(ticks)
+
+        print(axis_t)
+        plt.axis(axis_t)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         plt.xlabel("Training set size")
 
@@ -1373,7 +1388,7 @@ if __name__ == "__main__":
         help='Plot maximum X.', default=None,required=False)
     parser.add_argument('-maxy', dest='maxy', type=float, 
         help='Plot maximum X.', default=0.9,required=False)
-    parser.add_argument('-t', dest='title', type=str,default='AL Experiment', 
+    parser.add_argument('-t', dest='title', type=str,default='', 
         help='Figure title.')
     parser.add_argument('-labels', dest='labels', nargs='+', type=str, 
         help='Curve labels.',default=None,required=False)
@@ -1396,6 +1411,8 @@ if __name__ == "__main__":
         AL - General active learning experiment; \n \
         MN - MNIST dataset experiment.',
        choices=['AL','MN','DB','OR','KM','EN'],default='AL')
+    parser.add_argument('-yscale', action='store_true', dest='yscale', default=False, 
+        help='Scale y axis ticks to data.')    
     
     ##Single experiment plot
     parser.add_argument('--single', action='store_true', dest='single', default=False, 
@@ -1548,7 +1565,7 @@ if __name__ == "__main__":
             print("Something is wrong with your command options. No data to plot")
             sys.exit(1)
 
-        p.draw_stats(data,config.xtick,config.auc_only,config.labels,config.spread,config.title,config.colors)
+        p.draw_stats(data,config.xtick,config.auc_only,config.labels,config.spread,config.title,config.colors,yscale=config.yscale)
 
     elif config.debug:
 

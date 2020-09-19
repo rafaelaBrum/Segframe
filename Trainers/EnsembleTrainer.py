@@ -240,6 +240,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
 
         #Some acquisition functions may need access to GenericModel
         kwargs['model'] = model
+        kwargs['train_data'] = (self.train_x,self.train_y)
         
         if not self._config.tdim is None:
             fix_dim = self._config.tdim
