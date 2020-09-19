@@ -77,7 +77,19 @@ class GenericIterator(Iterator):
         Returns the number of examples
         """
         return self.n
-    
+
+    def setData(self,data):
+        """
+        Set data to be iterated and returned in batches. 
+        data: tuple (X,Y) 
+        """
+        if isinstance(data[0],np.ndarray):
+            self.n = data[0].shape[0]
+        elif isinstance(data[0],list):
+            self.n = len(data[0])
+        else:
+            raise ValueError("[GenericIterator] data should be a tuple of lists or ndarrays")
+        self.data = data
 
     def next(self):
         """

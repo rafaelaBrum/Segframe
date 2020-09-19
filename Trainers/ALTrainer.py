@@ -403,6 +403,11 @@ class ActiveLearningTrainer(Trainer):
 
         generator = ThreadedGenerator(**generator_params)
 
+        #For functions that need to access train data
+        generator_params['dps'] = (self.train_x,self.train_y)
+        train_gen = ThreadedGenerator(**generator_params)
+        kwargs['train_gen'] = train_gen
+        
         if self._config.gpu_count > 1:
             pred_model = model.parallel
         else:
