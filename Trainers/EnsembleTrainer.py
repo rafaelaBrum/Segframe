@@ -240,7 +240,6 @@ class EnsembleALTrainer(ActiveLearningTrainer):
 
         #Some acquisition functions may need access to GenericModel
         kwargs['model'] = model
-        kwargs['train_data'] = (self.train_x,self.train_y)
         
         if not self._config.tdim is None:
             fix_dim = self._config.tdim
@@ -264,6 +263,11 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             'input_n':1}
 
         generator = ThreadedGenerator(**generator_params)
+
+        #For functions that need to access train data
+        generator_params['dps'] = (self.train_x,self.train_y)
+        train_gen = ThreadedGenerator(**generator_params)
+        kwargs['train_gen'] = train_gen        
 
         if self._config.verbose > 0:
             print("\nStarting acquisition...(pool size: {})".format(self.pool_x.shape[0]))

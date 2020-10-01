@@ -67,6 +67,12 @@ class ActiveLearningTrainer(Trainer):
             self.pool_size = None
 
 
+    def coreset_pool(self):
+        """
+        Use CoreSet as a pool selection method
+        """
+        pass
+
     def _balance_classes(self,X,Y):
         """
         Returns a tuple (X,Y) of balanced classes
@@ -125,6 +131,8 @@ class ActiveLearningTrainer(Trainer):
         """
         Remove all past acquisitions from superpool. It's considerd that past acquisitions are aleready loaded
         into self.train_x
+
+        @param sp <boolean>: use superpool as the reference or current pool ()
         """
         cache_m = CacheManager()
         pool_x, pool_y = None, None

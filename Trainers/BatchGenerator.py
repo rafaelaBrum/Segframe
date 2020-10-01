@@ -7,9 +7,7 @@ import warnings
 warnings.filterwarnings('ignore')
     
 import keras
-from keras.utils.data_utils import Sequence
 from keras.preprocessing.image import Iterator,ImageDataGenerator
-from keras import backend as K
 
 #System modules
 import concurrent.futures
@@ -190,7 +188,7 @@ class SingleGenerator(GenericIterator):
         # calculate dimensions of each data point
         #Should only create the batches of appropriate size
         if not self.shape is None:
-            batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)), dtype=K.floatx())
+            batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)), dtype=np.float32)
         else:
             batch_x = None
         y = np.zeros(tuple([len(index_array)]),dtype=int)
@@ -210,7 +208,7 @@ class SingleGenerator(GenericIterator):
             
             if batch_x is None:
                 self.shape = example.shape
-                batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)),dtype=K.floatx())
+                batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)),dtype=np.float32)
             
             #TEST PURPOSES ONLY - This is slow given the sizes
             #involved
@@ -299,7 +297,7 @@ class ThreadedGenerator(GenericIterator):
         # calculate dimensions of each data point
         #Should only create the batches of appropriate size
         if not self.shape is None:
-            batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)), dtype=K.floatx())
+            batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)), dtype=np.float32)
         else:
             batch_x = None
         y = np.zeros(tuple([len(index_array)]),dtype=int)
@@ -319,7 +317,7 @@ class ThreadedGenerator(GenericIterator):
             example,t_y = futures[i].result()
             if batch_x is None:
                 self.shape = example.shape
-                batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)),dtype=K.floatx())            
+                batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)),dtype=np.float32)            
             batch_x[i] = example
             y[i] = t_y
 
