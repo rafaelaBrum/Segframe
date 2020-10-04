@@ -7,7 +7,7 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
-figure(num=1, figsize=(14, 7), dpi=100, facecolor='w', edgecolor='k')
+figure(num=1, figsize=(13.5, 6.7), dpi=100, facecolor='w', edgecolor='k')
 
 import pandas as pd
 from matplotlib.ticker import MaxNLocator
@@ -119,7 +119,7 @@ class Plotter(object):
                 #ax = fig.add_subplot(111)
                 palette = plt.get_cmap('tab20')
                 inset_ax = inset_axes(ax, 
-                    width="45%", # width = 30% of parent_bbox
+                    width="51%", # width = 52% of parent_bbox
                     height="35%") # height : 35%
 
                 for c in clusters:
@@ -129,12 +129,13 @@ class Plotter(object):
                         cmax = lmax
                 inset_ax.text(0,cmax-0.01,"Acquisition #{}".format(sub_acq),fontsize=8)
                 inset_ax.set_xlabel("Cluster #")
-                inset_ax.set_xticks(list(clusters.keys()))
-                inset_ax.xaxis.set_tick_params(rotation=-30)
-                inset_ax.set_yticks(np.arange(0.0, cmax, 0.05))
+                #inset_ax.set_xticks(list(clusters.keys()))
+                inset_ax.xaxis.set_tick_params(rotation=-35)
+                inset_ax.set_yticks(np.round(np.linspace(0.0, cmax, 5),2))
             
-        labels = ['Unsel. patches','Sel. patches','Sel. mean','Unsel. mean']
-        ax.legend(plots,labels=labels,loc=2,ncol=2,prop=dict(weight='bold'))
+        labels = ['Uns. patches','Sel. patches','Sel. mean','Uns. mean']
+        ncol = 1 if subfig else 2
+        ax.legend(plots,labels=labels,loc=2,ncol=ncol,prop=dict(weight='bold'),fontsize=14)
         ax.set_xticks(xticks)
         ax.set_yticks(np.arange(0.0, maxu+0.1, 0.05))
         ax.set_title(title, loc='center', fontsize=12, fontweight=0, pad=2.0, color='orange')
@@ -176,7 +177,6 @@ class Plotter(object):
             #Percentage of positives
             py.extend([clusters[acq][c][1]/(clusters[acq][c][0]+clusters[acq][c][1]) for c in clusters[acq]])
 
-            
             cur_y = [np.mean(data['unc'][acq][x]) for x in range(cn)]
             Y.extend(cur_y)
             umean = np.mean(cur_y)
@@ -475,12 +475,12 @@ class Plotter(object):
         marker = 0
         min_x = np.inf
         max_x = 0
-        min_y = 0
+        min_y = np.inf
         max_y = 0
-        lbcount = 0
         multi_label = False
         
-        experiments = sorted(list(data.keys()))
+        #experiments = sorted(list(data.keys()))
+        experiments = list(data.keys())
         if len(metrics) > 2:
             print("WSI plotting suports only 2 Y axis. X axis is always acquisition #")
             return None
@@ -494,25 +494,27 @@ class Plotter(object):
         ax1 = plt.gca()
         ax2 = None
 
-        for k in experiments:
-            if not colors is None and colors[lbcount] >= 0:
-                color = colors[lbcount]
+        for z in range(len(data.keys())):
+            k = experiments[z]
+            if not colors is None and colors[z] >= 0:
+                color = colors[z]
             elif 'color' in data[k]:
                 color = data[k]['color']
                 
             if not multi_label:
                 if labels is None:
-                    lb = k
+                    lb = z
                 else:
-                    lb = labels[lbcount]
-                    lbcount += 1
+                    lb = labels[z]
+                    #lbcount += 1
 
             line = color%len(linestyle)
             marker = color%len(markers)
             color = color % len(palette.colors)
 
-            lmax = data[k]['trainset'].max()
-            lmin = data[k]['trainset'].min()
+            X = data[k]['acquired']
+            lmax = X.max()
+            lmin = X.min()
             max_x = max_x if lmax < max_x else lmax
             min_x = min_x if lmin > min_x else lmin
             
@@ -523,23 +525,25 @@ class Plotter(object):
                     continue
                 if multi_label:
                     if labels is None:
-                        lb = k
+                        lb = z
                     else:
-                        lb = labels[lbcount]
+                        lb = labels[z]
                         lbcount += 1
                 #Repeat last point if needed
-                if data[k]['trainset'].shape[0] > data[k][m].shape[0]:
+                if X.shape[0] > data[k][m].shape[0]:
                     print("Shape mismatch:\n Trainset: {}; {}:{}".format(data[k]['trainset'].shape,m,data[k][m].shape))
                     data[k][m] = np.hstack((data[k][m],data[k][m][-1:]))
                     
                 if multi_label:
                     y_color = palette(color)
+                else:
+                    max_y = max_y if data[k][m].max() < max_y else data[k][m].max()
+                    min_y = min_x if data[k][m].min() > min_y else data[k][m].min()
                     
                 if m == 'pmean':
                     maxerr = (data[k]['pdp'] + data[k][m]).max()
                     max_y = max_y if maxerr < max_y else maxerr
                     yticks = np.arange(0.0, max_y, ytick)
-                    print(yticks)
                     #This limits lower error bars so it won't go below 0
                     yerr = [data[k]['pdp']-(np.clip(data[k]['pdp']-data[k][m],0.0,maxerr)),np.clip(data[k]['pdp'],0.0,100)]
                     if ax2 is None:
@@ -547,19 +551,19 @@ class Plotter(object):
                         random_displace = 0.0
                         if not multi_label:
                             random_displace = np.random.rand()
-                        pl=ax1.plot(data[k]['trainset']+random_displace,data[k][m],
+                        pl=ax1.plot(X+random_displace,data[k][m],
                                         marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                         if err_bar:
-                            ax1.errorbar(data[k]['trainset']+random_displace,data[k][m], yerr=yerr, fmt='none',color=palette(color),alpha=0.6,markersize=8,zorder=10)
+                            ax1.errorbar(X+random_displace,data[k][m], yerr=yerr, fmt='none',color=palette(color),alpha=0.6,markersize=8,zorder=10)
                         ax1.tick_params(axis='y', labelcolor=y_color)
                         ax1.set_yticks(yticks)
                         if multi_label:
                             ax2 = ax1.twinx()
                     else:
                         ax2.set_ylabel("Mean # of patches\nper WSI",color=y_color)
-                        pl=ax2.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                        pl=ax2.plot(X,data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                         if err_bar:
-                            ax2.errorbar(data[k]['trainset'],data[k][m], yerr=yerr, fmt='none',color=palette(color),alpha=0.6,markersize=8,zorder=10)
+                            ax2.errorbar(X,data[k][m], yerr=yerr, fmt='none',color=palette(color),alpha=0.6,markersize=8,zorder=10)
                         ax2.tick_params(axis='y', labelcolor=y_color)
                         ax2.set_yticks(yticks)
                         
@@ -568,14 +572,14 @@ class Plotter(object):
                         ytick = 10
                     if ax2 is None:
                         ax1.set_ylabel("WSI #",color=y_color)
-                        pl=ax1.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                        pl=ax1.plot(X,data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                         ax1.tick_params(axis='y', labelcolor=y_color)
                         ax1.set_yticks(np.arange(min(data[k][m].min(),20), data[k][m].max()+ytick, ytick))
                         if multi_label:
                             ax2 = ax1.twinx()
                     else:
                         ax2.set_ylabel("WSI #",color=y_color)
-                        pl=ax2.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                        pl=ax2.plot(X,data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                         ax2.tick_params(axis='y', labelcolor=y_color)
                         ax2.set_yticks(np.arange(min(data[k][m].min(),20), data[k][m].max()+ytick, ytick))
 
@@ -584,15 +588,16 @@ class Plotter(object):
                         ytick = 200
                     if ax2 is None:
                         ax1.set_ylabel("Mean intra-cluster distance (pixels)",color=y_color)
-                        pl=ax1.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                        pl=ax1.plot(X,data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,
+                                        linestyle=linestyle[line][1],alpha=0.9,label=lb,markersize=10)
                         ax1.tick_params(axis='y', labelcolor=y_color)
-                        #print("Experiment ({}): {} - {} elements".format(k,data[k][m],data[k][m].shape[0]))
-                        ax1.set_yticks(np.arange(data[k][m].min(), data[k][m].max(), ytick))
+                        print("Experiment {} ({}): {} - {} elements".format(lb,k,data[k][m],data[k][m].shape[0]))
+                        ax1.set_yticks(np.arange(min_y, max_y, ytick))
                         if multi_label:
                             ax2 = ax1.twinx()
                     else:
                         ax2.set_ylabel("Mean intra-cluster distance (pixels)",color=y_color)
-                        pl=ax2.plot(data[k]['trainset'],data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                        pl=ax2.plot(X,data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                         ax2.tick_params(axis='y', labelcolor=y_color)
                         ax2.set_yticks(np.arange(data[k][m].min(), data[k][m].max(), ytick))
 
@@ -609,16 +614,18 @@ class Plotter(object):
         if max_x > 1000:
             plt.setp(ax1.get_xticklabels(),rotation=30)
         ax1.set_title(title, loc='left', fontsize=12, fontweight=0, color='orange')
-        ax1.set_xlabel("Train set size")
+        ax1.set_xlabel("Acquisition step")
         plt.tight_layout()
         ax1.grid(True)
         plt.show()
         
-    def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False,other=None,colors=None,maxy=None):
+    def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False,other=None,colors=None,maxy=None,scale=True):
         
         import matplotlib.patches as mpatches
-            
+        from matplotlib.legend_handler import HandlerPatch
+        
         color = 0
+        hatch_color = 'white'
         line = 0
         marker = 0
         plotAUC = False
@@ -663,7 +670,7 @@ class Plotter(object):
                 max_x.append(data[k]['trainset'].max())
                 min_y.append(min(yd))
                 max_y.append(max(yd))
-                print(data[k]['trainset'])                
+      
             elif auc and data[k]['auc'].shape[0] > 0:
                 #Repeat last point if needed
                 if data[k]['trainset'].shape[0] > data[k]['auc'].shape[0]:
@@ -684,7 +691,8 @@ class Plotter(object):
                     lb = labels[lbcount]
                     lbcount += 1
                     
-                plt.plot(data[k]['trainset'],data[k]['auc'], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
+                plt.plot(data[k]['trainset'],data[k]['auc'], marker=markers[marker],color=palette(color),
+                             linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb,markersize=10)
                 plotAUC = True
                 min_x.append(data[k]['trainset'].min())
                 max_x.append(data[k]['trainset'].max())
@@ -733,6 +741,9 @@ class Plotter(object):
 
                 print("{}:\n - X:{};\n - Y:{}".format(lb,bar_x,tdata))
 
+                #patterns = ["+" , "x", "o", "O", ".", "*", "/" , "\\" , "|" , "-"]
+                patterns = ["+", ".", "/" , "\\" , "|" , "-","o"]
+                
                 if nmetrics > 1:
                     bottom = np.zeros(len(tdata))
                     colorf = np.asarray((1.4,1.4,1.4,0.85))
@@ -745,12 +756,11 @@ class Plotter(object):
                         bar_y = data[k][other[m]]
                         if bar_x.shape[0] > bar_y.shape[0]:
                             bar_y = np.hstack((bar_y,bar_y[-1:]))
-                        plt.bar(bar_x,bar_y,width=30,color=mcolor,bottom=bottom,edgecolor='white')
-                    plt.bar(bar_x,tdata-bar_y,width=30,color=palette(color),label=lb,bottom=bar_y,edgecolor='white')
+                        plt.bar(bar_x,bar_y,width=30,color=mcolor,bottom=bottom,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
+                    plt.bar(bar_x,tdata-bar_y,width=30,color=palette(color),label=lb,bottom=bar_y,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
                 else:
-                    plt.bar(bar_x,tdata,width=30,color=palette(color),label=lb,edgecolor='white')
-                metric_patches.append(mpatches.Patch(color=palette(color),label=lb))
-                #plt.plot(data[k]['trainset'],tdata,'bo',marker=markers[marker],linestyle='',color=palette(color),alpha=0.9,label=lb)
+                    plt.bar(bar_x,tdata,width=30,color=palette(color),label=lb,edgecolor=hatch_color,hatch=patterns[color%len(patterns)])
+                metric_patches.append(mpatches.Patch(facecolor=palette(color),label=lb,hatch=patterns[color%len(patterns)],edgecolor=hatch_color))
                 if not metric == 'auc':
                     formatter = FuncFormatter(self.format_func)
                     ax.yaxis.set_major_formatter(formatter)
@@ -792,7 +802,7 @@ class Plotter(object):
 
 
         if not other is None:
-            plt.legend(handles=metric_patches,loc=0,ncol=2,prop=dict(weight='bold'))
+            plt.legend(handles=metric_patches,loc=2,ncol=2,prop=dict(weight='bold'))
         else:
             plt.legend(loc=0,ncol=2,labels=config.labels,prop=dict(weight='bold'))
             
@@ -801,26 +811,34 @@ class Plotter(object):
 
         #Defining ticks
         axis_t = []
-        mtick = np.arange(min(min_x), max(max_x)+1, xtick)
-        axis_t.extend([mtick.min()*0.8,mtick.max()+xtick])
+        xlim = max(max_x)+(0.5*xtick)
+        mtick = np.arange(min(min_x), xlim, xtick)
+        axis_t.extend([mtick.min()*0.8,xlim])
         plt.xticks(mtick)
         if pos:
-            mtick = min(min(100,10+max(max_y)),maxy)
-            ticks = np.linspace(max(0,min(min_y)-10), mtick, 10)
+            if scale:
+                mtick = 1.1*max(max_y) if maxy == 0.0 else maxy
+                ticks = np.linspace(min(min_y)-5, mtick, 7)
+            else:
+                ticks = np.linspace(0.0,maxy,10)
             axis_t.extend([ticks.min(),ticks.max()])
             plt.yticks(ticks)
         elif not other is None:
             mtick = 1.1*max(max_t) if maxy == 0.0 else maxy
-            ticks = np.linspace(0.2*min(min_t), mtick,10)
+            ticks = np.linspace(0.0, mtick,7)
             np.around(ticks,2,ticks)
             axis_t.extend([ticks.min(),ticks.max()])
             plt.yticks(ticks)
         else:
-            ticks = np.arange(min(0.6,min(min_y)), maxy, 0.05)
+            if scale:
+                ticks = np.linspace(min(0.6,0.9*min(min_y)), maxy, 8)
+                np.round(ticks,2,ticks)
+            else:
+                ticks = np.arange(0.5,maxy,0.05)
+                np.round(ticks,2,ticks)
             axis_t.extend([ticks.min(),ticks.max()])
             plt.yticks(ticks)
 
-        print(axis_t)
         plt.axis(axis_t)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         plt.xlabel("Training set size")
@@ -914,13 +932,16 @@ class Plotter(object):
             wsis,wsi_means,patch_count = pickle.load(fd)
 
         data = {}
-        data['trainset'] = np.asarray([sum(patch_count[k]) for k in sorted(list(patch_count.keys()))])
+        data['acquired'] = np.asarray([sum(patch_count[k]) for k in sorted(list(patch_count.keys()))])
+        data['trainset'] = np.zeros(data['acquired'].shape[0],dtype=np.int32)
         #Workaround to get trainset size for each acquisition
         csize = init_train
-        for i in range(data['trainset'].shape[0]):
-            acq = data['trainset'][i]
+        for i in range(data['acquired'].shape[0]):
+            acq = data['acquired'][i]
             data['trainset'][i] = csize
             csize += acq
+            data['acquired'][i] += data['acquired'][i-1] if i > 0 else acq
+        data['acquired'][0] = sum(patch_count[1])
         data['acqn'] = np.asarray(sorted(list(patch_count.keys())))
         data['pmean'] = np.asarray([np.mean(patch_count[k]) for k in data['acqn']])
         data['pdp'] = np.asarray([np.std(patch_count[k]) for k in data['acqn']])
@@ -948,10 +969,13 @@ class Plotter(object):
                 upl += 1
 
             data['trainset'] = data['trainset'][:upl]
+            data['acqn'] = data['acqn'][:upl]
+            data['acquired'] = data['acquired'][:upl]
             data['wsicount'] = data['wsicount'][:upl]
             data['pmean'] = data['pmean'][:upl]
             data['pdp'] = data['pdp'][:upl]
             data['wsimeandis'] = data['wsimeandis'][:upl]
+
         return data
         
     def format_func(self,x, pos):
@@ -1380,7 +1404,7 @@ if __name__ == "__main__":
         help='Experiment IDs to plot.', default=None,required=False)
     parser.add_argument('-colors', dest='colors', nargs='+', type=int, 
         help='Line colors. Follow the order of the IDs.', default=None,required=False)
-    parser.add_argument('-xtick', dest='xtick', nargs=1, type=int, 
+    parser.add_argument('-xtick', dest='xtick', type=int, 
         help='xtick interval.', default=200,required=False)
     parser.add_argument('-ytick', dest='ytick', type=int, 
         help='ytick interval.', default=200,required=False)
@@ -1500,7 +1524,7 @@ if __name__ == "__main__":
             if len(data) == 0:
                 print("Something is wrong with your command options. No data to plot")
                 sys.exit(1)        
-            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos,config.auc_only,config.metrics,config.colors,maxy=config.maxy)
+            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos,config.auc_only,config.metrics,config.colors,maxy=config.maxy,scale=config.yscale)
                 
     elif config.single:
         p = Plotter(path=config.sdir)
@@ -1629,5 +1653,5 @@ if __name__ == "__main__":
 
         data = p.parseResults(exp_type,config.ids,config.n_exp,config.maxx,config.concat,wsi=True,ncf=config.ncf)
 
-        p.draw_wsi_stat(data,config.title,config.labels,config.metrics,config.colors,config.ytick,config.xtick[0],config.err_bar)
+        p.draw_wsi_stat(data,config.title,config.labels,config.metrics,config.colors,config.ytick,config.xtick,config.err_bar)
 

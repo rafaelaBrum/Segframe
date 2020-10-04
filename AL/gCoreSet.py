@@ -83,7 +83,7 @@ def __update_distances(cluster_centers,
 
     return min_distances
 
-def __select_batch(train_features, pool_features, N, **kwargs):
+def cs_select_batch(train_features, pool_features, N, **kwargs):
     """
     Diversity promoting active learning method that greedily forms a batch
     to minimize the maximum distance to a cluster center among all unlabeled
@@ -210,16 +210,17 @@ def core_set(bayesian_model,generator,data_size,**kwargs):
 
     #Run feature extraction and clustering
     if hasattr(model,'build_extractor'):
-        single_m,parallel_m = model.build_extractor(training=False,feature=True,parallel=False)
+        single_m,parallel_m = model.build_extractor(training=False,feature=True,parallel=True)
     else:
         if config.info:
-            print("[km_uncert] Model is not prepared to produce features. No feature extractor")
+            print("[core_set] Model is not prepared to produce features. No feature extractor")
         return None
 
     if not model.is_ensemble():
         pred_model = load_model_weights(config,model,single_m,parallel_m)
     else:
         generator.set_input_n(config.emodels)
+        train_gen.set_input_n(config.emodels)
         if not parallel_m is None:
             pred_model = parallel_m
         else:
@@ -227,12 +228,11 @@ def core_set(bayesian_model,generator,data_size,**kwargs):
             
     #Extract features for all images in the pool
     if config.info:
-        print("Starting feature extraction ({} batches)...".format(len(generator)))        
+        print("Starting feature extraction ({} batches)...".format(len(generator)))
     pool_features = pred_model.predict_generator(generator,
                                             workers=4*cpu_count,
                                             max_queue_size=100*gpu_count,
                                             verbose=0)
-
 
     train_features = pred_model.predict_generator(train_gen,
                                             workers=4*cpu_count,
@@ -266,7 +266,7 @@ def core_set(bayesian_model,generator,data_size,**kwargs):
         print("Done extraction...starting CoreSet")
         stime = time.time()
 
-    acquired = __select_batch(train_features, pool_features, query)
+    acquired = cs_select_batch(train_features, pool_features, query)
 
     print("Acquired ({}): {}".format(acquired.shape,acquired))
 

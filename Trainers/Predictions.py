@@ -180,7 +180,6 @@ class Predictor(object):
         sess.config = ses_config
         K.set_session(sess)
         
-        #During test phase multi-gpu mode is not used (maybe done latter)
         if self._ensemble:
             #Weights should be loaded during ensemble build
             if hasattr(model,'build_ensemble'):

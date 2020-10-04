@@ -83,3 +83,105 @@ def split_test(config,ds):
         X,Y = fX,fY
 
     return test_x,test_y,X,Y
+
+def csregen(superp,pool_size,generator_params,**kwargs):
+    """
+    Regenerates the pool extracting pool_size elements from superpool.
+    
+    Uses CoreSet to select the samples that will be in the pool.
+
+    Uses KMedian to select initial members, based on a limited subsample of the superpool 
+
+    Arguments:
+    - superp <tuple>: (superpool X, superpool Y)
+    - pool_size <int>: size of the returned set
+    - generator_params <dict>: parameters to be passed to a ThreadedGenerator
+
+    Optional arguments:
+    - space <int>: sets the observation space as space*pool_size. Defaul is 3.
+    - clusters <int>: clusters space in this many groups
+    """
+    from sklearn.cluster import KMeans,MiniBatchKMeans
+    from sklearn.decomposition import PCA
+    from sklearn.metrics import pairwise_distances_argmin_min
+    from Trainers import ThreadedGenerator
+    from AL.Common import load_model_weights
+    from AL import cs_select_batch
+    
+    import time
+    
+    #Checks params
+    if not 'model' in kwargs:
+        print('[csregen] No model given, falling back to random selection')
+        return np.random.choice(superp.shape[0],pool_size,replace=False)
+
+    config = None
+    if 'config' in kwargs:
+        config = kwargs['config']
+        clusters = config.clusters
+        gpu_count = config.gpu_count
+        cpu_count = config.cpu_count
+    else:
+        cpu_count = 1
+        gpu_count = 0
+        clusters = 20
+    
+    #First - select space from superpool and setup generator
+    sp_size = kwargs.get('space',3) * pool_size
+    space_idx = np.random.choice(superp.shape[0],sp_size,replace=False)
+    space = superp[space_idx]
+
+    generator = ThreadedGenerator(**generator_params)
+    
+    #Second - extract features from space, apply PCA
+    stime = time.time()
+    if hasattr(model,'build_extractor'):
+        single_m,parallel_m = model.build_extractor(training=False,feature=True,parallel=True)
+    else:
+        if config.info:
+            print("[csregen] Model is not prepared to produce features. No feature extractor")
+        return None
+
+    if not model.is_ensemble():
+        pred_model = load_model_weights(config,model,single_m,parallel_m,kwargs.get('sw_thread',None))
+    else:
+        generator.set_input_n(config.emodels)
+        if not parallel_m is None:
+            pred_model = parallel_m
+        else:
+            pred_model = single_m
+            
+    if config.info:
+        print("Starting feature extraction ({} batches)...".format(len(generator)))        
+    features = pred_model.predict_generator(generator,
+                                            workers=4*cpu_count,
+                                            max_queue_size=100*gpu_count,
+                                            verbose=0)
+    features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
+
+    if config.pca > 0:
+        if config.info:
+            print("[csregen] Starting PCA decomposition ({} features)...".format(config.pca))
+
+        pca = PCA(n_components = config.pca)
+        features = pca.fit_transform(pool_features)
+        
+    #Third - Runs KMeans and divides feature space in k clusters (same as given by config - default 20)
+    if data_size < 10000:
+        km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=max(int(cpu_count/2),1)).fit(features)
+    else:
+        km = MiniBatchKMeans(n_clusters = clusters, init='k-means++',batch_size=500).fit(features)
+
+    centers, _ = pairwise_distances_argmin_min(km.cluster_centers_, features)
+    
+    #Fourth - CoreSet extracts pool_size samples from space (pass space features and cluster center features - already selected)
+    acquired = cs_select_batch(features[centers],features,config.query)
+    del(features)
+    
+    if config.verbose > 0:
+        etime = time.time()
+        td = timedelta(seconds=(etime-stime))
+        print("Pool setup step took: {}".format(td))
+        
+    #Fifth - return the index for selected samples, relative to superpool
+    return space_idx[acquired]

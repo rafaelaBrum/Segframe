@@ -67,6 +67,12 @@ class ActiveLearningTrainer(Trainer):
             self.pool_size = None
 
 
+    def coreset_pool(self):
+        """
+        Use CoreSet as a pool selection method
+        """
+        pass
+
     def _balance_classes(self,X,Y):
         """
         Returns a tuple (X,Y) of balanced classes
@@ -125,6 +131,8 @@ class ActiveLearningTrainer(Trainer):
         """
         Remove all past acquisitions from superpool. It's considerd that past acquisitions are aleready loaded
         into self.train_x
+
+        @param sp <boolean>: use superpool as the reference or current pool ()
         """
         cache_m = CacheManager()
         pool_x, pool_y = None, None
@@ -162,7 +170,14 @@ class ActiveLearningTrainer(Trainer):
         else:
             self.pool_x, self.pool_y = pool_x, pool_y
     
-    def _refresh_pool(self,r,name):
+    def _refresh_pool(self,r,name,**kwargs):
+        """
+        In kwargs:
+        - regen_f : a function to choose the new pool points (if not given, selection is random). The function's first
+        parameter should be the data;
+        - regen_p : a tuple with this function's parameters, except the data which will be defined here.
+        """
+        
         if self.superp_x is None or self.superp_y is None:
             return None
         
@@ -189,7 +204,16 @@ class ActiveLearningTrainer(Trainer):
         if not self.acq_idx is None:
             self.superp_x = np.delete(self.superp_x,self.acq_idx)
             self.superp_y = np.delete(self.superp_y,self.acq_idx)
-        self.sample_idx = np.random.choice(self.superp_x.shape[0],self.pool_size,replace=False)
+        if not 'regen_f' in kwargs:
+            self.sample_idx = np.random.choice(self.superp_x.shape[0],self.pool_size,replace=False)
+        else:
+            if 'regen_p' in kwargs:
+                rg_params = ((self.superp_x,self.superp_y),*kwargs['regen_p'])
+            else:
+                rg_params = ((self.superp_x,self.superp_y),)
+            self.sample_idx = kwargs['regen_f'](*rg_params)
+            #TODO: REMOVE
+            print(self.sample_idx)
             
         self.pool_x = self.superp_x[self.sample_idx]
         self.pool_y = self.superp_y[self.sample_idx]
@@ -199,6 +223,12 @@ class ActiveLearningTrainer(Trainer):
         
         if self._config.info:
             print("[ALTrainer] Pool regenerated: {}. Superpool size: {}".format(self.pool_y.shape[0],self.superp_x.shape[0])) 
+
+    def _build_predictor(self):
+        return Predictor(self._config,keepImg=self._config.keepimg)
+
+    def _initializer(self,**kwargs):
+        pass
     
     def configure_sets(self):
         """
@@ -275,12 +305,11 @@ class ActiveLearningTrainer(Trainer):
         if self._config.sample != 1.0:
             self.sample_idx = np.delete(self.sample_idx,remove)
 
-        
+
     def run(self):
         """
-        Coordenates the AL process
+        General AL logic
         """
-        from keras import backend as K
         
         #Loaded CNN model and Datasource
         model = self.load_modules()
@@ -289,7 +318,6 @@ class ActiveLearningTrainer(Trainer):
         self.configure_sets()
         #AL components
         cache_m = CacheManager()
-        predictor = Predictor(self._config,keepImg=self._config.keepimg)
         function = None
         
         if not self._config.ac_function is None:
@@ -299,16 +327,28 @@ class ActiveLearningTrainer(Trainer):
             print("You should specify an acquisition function")
             sys.exit(Exitcodes.RUNTIME_ERROR)
 
+        #Starting from scratch or restoring?
+        if self.initial_acq > 0:
+            self.initial_acq += 1
+
+        predictor = self._build_predictor()
+        cache_m.dump(tuple(self._config.split),'split_ratio.pik')
+        
+        self.run_al(model,function,predictor,cache_m)
+        
+        
+    def run_al(self,model,function,predictor,cache_m):
+        """
+        Coordenates the AL process.
+        """
+        from keras import backend as K
+        
         stime = None
         etime = None
         train_time = None
         sw_thread = None
         end_train = False
-
-        #Starting from scratch or restoring?
-        if self.initial_acq > 0:
-            self.initial_acq += 1
-
+        
         final_acq = self.initial_acq+self._config.acquisition_steps
         for r in range(self.initial_acq,final_acq):
             if self._config.info:
@@ -339,7 +379,7 @@ class ActiveLearningTrainer(Trainer):
                     
             #Set load_full to false so dropout is disabled
             predictor.run(self.test_x,self.test_y,load_full=False,net_model=model)
-            
+                
             #Attempt to free GPU memory
             K.clear_session()
             
@@ -361,18 +401,6 @@ class ActiveLearningTrainer(Trainer):
         from Trainers import ThreadedGenerator
         import gc
 
-        #Regenerate pool if defined
-        if self._config.spool > 0 and kwargs['acquisition'] > 0 and ((kwargs['acquisition'] + 1) % (self._config.spool)) == 0:
-            self._refresh_pool(kwargs['acquisition'],model.name)
-            
-        #Clear some memory before acquisitions
-        gc.collect()
-        
-        #An acquisition function should return a NP array with the indexes of all items from the pool that 
-        #should be inserted into training and validation sets
-        if self.pool_x.shape[0] < self._config.acquire:
-            return False
-
         if kwargs is None:
             kwargs = {}
 
@@ -380,6 +408,11 @@ class ActiveLearningTrainer(Trainer):
 
         #Some acquisition functions may need access to GenericModel
         kwargs['model'] = model
+        
+        #An acquisition function should return a NP array with the indexes of all items from the pool that 
+        #should be inserted into training and validation sets
+        if self.pool_x.shape[0] < self._config.acquire:
+            return False
         
         if not self._config.tdim is None:
             fix_dim = self._config.tdim
@@ -393,7 +426,7 @@ class ActiveLearningTrainer(Trainer):
 
         #Acquisition functions that require a generator to load data
         generator_params = {
-            'dps':(self.pool_x,self.pool_y),
+            'dps':None,
             'classes':self._ds.nclasses,
             'dim':fix_dim,
             'batch_size':self._config.gpu_count * self._config.batch_size if self._config.gpu_count > 0 else self._config.batch_size,
@@ -401,6 +434,22 @@ class ActiveLearningTrainer(Trainer):
             'shuffle':False, #DO NOT SET TRUE!
             'verbose':self._config.verbose}
 
+        #Regenerate pool if defined
+        if self._config.spool > 0 and kwargs['acquisition'] > 0 and ((kwargs['acquisition'] + 1) % (self._config.spool)) == 0:
+            if self._config.spool_f is None:
+                self._refresh_pool(kwargs['acquisition'],model.name)
+            else:
+                acq = importlib.import_module('DataSetup')
+                function = getattr(acq,self._config.spool_f)
+                kwargs['space'] = 2
+                params = (self.pool_size,generator_params,kwargs)
+                self._refresh_pool(kwargs['acquisition'],model.name,regen_f=function,regen_p=params)
+            
+        #Clear some memory before acquisitions
+        gc.collect()
+
+        #Set pool generator
+        generator_params['dps'] = (self.pool_x,self.pool_y)
         generator = ThreadedGenerator(**generator_params)
 
         #For functions that need to access train data

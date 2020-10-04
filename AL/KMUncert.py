@@ -82,20 +82,6 @@ def _km_uncert(bayesian_model,generator,data_size,**kwargs):
     un_indexes = un_function(bayesian_model,generator,data_size,**kwargs)
     del(un_function)
 
-    #Models that take to long to save weights might not have finished
-    if 'sw_thread' in kwargs:
-        last_thread = None
-        if isinstance(kwargs['sw_thread'],list):
-            last_thread = kwargs['sw_thread'][-1]
-        else:
-            last_thread = kwargs['sw_thread']
-        if config.ffeat is None and last_thread.is_alive():
-            if config.info:
-                print("[km_uncert] Waiting for model weights to become available...")
-            last_thread.join()
-    elif config.info:
-        print("[km_uncert] Weights thread not available...trying to load weights")
-
     if not model.is_ensemble() and not (os.path.isfile(model.get_weights_cache()) or not os.path.isfile(model.get_mgpu_weights_cache())):
         if config.info:
             print("[km_uncert] No trained model or weights file found (H5).")
@@ -110,15 +96,18 @@ def _km_uncert(bayesian_model,generator,data_size,**kwargs):
         km.labels_ = np.delete(km.labels_,acquired)
     else:
         #Run feature extraction and clustering
+        if config.info:
+            print("Starting feature extraction ({} batches)...".format(len(generator)))
+            
         if hasattr(model,'build_extractor'):
-            single_m,parallel_m = model.build_extractor(training=False,feature=True,parallel=False)
+            single_m,parallel_m = model.build_extractor(training=False,feature=True,parallel=True,sw_thread=kwargs.get('sw_thread',None))
         else:
             if config.info:
                 print("[km_uncert] Model is not prepared to produce features. No feature extractor")
             return None
 
         if not model.is_ensemble():
-            pred_model = load_model_weights(config,model,single_m,parallel_m)
+            pred_model = load_model_weights(config,model,single_m,parallel_m,kwargs.get('sw_thread',None))
         else:
             generator.set_input_n(config.emodels)
             if not parallel_m is None:
@@ -127,8 +116,6 @@ def _km_uncert(bayesian_model,generator,data_size,**kwargs):
                 pred_model = single_m
             
         #Extract features for all images in the pool
-        if config.info:
-            print("Starting feature extraction ({} batches)...".format(len(generator)))        
         features = pred_model.predict_generator(generator,
                                                 workers=4*cpu_count,
                                                 max_queue_size=100*gpu_count,
