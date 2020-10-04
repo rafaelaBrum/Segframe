@@ -230,7 +230,7 @@ if __name__ == "__main__":
     al_args.add_argument('-sv', action='store_true', dest='save_var',
         help='Save aquisition variations/probability/clusters arrays and selected items indexes.',default=False)
     al_args.add_argument('-clusters', dest='clusters', type=int, 
-        help='Number of clusters to form in similarity selections (Default 0).', default=0)
+        help='Number of clusters to form in similarity selections (Default 20).', default=20)
     al_args.add_argument('-recluster', dest='recluster', type=int, 
         help='Re-cluster data every X acquisitions (Default:all).',default=0)
     al_args.add_argument('-ffeat', dest='ffeat', type=str,
@@ -241,6 +241,8 @@ if __name__ == "__main__":
         help='Use the same initial training set as produced by a previous experiment.')
     al_args.add_argument('-spool', dest='spool', type=int, 
         help='Regenerate the pool every spool acquisitions. Default = 0 (do not regenerate).',default=0)
+    al_args.add_argument('-spool_f', dest='spool_f', type=str, 
+        help='Use this function to regenerate - check docs. Default is None (random sample).',default=None)
     al_args.add_argument('-restore', dest='restore', action='store_true', default=False,
         help='Restore a previous experimet data and continue from where it left of.')
     

@@ -8,10 +8,23 @@ __doc__ = """
 Utility functions for acquisition functions and independent functions
 """
 
-def load_model_weights(config,model,single_m,parallel_m):
+def load_model_weights(config,model,single_m,parallel_m,sw_thread=None):
 
     npfile = False
     checkpath = None
+
+    if not sw_thread is None:
+        last_thread = None
+        if isinstance(sw_thread,list):
+            last_thread = sw_thread[-1]
+        else:
+            last_thread = sw_thread
+        if config.ffeat is None and last_thread.is_alive():
+            if config.info:
+                print("[load_model_weights] Waiting for model weights to become available...")
+            last_thread.join()
+    elif config.info:
+        print("[load_model_weights] Weights thread not available...trying to load weights")    
     
     if hasattr(model,'get_npweights_cache'):
         checkpath = model.get_npweights_cache(add_ext=True)

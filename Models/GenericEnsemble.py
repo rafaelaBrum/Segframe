@@ -144,6 +144,7 @@ class GenericEnsemble(GenericModel):
         else:
             allocated_gpus = self._config.gpu_count            
 
+        sw_thread = kwargs.get('sw_thread',None)
         inputs = None
         s_models = None
         p_models = None
@@ -151,7 +152,7 @@ class GenericEnsemble(GenericModel):
         if new or not (hasattr(self,'_s_models') or hasattr(self,'_p_models')):
             if self._config.info and not new:
                 print("[{}] No previous ensemble models stored, building new ones".format(self.name))
-            s_models,p_models,inputs = self._build_ensemble_body(feature,npfile,allocated_gpus)
+            s_models,p_models,inputs = self._build_ensemble_body(feature,npfile,allocated_gpus,sw_thread)
             self._s_models = s_models
             self._p_models = p_models
             self._en_inputs = inputs
@@ -189,7 +190,7 @@ class GenericEnsemble(GenericModel):
         return s_model,p_model
 
 
-    def _build_ensemble_body(self,feature,npfile,allocated_gpus):
+    def _build_ensemble_body(self,feature,npfile,allocated_gpus,sw_thread=None):
         s_models = []
         p_models = []
         inputs = []
@@ -214,7 +215,7 @@ class GenericEnsemble(GenericModel):
                 
             single,parallel = self._configure_compile(model,allocated_gpus)
             
-            single,parallel = self._load_weights(single,parallel,npfile,m)
+            single,parallel = self._load_weights(single,parallel,npfile,m,sw_thread)
             
             s_models.append(single)
             p_models.append(parallel)        
@@ -222,7 +223,19 @@ class GenericEnsemble(GenericModel):
         return s_models,p_models,inputs    
 
 
-    def _load_weights(self,single,parallel,npfile,m=''):
+    def _load_weights(self,single,parallel,npfile,m='',sw_thread=None):
+
+        if not sw_thread is None:
+            last_thread = None
+            if isinstance(sw_thread,list):
+                last_thread = sw_thread[-1]
+            else:
+                last_thread = sw_thread
+            if last_thread.is_alive():
+                if self._config.info:
+                    print("[GenericEnsemble] Waiting for model weights to become available...")
+                last_thread.join()
+            
         if not parallel is None:
             #Updates all layer names to avoid repeated name error
             for layer in parallel.layers:
