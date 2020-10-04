@@ -285,7 +285,7 @@ class Trainer(object):
         else:
             training_model = single
             
-        # try to resume the training
+        # try to resume the training - TODO: consider numpy weights file
         weights = list(filter(lambda f: f.endswith(".h5") and f.startswith(model.name),os.listdir(self._config.weights_path)))
         weights.sort()
         old_e_offset = 0
@@ -373,7 +373,6 @@ class Trainer(object):
                 np.save(model.get_npmgpu_weights_cache(),parallel.get_weights())
             else:
                 parallel.save_weights(model.get_mgpu_weights_cache())
-        cache_m.dump(tuple(self._config.split),'split_ratio.pik')
 
         if clear_sess:
             K.clear_session()

@@ -88,6 +88,7 @@ class GenericIterator(Iterator):
         else:
             raise ValueError("[GenericIterator] data should be a tuple of lists or ndarrays")
         self.data = data
+        self.reset()
 
     def next(self):
         """
