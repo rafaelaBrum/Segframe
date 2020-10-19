@@ -114,7 +114,6 @@ def _km_uncert(trained_models,generator,data_size,**kwargs):
         features = extract_feature_from_function(pred_model,generator,config.batch_size)
 
         del(pred_model)
-        del(generator)
         
         #features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
 
@@ -159,6 +158,7 @@ def _km_uncert(trained_models,generator,data_size,**kwargs):
         cache_m.dump((generator.returnDataAsArray(),un_clusters,un_indexes),fid)
 
     del(model)
+    del(generator)
     #Check uncertainty by the indexes, lower indexes correspond to greater uncertainty
     ind = None
     posa = {}
