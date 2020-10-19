@@ -49,13 +49,51 @@ class GenericModel(ABC):
         pass
     
     @abstractmethod
+    def _build(self,**kwargs):
+        pass
+        
     def build(self,**kwargs):
         """
-        Possible parameters to pass in kwargs (some models may use them, others not):
-        data_size <int>: Training data size, usefull for custom parameter settings
-        pre_trained <boolean>: Should load a pre-trained model?
+        Child classes should implement: _build method
+
+        Optional params:
+        @param data_size <int>: size of the training dataset
+        @param training <boolean>: set layer behavior to training mode (aplicable to dropout/BatchNormalization)
+        @param feature <boolean>: return features instead of softmax classification
+        @param preload_w <boolean>: load pre-trained weights to model
+        @param allocated_gpus <int>: number of GPU availables
+        @param pre_trained <boolean>: returned model should be pre-trained or not
         """
-        pass
+
+        width,height,channels = self._check_input_shape()
+
+        if 'data_size' in kwargs:
+            self.data_size = kwargs['data_size']
+
+        if 'training' in kwargs:
+            training = kwargs['training']
+        else:
+            training = None
+            
+        if 'feature' in kwargs:
+            feature = kwargs['feature']
+        else:
+            feature = False
+
+        if 'preload_w' in kwargs:
+            preload = kwargs['preload_w']
+        else:
+            preload = False
+
+        if not 'allocated_gpus' in kwargs or kwargs['allocated_gpus'] is None:
+            kwargs['allocated_gpus'] = self._config.gpu_count
+            
+        model,parallel_model = self._build(width,height,channels,**kwargs)
+        
+        self.single = model
+        self.parallel = parallel_model
+        
+        return (model,parallel_model)
 
     def get_ds(self):
         return self._ds

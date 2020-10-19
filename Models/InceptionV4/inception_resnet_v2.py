@@ -244,7 +244,7 @@ def InceptionResNetV2(include_top=True,
             img_input = input_tensor
 
     use_bn = kwargs['batch_n']
-
+    
     if 'use_dp' in kwargs:
         use_dp = kwargs['use_dp']
     else:
@@ -335,17 +335,13 @@ def InceptionResNetV2(include_top=True,
     # Final convolution block: 8 x 8 x 1536
     x = conv2d_bn(x, 1536, 1, name='conv_7b', use_bn=use_bn)
 
-    last_tensor = None
     if include_top:
         # Classification block
-        x = layers.GlobalAveragePooling2D(name='avg_pool')(x)
-        last_tensor = x
+        x = layers.GlobalAveragePooling2D(name='feature')(x)
         x = layers.Dense(classes, activation='softmax', kernel_initializer='glorot_normal', name='predictions')(x)
     elif 'custom_top' in kwargs and kwargs['custom_top']:
         #Create a custom new classification here if needed
-        x = layers.GlobalAveragePooling2D()(x)
-        last_tensor = x
-
+        x = layers.GlobalAveragePooling2D(name='feature')(x)
         x = layers.Dense(512,kernel_initializer='glorot_normal')(x)
         x = layers.Activation('relu', name='class1_ac')(x)
         if use_dp:
@@ -358,10 +354,9 @@ def InceptionResNetV2(include_top=True,
         x = layers.Activation('softmax')(x)
     else:
         if pooling == 'avg':
-            x = layers.GlobalAveragePooling2D()(x)
+            x = layers.GlobalAveragePooling2D(name='feature')(x)
         elif pooling == 'max':
-            x = layers.GlobalMaxPooling2D()(x)
-        last_tensor = x
+            x = layers.GlobalMaxPooling2D(name='feature')(x)
         x = layers.Dense(classes, activation='softmax', kernel_initializer='glorot_normal', name='predictions')(x)
         
     # Ensure that the model takes into account
@@ -372,12 +367,7 @@ def InceptionResNetV2(include_top=True,
         inputs = img_input
         
     # Create model.
-    model = None
-
-    if 'feature' in kwargs and kwargs['feature']:
-        return models.Model(inputs,last_tensor,name='inception_resnet_features')
-    else:
-        model = models.Model(inputs, x, name='inception_resnet_v2')
+    model = models.Model(inputs, x, name='inception_resnet_v2')
     
     # Load weights.
     if 'preload' in kwargs and kwargs['preload']:

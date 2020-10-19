@@ -183,7 +183,7 @@ class Predictor(object):
         if self._ensemble:
             #Weights should be loaded during ensemble build
             if hasattr(model,'build_ensemble'):
-                single,parallel = model.build_ensemble(training=False,npfile=True,new=True)
+                single,parallel = model.build_ensemble(training=False,npfile=True,new=False)
                 if parallel:
                     if self._config.info:
                         print("Using multigpu model for predictions.")
@@ -249,7 +249,9 @@ class Predictor(object):
         for i in range(stp):
             start_idx = i*bsize
             example = test_generator.next()
-            Y_pred[start_idx:start_idx+bsize] = pred_model.predict_on_batch(example[0])
+            with sess.as_default():
+                with sess.graph.as_default():
+                    Y_pred[start_idx:start_idx+bsize] = pred_model.predict_on_batch(example[0])
             if self._config.progressbar:
                 l.update(1)
             elif self._config.info:

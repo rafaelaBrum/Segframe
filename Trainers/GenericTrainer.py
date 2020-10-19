@@ -234,7 +234,7 @@ class Trainer(object):
         if 'allocated_gpus' in kwargs:
             allocated_gpus = kwargs['allocated_gpus']
         else:
-            allocated_gpus = None
+            allocated_gpus = self._config.gpu_count
             
         if 'save_numpy' in kwargs:
             save_numpy = kwargs['save_numpy']
@@ -355,7 +355,7 @@ class Trainer(object):
 
         sw_thread = threading.Thread(target=self._save_weights,name='save_weights',args=(model,single,parallel,clear_sess,save_numpy))
         sw_thread.start()
-        return sw_thread
+        return (training_model,sw_thread)
         
     def _save_weights(self,model,single,parallel,clear_sess,save_numpy):
         #Save weights for single tower model and for multigpu model (if defined)
