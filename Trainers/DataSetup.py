@@ -104,11 +104,12 @@ def csregen(superp,pool_size,generator_params,kwargs):
     from sklearn.cluster import KMeans,MiniBatchKMeans
     from sklearn.decomposition import PCA
     from sklearn.metrics import pairwise_distances_argmin_min
+    from datetime import timedelta
+    import time
     from Trainers import ThreadedGenerator
     from AL.Common import extract_feature_from_function,load_model_weights
     from AL import cs_select_batch
-    
-    import time
+
     
     #Checks params
     model = None
