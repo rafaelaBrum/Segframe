@@ -195,10 +195,10 @@ class ActiveLearningTrainer(Trainer):
             to_remove = self.acq_idx.shape[0] if not self.acq_idx is None else 0
             print("[ALTrainer] To be removed from super pool ({1}): {0}".format(self.acq_idx,to_remove))
             
-        if cache_m.checkFileExistence(fid):
+        #if cache_m.checkFileExistence(fid):
             #self.pool_x,self.pool_y,_ = cache_m.load(fid)
-            if self._config.info:
-                print("Subpool restoration not available, resampling...")
+            #if self._config.info:
+                #print("[ALTrainer] Subpool restoration not available, resampling...")
                 #print("[ALTrainer] Loaded resampled pool from: {}".format(cache_m.fileLocation(fid)))
 
         if not self.acq_idx is None:
@@ -362,7 +362,7 @@ class ActiveLearningTrainer(Trainer):
 
             #Track training time
             train_time = time.time()
-            sw_thread = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))
+            sw_thread,_ = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
                 
@@ -408,6 +408,8 @@ class ActiveLearningTrainer(Trainer):
 
         #Some acquisition functions may need access to GenericModel
         kwargs['model'] = model
+
+        tmodels = kwargs.get('emodels',None)
         
         #An acquisition function should return a NP array with the indexes of all items from the pool that 
         #should be inserted into training and validation sets
@@ -439,8 +441,8 @@ class ActiveLearningTrainer(Trainer):
             if self._config.spool_f is None:
                 self._refresh_pool(kwargs['acquisition'],model.name)
             else:
-                acq = importlib.import_module('DataSetup')
-                function = getattr(acq,self._config.spool_f)
+                acq = importlib.import_module('Trainers')
+                function = getattr(getattr(acq,'DataSetup'),self._config.spool_f)
                 kwargs['space'] = 2
                 params = (self.pool_size,generator_params,kwargs)
                 self._refresh_pool(kwargs['acquisition'],model.name,regen_f=function,regen_p=params)
@@ -456,8 +458,10 @@ class ActiveLearningTrainer(Trainer):
         generator_params['dps'] = (self.train_x,self.train_y)
         train_gen = ThreadedGenerator(**generator_params)
         kwargs['train_gen'] = train_gen
-        
-        if self._config.gpu_count > 1:
+
+        if not tmodels is None:
+            pred_model = tmodels
+        elif self._config.gpu_count > 1:
             pred_model = model.parallel
         else:
             pred_model = model.single

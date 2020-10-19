@@ -84,7 +84,7 @@ def split_test(config,ds):
 
     return test_x,test_y,X,Y
 
-def csregen(superp,pool_size,generator_params,**kwargs):
+def csregen(superp,pool_size,generator_params,kwargs):
     """
     Regenerates the pool extracting pool_size elements from superpool.
     
@@ -105,16 +105,22 @@ def csregen(superp,pool_size,generator_params,**kwargs):
     from sklearn.decomposition import PCA
     from sklearn.metrics import pairwise_distances_argmin_min
     from Trainers import ThreadedGenerator
-    from AL.Common import load_model_weights
+    from AL.Common import extract_feature_from_function,load_model_weights
     from AL import cs_select_batch
     
     import time
     
     #Checks params
-    if not 'model' in kwargs:
-        print('[csregen] No model given, falling back to random selection')
+    model = None
+    tmodels = None
+    if not 'model' in kwargs or not 'emodels' in kwargs:
+        print('[csregen] Generic model or trained models unavailable, falling back to random selection.')
         return np.random.choice(superp.shape[0],pool_size,replace=False)
+    else:
+        model = kwargs['model']
+        tmodels = kwargs['emodels']
 
+    sw_thread = kwargs.get('sw_thread',None)
     config = None
     if 'config' in kwargs:
         config = kwargs['config']
@@ -128,46 +134,44 @@ def csregen(superp,pool_size,generator_params,**kwargs):
     
     #First - select space from superpool and setup generator
     sp_size = kwargs.get('space',3) * pool_size
-    space_idx = np.random.choice(superp.shape[0],sp_size,replace=False)
-    space = superp[space_idx]
+    space_idx = np.random.choice(superp[0].shape[0],sp_size,replace=False)
+    space = (superp[0][space_idx],superp[1][space_idx])
+    generator_params['dps'] = space
 
     generator = ThreadedGenerator(**generator_params)
     
     #Second - extract features from space, apply PCA
     stime = time.time()
     if hasattr(model,'build_extractor'):
-        single_m,parallel_m = model.build_extractor(training=False,feature=True,parallel=True)
+        pred_model = model.build_extractor(model=tmodels,parallel=gpu_count>1,sw_thread=sw_thread)
     else:
         if config.info:
-            print("[csregen] Model is not prepared to produce features. No feature extractor")
+            print("[DataSetup] Model is not prepared to produce features. No feature extractor")
         return None
 
-    if not model.is_ensemble():
-        pred_model = load_model_weights(config,model,single_m,parallel_m,kwargs.get('sw_thread',None))
-    else:
+    if model.is_ensemble():
         generator.set_input_n(config.emodels)
-        if not parallel_m is None:
-            pred_model = parallel_m
-        else:
-            pred_model = single_m
             
-    if config.info:
-        print("Starting feature extraction ({} batches)...".format(len(generator)))        
-    features = pred_model.predict_generator(generator,
-                                            workers=4*cpu_count,
-                                            max_queue_size=100*gpu_count,
-                                            verbose=0)
-    features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
+    #Extract features for all images in the pool
+    #Some model variables should be reinitialized
+    for m in tmodels:
+        model.register_ensemble(m)
+        load_model_weights(config,model,tmodels[m],sw_thread)
+        
+    features = extract_feature_from_function(pred_model,generator,config.batch_size)
 
+    del(pred_model)
+    del(generator)
+    
     if config.pca > 0:
         if config.info:
             print("[csregen] Starting PCA decomposition ({} features)...".format(config.pca))
 
         pca = PCA(n_components = config.pca)
-        features = pca.fit_transform(pool_features)
+        features = pca.fit_transform(features)
         
     #Third - Runs KMeans and divides feature space in k clusters (same as given by config - default 20)
-    if data_size < 10000:
+    if pool_size < 10000:
         km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=max(int(cpu_count/2),1)).fit(features)
     else:
         km = MiniBatchKMeans(n_clusters = clusters, init='k-means++',batch_size=500).fit(features)
@@ -175,7 +179,7 @@ def csregen(superp,pool_size,generator_params,**kwargs):
     centers, _ = pairwise_distances_argmin_min(km.cluster_centers_, features)
     
     #Fourth - CoreSet extracts pool_size samples from space (pass space features and cluster center features - already selected)
-    acquired = cs_select_batch(features[centers],features,config.query)
+    acquired = cs_select_batch(features[centers],features,config.acquire)
     del(features)
     
     if config.verbose > 0:

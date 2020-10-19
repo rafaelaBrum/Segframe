@@ -7,7 +7,7 @@ from tqdm import tqdm
 
 from scipy.stats import mode
 
-from .Common import load_model_weights
+from .Common import extract_feature_from_function
 
 __doc__ = """
 All acquisition functions should receive:
@@ -19,19 +19,19 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-def km_uncert(bayesian_model,generator,data_size,**kwargs):
-    return _km_uncert(bayesian_model,generator,data_size,**kwargs)
+def km_uncert(trained_models,generator,data_size,**kwargs):
+    return _km_uncert(trained_models,generator,data_size,**kwargs)
 
-def kmng_uncert(bayesian_model,generator,data_size,**kwargs):
+def kmng_uncert(trained_models,generator,data_size,**kwargs):
     kwargs['ng_logic'] = True
-    return _km_uncert(bayesian_model,generator,data_size,**kwargs)
+    return _km_uncert(trained_models,generator,data_size,**kwargs)
 
-def _km_uncert(bayesian_model,generator,data_size,**kwargs):
+def _km_uncert(trained_models,generator,data_size,**kwargs):
     """
     Cluster in K centroids and extract samples from each cluster, according to selection logic (ng or not).
 
     Function needs to extract the following configuration parameters:
-    model <keras.Model>: model to use for predictions
+    trained_models <keras.Model or dict of models>: model(s) to use for predictions
     generator <keras.Sequence>: data generator for predictions
     data_size <int>: number of data samples
     mc_dp <int>: number of dropout iterations
@@ -75,11 +75,12 @@ def _km_uncert(bayesian_model,generator,data_size,**kwargs):
 
     ## UNCERTAINTY CALCULATION FIRST 
     #Any uncertainty function could be used
+    #TODO: BAYESIAN FUNCTIONS SHOULD BUILD A NEW MODEL, ENABLING DROPOUT
     n_config = copy.copy(config)
     n_config.acquire = data_size
     kwargs['config'] = n_config
     un_function = getattr(importlib.import_module('AL'),config.un_function)
-    un_indexes = un_function(bayesian_model,generator,data_size,**kwargs)
+    un_indexes = un_function(trained_models,generator,data_size,**kwargs)
     del(un_function)
 
     if not model.is_ensemble() and not (os.path.isfile(model.get_weights_cache()) or not os.path.isfile(model.get_mgpu_weights_cache())):
@@ -98,34 +99,24 @@ def _km_uncert(bayesian_model,generator,data_size,**kwargs):
         #Run feature extraction and clustering
         if config.info:
             print("Starting feature extraction ({} batches)...".format(len(generator)))
-            
+
         if hasattr(model,'build_extractor'):
-            single_m,parallel_m = model.build_extractor(training=False,feature=True,parallel=True,sw_thread=kwargs.get('sw_thread',None))
+            pred_model = model.build_extractor(model=trained_models,parallel=gpu_count>1,sw_thread=kwargs.get('sw_thread',None))
         else:
             if config.info:
                 print("[km_uncert] Model is not prepared to produce features. No feature extractor")
             return None
 
-        if not model.is_ensemble():
-            pred_model = load_model_weights(config,model,single_m,parallel_m,kwargs.get('sw_thread',None))
-        else:
+        if model.is_ensemble():
             generator.set_input_n(config.emodels)
-            if not parallel_m is None:
-                pred_model = parallel_m
-            else:
-                pred_model = single_m
             
         #Extract features for all images in the pool
-        features = pred_model.predict_generator(generator,
-                                                workers=4*cpu_count,
-                                                max_queue_size=100*gpu_count,
-                                                verbose=0)
+        features = extract_feature_from_function(pred_model,generator,config.batch_size)
 
         del(pred_model)
-        del(parallel_m)
-        del(single_m)
+        del(generator)
         
-        features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
+        #features = features.reshape(features.shape[0],np.prod(features.shape[1:]))
 
         if config.info:
             print("Feature vector shape: {}".format(features.shape))
@@ -209,6 +200,7 @@ def _acq_ng_logic(posa,clusters,un_clusters,query,config,verbose,cache_m):
     cmean = np.asarray([np.mean(posa[k]) for k in range(clusters)])
     glb = np.sum(cmean)
     frac = (glb/cmean)/np.sum(glb/cmean)
+    frac[np.isnan(frac)] = 1/clusters #Prevent NaN values if cmean is zero
     while ac_count < query:
         cln = j % clusters
         q = un_clusters[cln]

@@ -625,7 +625,7 @@ class Plotter(object):
         from matplotlib.legend_handler import HandlerPatch
         
         color = 0
-        hatch_color = 'white'
+        hatch_color = 'black'
         line = 0
         marker = 0
         plotAUC = False

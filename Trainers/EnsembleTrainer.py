@@ -118,6 +118,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         train_time = None
         sw_thread = None
         end_train = False
+        t_models = {}
         
         self._initializer(gpus=self._config.gpu_count,processes=self._config.cpu_count)
 
@@ -161,9 +162,10 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                 if self._config.info:
                     print("[EnsembleTrainer] Starting model {} training".format(m))
                     
-                st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
+                tm,st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
                                                 set_session=False,stats=False,summary=False,
                                                 clear_sess=True,save_numpy=True)
+                t_models[m] = tm
                 if sw_thread is None:
                     sw_thread = [st]
                 else:
@@ -172,7 +174,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
                 
-            if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
+            if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,emodels=t_models,sw_thread=sw_thread):
                 if self._config.info:
                     print("[EnsembleTrainer] No more acquisitions are in order")
                 end_train = True

@@ -4,10 +4,10 @@
 import numpy as np
 import os,sys
 from tqdm import tqdm
-
 from scipy.stats import mode
 
 from .Common import load_model_weights
+
 __doc__ = """
 All acquisition functions should receive:
 1 - numpy array of items
@@ -18,14 +18,14 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
-
 def ensemble_varratios(pred_model,generator,data_size,**kwargs):
     """
     Calculation as defined in paper:
     Bayesian convolutional neural networks with Bernoulli approximate variational inference
 
     Function needs to extract the following configuration parameters:
-    model <keras.Model>: model to use for predictions
+    pred_model <dict>: keys (int) -> keras.Model model to use for predictions
+    model <GenericModel>: instance responsible for model construction
     generator <keras.Sequence>: data generator for predictions
     data_size <int>: number of data samples
     mc_dp <int>: number of dropout iterations
@@ -92,20 +92,21 @@ def ensemble_varratios(pred_model,generator,data_size,**kwargs):
     if config.debug:
         all_probs = np.zeros(shape=(emodels,data_size,generator.classes),dtype=np.float32)
 
-    single,parallel = model.build(preload_w=False)
+    #single,parallel = model.build(preload_w=False)
     for d in l:
         if not pbar and config.info:
             print("Step {0}/{1}".format(d+1,emodels))
 
         model.register_ensemble(d)
             
-        pred_model = load_model_weights(config,model,single,parallel)
+        curmodel = pred_model[d]
+        curmodel = load_model_weights(config,model,curmodel,sw_thread)
         
         #Keep verbosity in 0 to gain speed 
-        proba = pred_model.predict_generator(generator,
-                                                workers=5*cpu_count,
-                                                max_queue_size=100*gpu_count,
-                                                verbose=0)
+        proba = curmodel.predict_generator(generator,
+                                               workers=5*cpu_count,
+                                               max_queue_size=100*gpu_count,
+                                               verbose=0)
 
         if config.debug:
             all_probs[d] = proba
@@ -159,10 +160,21 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
     """
     Calculation as defined in paper:
     Bayesian convolutional neural networks with Bernoulli approximate variational inference
+
+    Function needs to extract the following configuration parameters:
+    pred_model <dict>: keys (int) -> keras.Model model to use for predictions
+    model <GenericModel>: instance responsible for model construction
+    generator <keras.Sequence>: data generator for predictions
+    data_size <int>: number of data samples
+    mc_dp <int>: number of dropout iterations
+    cpu_count <int>: number of cpu cores (used to define number of generator workers)
+    gpu_count <int>: number of gpus available
+    verbose <int>: verbosity level
+    pbar <boolean>: user progress bars
     """
     from Utils import CacheManager
     cache_m = CacheManager()
-
+    
     if 'config' in kwargs:
         config = kwargs['config']
         emodels = config.emodels
@@ -219,7 +231,7 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
             print("Starting ensemble sampling...")
         l = range(emodels)
 
-    single,parallel = model.build(preload_w=False)
+    #single,parallel = model.build(preload_w=False)
     
     for d in l:
         if not pbar and config.info:
@@ -227,10 +239,11 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
             sys.stdout.flush()
             
         model.register_ensemble(d)
-            
-        pred_model = load_model_weights(config,model,single,parallel)
+
+        curmodel = pred_model[d]
+        curmodel = load_model_weights(config,model,curmodel,sw_thread)
         
-        proba = pred_model.predict_generator(generator,
+        proba = curmodel.predict_generator(generator,
                                                 workers=5*cpu_count,
                                                 max_queue_size=100*gpu_count,
                                                 verbose=0)
@@ -249,7 +262,7 @@ def ensemble_bald(pred_model,generator,data_size,**kwargs):
         del(proba)
         del(dropout_score_log)
         del(Entropy_Compute)
-        del(pred_model)
+        del(curmodel)
 
     Avg_Pi = np.divide(score_All, emodels)
     Log_Avg_Pi = np.log2(Avg_Pi)
