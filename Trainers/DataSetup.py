@@ -180,7 +180,7 @@ def csregen(superp,pool_size,generator_params,kwargs):
     centers, _ = pairwise_distances_argmin_min(km.cluster_centers_, features)
     
     #Fourth - CoreSet extracts pool_size samples from space (pass space features and cluster center features - already selected)
-    acquired = cs_select_batch(features[centers],features,config.acquire)
+    acquired = cs_select_batch(features[centers],features,pool_size)
     del(features)
     
     if config.verbose > 0:
