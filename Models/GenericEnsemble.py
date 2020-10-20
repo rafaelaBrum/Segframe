@@ -162,7 +162,7 @@ class GenericEnsemble(GenericModel):
                 print("[{}] No previous ensemble models stored, building new ones".format(self.name))
             s_models,p_models,inputs = self._build_ensemble_body(feature,npfile,allocated_gpus,sw_thread)
             p_models = list(filter(lambda x: not x is None,p_models))
-        elif not emodels is None and new:
+        elif not emodels is None and (new or self._s_ensemble is None or self._p_ensemble is None):
             #Build from trained models
             inputs = []
             outputs = []
