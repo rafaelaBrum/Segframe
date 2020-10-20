@@ -442,10 +442,10 @@ class ActiveLearningTrainer(Trainer):
                 self._refresh_pool(kwargs['acquisition'],model.name)
             else:
                 acq = importlib.import_module('Trainers')
-                function = getattr(getattr(acq,'DataSetup'),self._config.spool_f)
+                spool_f = getattr(getattr(acq,'DataSetup'),self._config.spool_f)
                 kwargs['space'] = 2
                 params = (self.pool_size,generator_params,kwargs)
-                self._refresh_pool(kwargs['acquisition'],model.name,regen_f=function,regen_p=params)
+                self._refresh_pool(kwargs['acquisition'],model.name,regen_f=spool_f,regen_p=params)
             
         #Clear some memory before acquisitions
         gc.collect()
