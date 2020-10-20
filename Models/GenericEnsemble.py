@@ -134,7 +134,8 @@ class GenericEnsemble(GenericModel):
 
         @param feature <boolean>: ensemble should be a feature extractor (no classification top)
         @param npfile <boolean>: loads weights from numpy files
-        @param new <boolean>: build a new ensemble body or use the last built
+        @param rbuild <boolean>: build a new ensemble body or use the last built
+        @param new <boolean>: create a new ensemble from emodels or use one already available
         @param emodels <dict>: dictionary  keys (int - model number) -> ensemble tower
         @param sw_thread <list/thread object>: wait on thread to load weights
         @param allocated_gpus <int>: define the number of GPUs to distribute the model
@@ -145,6 +146,7 @@ class GenericEnsemble(GenericModel):
 
         #Optional parameters
         npfile = kwargs.get('npfile',False)
+        rbuild = kwargs.get('new',False)
         new = kwargs.get('new',False)
         emodels = kwargs.get('emodels',None)
         sw_thread = kwargs.get('sw_thread',None)
@@ -155,12 +157,12 @@ class GenericEnsemble(GenericModel):
         s_models = None
         p_models = None
         
-        if new or (emodels is None and not (hasattr(self,'_s_ensemble') or hasattr(self,'_p_ensemble'))):
+        if rbuild or (emodels is None and not (hasattr(self,'_s_ensemble') or hasattr(self,'_p_ensemble'))):
             if self._config.info and not new:
                 print("[{}] No previous ensemble models stored, building new ones".format(self.name))
             s_models,p_models,inputs = self._build_ensemble_body(feature,npfile,allocated_gpus,sw_thread)
             p_models = list(filter(lambda x: not x is None,p_models))
-        elif not emodels is None:
+        elif not emodels is None and new:
             #Build from trained models
             inputs = []
             outputs = []
