@@ -212,8 +212,6 @@ class ActiveLearningTrainer(Trainer):
             else:
                 rg_params = ((self.superp_x,self.superp_y),)
             self.sample_idx = kwargs['regen_f'](*rg_params)
-            #TODO: REMOVE
-            print(self.sample_idx)
             
         self.pool_x = self.superp_x[self.sample_idx]
         self.pool_y = self.superp_y[self.sample_idx]

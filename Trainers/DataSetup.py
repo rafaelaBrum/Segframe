@@ -144,7 +144,7 @@ def csregen(superp,pool_size,generator_params,kwargs):
     #Second - extract features from space, apply PCA
     stime = time.time()
     if hasattr(model,'build_extractor'):
-        pred_model = model.build_extractor(model=tmodels,parallel=gpu_count>1,sw_thread=sw_thread)
+        pred_model = model.build_extractor(model=tmodels,parallel=gpu_count>1,sw_thread=sw_thread,new=True)
     else:
         if config.info:
             print("[DataSetup] Model is not prepared to produce features. No feature extractor")
