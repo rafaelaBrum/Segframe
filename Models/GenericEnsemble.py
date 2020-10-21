@@ -146,7 +146,7 @@ class GenericEnsemble(GenericModel):
 
         #Optional parameters
         npfile = kwargs.get('npfile',False)
-        rbuild = kwargs.get('new',False)
+        rbuild = kwargs.get('rbuild',False)
         new = kwargs.get('new',False)
         emodels = kwargs.get('emodels',None)
         sw_thread = kwargs.get('sw_thread',None)

@@ -63,6 +63,7 @@ class GenericModel(ABC):
         @param preload_w <boolean>: load pre-trained weights to model
         @param allocated_gpus <int>: number of GPU availables
         @param pre_trained <boolean>: returned model should be pre-trained or not
+        @param keep_model <boolean>: store created model as an instance atribute.
         """
 
         width,height,channels = self._check_input_shape()
@@ -85,13 +86,16 @@ class GenericModel(ABC):
         else:
             preload = False
 
+        keep_model = kwargs.get('keep_model',True)
+
         if not 'allocated_gpus' in kwargs or kwargs['allocated_gpus'] is None:
             kwargs['allocated_gpus'] = self._config.gpu_count
             
         model,parallel_model = self._build(width,height,channels,**kwargs)
-        
-        self.single = model
-        self.parallel = parallel_model
+
+        if keep_model:
+            self.single = model
+            self.parallel = parallel_model
         
         return (model,parallel_model)
 
