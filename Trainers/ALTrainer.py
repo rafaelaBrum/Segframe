@@ -360,7 +360,7 @@ class ActiveLearningTrainer(Trainer):
 
             #Track training time
             train_time = time.time()
-            sw_thread,_ = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))
+            tmodel,sw_thread = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
                 

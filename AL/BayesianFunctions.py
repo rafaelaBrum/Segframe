@@ -20,7 +20,14 @@ Returns: numpy array of element indexes
 
 def _build_load_model(genmodel,data_size,config,sw_thread=None):
 
-    single,parallel = genmodel.build(data_size=data_size,training=True,allocated_gpus=config.gpu_count)
+    if sw_thread is None and config.info:
+        print("[BayesianFunctions] Building bayesian model...")
+    elif sw_thread.is_alive():
+        if config.info:
+            print("[ALTrainer] Waiting for model weights...")
+        sw_thread.join()        
+        
+    single,parallel = genmodel.build(data_size=data_size,training=True,allocated_gpus=config.gpu_count,keep_model=False)
 
     pred_model = load_model_weights(config,genmodel,(single,parallel),sw_thread=None)
 
