@@ -38,7 +38,7 @@ class GenericEnsemble(GenericModel):
     """
     def __init__(self,config,ds,name=None):
         super().__init__(config,ds,name=name)
-        self._ensemble = None
+        self.tmodels = None
 
     def is_ensemble(self):
         return self._config.strategy == 'EnsembleTrainer'
@@ -160,6 +160,10 @@ class GenericEnsemble(GenericModel):
         inputs = None
         s_models = None
         p_models = None
+
+        #Use cached models if needed
+        if emodels is None and not self.tmodels is None:
+            emodels = self.tmodels
         
         if rbuild or (emodels is None and not (hasattr(self,'_s_ensemble') or hasattr(self,'_p_ensemble'))):
             if self._config.info and not new:

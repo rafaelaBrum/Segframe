@@ -159,7 +159,7 @@ def csregen(superp,pool_size,generator_params,kwargs):
         model.register_ensemble(m)
         load_model_weights(config,model,tmodels[m],sw_thread)
         
-    features = extract_feature_from_function(pred_model,generator,config.batch_size)
+    features = extract_feature_from_function(pred_model,generator)
 
     del(pred_model)
     del(generator)

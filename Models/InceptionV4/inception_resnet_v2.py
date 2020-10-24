@@ -26,6 +26,8 @@ from keras import utils as keras_utils
 from keras import models
 from keras_contrib.layers import GroupNormalization
 
+import tensorflow as tf
+
 BASE_WEIGHT_URL = ('https://github.com/fchollet/deep-learning-models/'
                    'releases/download/v0.7/')
 
@@ -367,7 +369,8 @@ def InceptionResNetV2(include_top=True,
         inputs = img_input
         
     # Create model.
-    model = models.Model(inputs, x, name='inception_resnet_v2')
+    with tf.device('/cpu:0'):
+        model = models.Model(inputs, x, name='inception_resnet_v2')
     
     # Load weights.
     if 'preload' in kwargs and kwargs['preload']:

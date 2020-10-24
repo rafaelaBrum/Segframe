@@ -186,11 +186,14 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                         print("Waiting ensemble model {} weights' to become available...".format(k))
                         sw_thread[k].join()
                         
-            #Set load_full to false so dropout is disabled
+            #Set load_full loads a full model stored in file
+            model.tmodels = t_models
             predictor.run(self.test_x,self.test_y,load_full=False,net_model=model)
                 
             #Attempt to free GPU memory
             K.clear_session()
+
+            model.tmodels = None
             
             if self._config.info:
                 etime = time.time()

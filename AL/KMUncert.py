@@ -92,8 +92,6 @@ def _km_uncert(trained_models,generator,data_size,**kwargs):
         km,acquired = cache_m.load('clusters.pik')
         if config.info:
             print("[km_uncert] Loaded clusters from previous acquisition")
-            #TODO: REMOVE
-            print("[km_uncert] Previous cluster size: {};\nAcquired: {}".format(km.labels_.shape,acquired.shape))
         km.labels_ = np.delete(km.labels_,acquired)
     else:
         #Run feature extraction and clustering
@@ -111,7 +109,7 @@ def _km_uncert(trained_models,generator,data_size,**kwargs):
             generator.set_input_n(config.emodels)
             
         #Extract features for all images in the pool
-        features = extract_feature_from_function(pred_model,generator,config.batch_size)
+        features = extract_feature_from_function(pred_model,generator)
 
         del(pred_model)
         
