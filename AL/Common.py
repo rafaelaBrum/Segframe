@@ -160,6 +160,7 @@ def debug_acquisition(s_expected,s_probs,classes,cache_m,config,fidp):
 def extract_feature_from_function(function,generator):
 
     data_size = generator.returnDataSize()
+    bsize = generator.batch_size
     stp = int(np.ceil(data_size / bsize))
     features = None
     for i in range(stp):

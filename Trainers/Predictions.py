@@ -215,7 +215,7 @@ class Predictor(object):
                 print("No trained model or weights file found")
             return None
 
-        bsize = self._config.batch_size
+        bsize = 2*self._config.batch_size
         stp = int(np.ceil(len(X) / bsize))
 
         image_generator = ImageDataGenerator(samplewise_center=self._config.batch_norm, 

@@ -120,7 +120,11 @@ def run_clustering(config,data,net_model,nclasses):
     count = len(data[0])
     print("Cluster sizes:")
     print("\n".join(["Cluster # {0}: {1} items ({2:2.2f}% of total)" .format(key[0],key[1],100*(key[1]/count)) for key in cl]))
-    print("Patches in first {} clusters: {}".format(3,sum([k[1] for k in cl[:3]])))
+
+    #Cumulative patch sum
+    for k in range(1,len(cl)+1):
+        first = sum([j[1] for j in cl[:k]])
+        print("Patches grouped in {} denser clusters: {} ({:2.2f} % of total)".format(k,first,100*first/count))
     
 if __name__ == "__main__":
 
@@ -145,7 +149,7 @@ if __name__ == "__main__":
         help='Batch size (Default: 8).', default=8)
     parser.add_argument('-emodels', dest='emodels', type=int, 
         help='Number of ensemble submodels (Default: 3).', default=3)    
-    parser.add_argument('-bw', dest='bandwidth', type=int, 
+    parser.add_argument('-bw', dest='bandwidth', type=float, 
         help='Mean-shift bandwidth. Zero means use default estimator. (Default: 0).', default=0)
     parser.add_argument('-pca', dest='pca', type=int, 
         help='Apply PCA to extracted features before clustering (Default: 0 (not used)).',default=50)    
