@@ -115,7 +115,11 @@ class GenericEnsemble(GenericModel):
 
         f = None
         if self.is_ensemble():
-            layers = [model.get_layer('EM{}-{}'.format(e,'feature')).output for e in range(self._config.emodels)]
+            if parallel:
+                 p_features = [model.get_layer('EM{}-inception_resnet_v2'.format(e)) for e in range(self._config.emodels)]
+                 layers = [imodel.get_layer('feature').output for imodel in p_features]
+            else:
+                 layers = [model.get_layer('EM{}-{}'.format(e,'feature')).output for e in range(self._config.emodels)]
             x = Concatenate()(layers)
             f = K.function(model.inputs, [x])
         else:
