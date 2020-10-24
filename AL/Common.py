@@ -157,7 +157,7 @@ def debug_acquisition(s_expected,s_probs,classes,cache_m,config,fidp):
         cache_m.dump((s_expected,s_probs),fidp)
 
 
-def extract_feature_from_function(function,generator,bsize):
+def extract_feature_from_function(function,generator):
 
     data_size = generator.returnDataSize()
     stp = int(np.ceil(data_size / bsize))
