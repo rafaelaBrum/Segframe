@@ -26,6 +26,7 @@ from keras.models import Model
 #Locals
 from Utils import CacheManager
 from Models.GenericModel import GenericModel
+from AL.Common import load_model_weights
 
 class GenericEnsemble(GenericModel):
     """
@@ -151,6 +152,7 @@ class GenericEnsemble(GenericModel):
         @param emodels <dict>: dictionary  keys (int - model number) -> ensemble tower
         @param sw_thread <list/thread object>: wait on thread to load weights
         @param allocated_gpus <int>: define the number of GPUs to distribute the model
+        @param load_weights <boolean>: load ensemble model weights during build
         """
         
         if 'data_size' in kwargs:
@@ -160,6 +162,7 @@ class GenericEnsemble(GenericModel):
         npfile = kwargs.get('npfile',False)
         rbuild = kwargs.get('rbuild',False)
         new = kwargs.get('new',False)
+        load_weights = kwargs.get('load_weights',False)        
         emodels = kwargs.get('emodels',None)
         sw_thread = kwargs.get('sw_thread',None)
         allocated_gpus = kwargs.get('allocated_gpus',self._config.gpu_count)
@@ -183,6 +186,8 @@ class GenericEnsemble(GenericModel):
             inputs = []
             outputs = []
             for e in emodels:
+                if load_weights:
+                    emodels[e] = load_model_weights(self._config,self,emodels[e],sw_thread)
                 for l in emodels[e].layers:
                     l.name = 'EM{}-{}'.format(e,l.name)
                 inputs.extend(emodels[e].inputs)

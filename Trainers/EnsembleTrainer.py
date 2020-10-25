@@ -189,7 +189,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                         
             #Set load_full loads a full model stored in file
             model.tmodels = t_models
-            predictor.run(self.test_x,self.test_y,load_full=False,net_model=model)
+            predictor.run(self.test_x,self.test_y,load_full=end_train,net_model=model)
                 
             #Attempt to free GPU memory
             K.clear_session()

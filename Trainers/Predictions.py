@@ -107,7 +107,7 @@ class Predictor(object):
 
         If provided x_test and y_test data, runs prediction with them.
 
-        @param load_full <boolean>: loads full model with load_model function
+        @param load_full <boolean>: loads full model with load_model function. If ensemble, load individual model weights
         @param net_model <GenericModel subclass>: performs predictions with this model
         """
         net_name = self._config.network
@@ -183,7 +183,7 @@ class Predictor(object):
         if self._ensemble:
             #Weights should be loaded during ensemble build
             if hasattr(model,'build_ensemble'):
-                single,parallel = model.build_ensemble(training=False,npfile=True,new=False)
+                single,parallel = model.build_ensemble(training=False,npfile=True,new=False,load_weights=load_full)
                 if parallel:
                     if self._config.info:
                         print("Using multigpu model for predictions.")
