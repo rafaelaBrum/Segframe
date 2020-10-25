@@ -171,14 +171,14 @@ class Predictor(object):
 
         # session setup
         sess = K.get_session()
-        ses_config = tf.ConfigProto(
-            device_count={"CPU":self._config.cpu_count,"GPU":self._config.gpu_count},
-            intra_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count, 
-            inter_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count,
-            log_device_placement=True if self._verbose > 1 else False
-            )
-        sess.config = ses_config
-        K.set_session(sess)
+        #ses_config = tf.ConfigProto(
+        #    device_count={"CPU":self._config.cpu_count,"GPU":self._config.gpu_count},
+        #    intra_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count, 
+        #    inter_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count,
+        #    log_device_placement=True if self._verbose > 1 else False
+        #    )
+        #sess.config = ses_config
+        #K.set_session(sess)
         
         if self._ensemble:
             #Weights should be loaded during ensemble build

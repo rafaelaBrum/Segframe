@@ -7,7 +7,7 @@
 
 #echo commands to stdout
 #set -x
-DIRID="KN-17"
+DIRID="MN-67"
 
 export PYTHONPATH=$HOME/.local/lib/python3.6/site-packages:/pylon5/ac3uump/alsm/lib64/python3.6/site-packages:$PYTHONPATH
 
@@ -27,7 +27,7 @@ module load cuda/9.0
 echo '[START] training'
 date +"%D %T"
 
-time python3 main.py -i -v --al -predst ~/.keras/datasets -split 0.857 0.013 0.13 -net BayesKNet -data MNIST -tnorm -init_train 20 -ac_steps 50 -dropout_steps 50 -ac_function km_uncert -un_function bayesian_varratios -clusters 10 -acquire 20 -k -e 50 -b 128 -out logs/ -cpu 4 -gpu 1 -f1 0 -tn -wpath results/$DIRID -model_dir results/$DIRID -logdir results/$DIRID
+time python3 main.py -i -v --al -predst ~/.keras/datasets -split 0.857 0.013 0.13 -net GalKNet -data MNIST -tnorm -init_train 20 -ac_steps 50 -dropout_steps 50 -ac_function km_uncert -un_function bayesian_varratios -clusters 20 -acquire 20 -k -e 50 -b 128 -out logs/ -cpu 4 -gpu 1 -f1 0 -tn -wpath results/$DIRID -model_dir results/$DIRID -logdir results/$DIRID
 
 echo '[FINAL] done training'
 

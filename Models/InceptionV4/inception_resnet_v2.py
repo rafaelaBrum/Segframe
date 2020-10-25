@@ -84,7 +84,7 @@ def conv2d_bn(x,
                                       name=bn_name)(x)
     else:
         bn_name = None if name is None else name + '_gn'
-        x = GroupNormalization(groups=16,axis=-1,name=bn_name)(x)
+        x = GroupNormalization(groups=16,axis=-1,name=bn_name,scale=False)(x)
         
     if activation is not None:
         ac_name = None if name is None else name + '_ac'
