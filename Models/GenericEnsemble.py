@@ -43,6 +43,14 @@ class GenericEnsemble(GenericModel):
     def is_ensemble(self):
         return self._config.strategy == 'EnsembleTrainer'
 
+    def reset(self):
+        if hasattr(self,'_s_ensemble'):
+            del(self._s_ensemble)
+        if hasattr(self,'_p_ensemble'):
+            del(self._p_ensemble)
+
+        self.tmodels = None
+
     def get_npweights_cache(self,add_ext=False):
         """
         Returns path to model cache.

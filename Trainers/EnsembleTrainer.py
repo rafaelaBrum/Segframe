@@ -193,7 +193,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             #Attempt to free GPU memory
             K.clear_session()
 
-            model.tmodels = None
+            model.reset()
             
             if self._config.info:
                 etime = time.time()
