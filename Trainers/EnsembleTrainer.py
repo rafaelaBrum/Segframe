@@ -178,6 +178,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                 if self._config.info:
                     print("[EnsembleTrainer] No more acquisitions are in order")
                 end_train = True
+                model.reset() #Last AL iteration, force ensemble build for prediction
 
             #If sw_thread was provided, we should check the availability of model weights
             if not sw_thread is None:
@@ -192,8 +193,6 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                 
             #Attempt to free GPU memory
             K.clear_session()
-
-            model.reset()
             
             if self._config.info:
                 etime = time.time()
