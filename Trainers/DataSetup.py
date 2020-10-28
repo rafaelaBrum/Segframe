@@ -134,7 +134,10 @@ def csregen(superp,pool_size,generator_params,kwargs):
         clusters = 20
     
     #First - select space from superpool and setup generator
-    sp_size = kwargs.get('space',3) * pool_size
+    if pool_size <= 1000:
+        sp_size = kwargs.get('space',4) * pool_size
+    else:
+        sp_size = kwargs.get('space',3) * pool_size
     space_idx = np.random.choice(superp[0].shape[0],sp_size,replace=False)
     space = (superp[0][space_idx],superp[1][space_idx])
     generator_params['dps'] = space
@@ -180,7 +183,9 @@ def csregen(superp,pool_size,generator_params,kwargs):
     centers, _ = pairwise_distances_argmin_min(km.cluster_centers_, features)
     
     #Fourth - CoreSet extracts pool_size samples from space (pass space features and cluster center features - already selected)
-    acquired = cs_select_batch(features[centers],features,pool_size)
+    mask = np.ones(features.shape[0],dtype=bool)
+    mask[centers] = False
+    acquired = cs_select_batch(features[centers],features[mask],pool_size,cluster_centers=centers)
     del(features)
     
     if config.verbose > 0:

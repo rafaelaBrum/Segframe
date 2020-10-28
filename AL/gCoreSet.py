@@ -68,7 +68,7 @@ def __update_distances(cluster_centers,
     if only_new:
       cluster_centers = [d for d in cluster_centers
                          if d not in already_selected]
-    if cluster_centers or initialize:
+    if len(cluster_centers) > 0 or initialize:
       # Update min_distances for all examples given new cluster center.
       if only_new:
         x = pool_features[cluster_centers]
@@ -99,12 +99,14 @@ def cs_select_batch(train_features, pool_features, N, **kwargs):
     """
         
     min_distances = None
+
+    cluster_centers = kwargs.get('cluster_centers',[])
     
     if not train_features is None:
         if len(train_features.shape) != 2:
             print("[core-set] Train features should be a 2D array")
             return None
-        min_distances = __update_distances([],
+        min_distances = __update_distances(cluster_centers,
                                                min_distances=min_distances,
                                                pool_features = pool_features,
                                                sel_features = train_features,
@@ -112,6 +114,7 @@ def cs_select_batch(train_features, pool_features, N, **kwargs):
                                                only_new=False,
                                                reset_dist=True,
                                                initialize=True)
+
 
     new_batch = []
 
