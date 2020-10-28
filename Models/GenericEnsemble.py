@@ -197,6 +197,7 @@ class GenericEnsemble(GenericModel):
             outputs = []
             for e in emodels:
                 if load_weights:
+                    self.register_ensemble(e)
                     emodels[e] = load_model_weights(self._config,self,emodels[e],sw_thread)
                 for l in emodels[e].layers:
                     l.name = 'EM{}-{}'.format(e,l.name)
