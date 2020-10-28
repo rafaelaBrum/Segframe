@@ -181,6 +181,9 @@ def csregen(superp,pool_size,generator_params,kwargs):
         km = MiniBatchKMeans(n_clusters = clusters, init='k-means++',batch_size=500).fit(features)
 
     centers, _ = pairwise_distances_argmin_min(km.cluster_centers_, features)
+
+    if config.verbose > 0:
+        print("[csregen] Selected centers cluster #: {}".format(km.labels_[centers]))
     
     #Fourth - CoreSet extracts pool_size samples from space (pass space features and cluster center features - already selected)
     mask = np.ones(features.shape[0],dtype=bool)
