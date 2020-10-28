@@ -99,7 +99,7 @@ def _km_uncert(trained_models,generator,data_size,**kwargs):
             print("Starting feature extraction ({} batches)...".format(len(generator)))
 
         if hasattr(model,'build_extractor'):
-            pred_model = model.build_extractor(model=trained_models,parallel=gpu_count>1,sw_thread=kwargs.get('sw_thread',None))
+            pred_model = model.build_extractor(model=trained_models,parallel=gpu_count>1,sw_thread=kwargs.get('sw_thread',None),new=True)
         else:
             if config.info:
                 print("[km_uncert] Model is not prepared to produce features. No feature extractor")

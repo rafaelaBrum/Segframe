@@ -179,7 +179,8 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                     print("[EnsembleTrainer] No more acquisitions are in order")
                 end_train = True
                 model.reset() #Last AL iteration, force ensemble build for prediction
-
+                model.tmodels = t_models
+                
             #If sw_thread was provided, we should check the availability of model weights
             if not sw_thread is None:
                 for k in range(len(sw_thread)):
@@ -188,7 +189,6 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                         sw_thread[k].join()
                         
             #Set load_full loads a full model stored in file
-            model.tmodels = t_models
             predictor.run(self.test_x,self.test_y,load_full=end_train,net_model=model)
                 
             #Attempt to free GPU memory

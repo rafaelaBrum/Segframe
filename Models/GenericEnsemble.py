@@ -40,6 +40,7 @@ class GenericEnsemble(GenericModel):
     def __init__(self,config,ds,name=None):
         super().__init__(config,ds,name=name)
         self.tmodels = None
+        self.tmids = None
 
     def is_ensemble(self):
         return self._config.strategy == 'EnsembleTrainer'
@@ -51,6 +52,7 @@ class GenericEnsemble(GenericModel):
             del(self._p_ensemble)
 
         self.tmodels = None
+        self.tmids = None
 
     def get_npweights_cache(self,add_ext=False):
         """
@@ -173,6 +175,14 @@ class GenericEnsemble(GenericModel):
         p_models = None
 
         #Use cached models if needed
+        if not emodels is None:
+            ids = tuple([id(emodels[m]) for m in range(len(emodels))])
+            if ids != self.tmids:
+                self.tmids = ids
+                self.tmodels = emodels
+            else:
+                new = False
+                
         if emodels is None and not self.tmodels is None:
             emodels = self.tmodels
         
