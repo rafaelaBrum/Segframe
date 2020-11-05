@@ -6,6 +6,8 @@ import os,sys
 import re
 import numpy as np
 import threading
+import time
+from datetime import timedelta
 
 #Filter warnings
 import warnings
@@ -360,8 +362,11 @@ class Trainer(object):
     def _save_weights(self,model,single,parallel,clear_sess,save_numpy):
         #Save weights for single tower model and for multigpu model (if defined)
         cache_m = CacheManager()
+        stime = None
         if self._config.info:
+            stime = time.time()
             print("Saving weights, this could take a while...")
+            
         if save_numpy and hasattr(model,'get_npweights_cache'):
             np.save(model.get_npweights_cache(),single.get_weights())
         else:
@@ -373,6 +378,11 @@ class Trainer(object):
                 np.save(model.get_npmgpu_weights_cache(),parallel.get_weights())
             else:
                 parallel.save_weights(model.get_mgpu_weights_cache())
+
+        if self._config.info:
+                etime = time.time()
+                td = timedelta(seconds=(etime-stime))
+                print("Weight saving took: {}".format(td))
 
         if clear_sess:
             K.clear_session()

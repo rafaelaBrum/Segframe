@@ -28,7 +28,7 @@ def _split_origins(config,x_data,t_idx):
     selected = set(random.choices(wsis,k=config.wsi_split))
     selected_idx = []
 
-    if self._config.info:
+    if config.info:
         print("[DataSetup] WSIs selected to provide test patches:\n{}".format("\n".join(selected)))
             
     for i in range(len(x_data)):

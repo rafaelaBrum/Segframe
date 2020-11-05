@@ -14,9 +14,13 @@ def load_model_weights(config,genmodel,tmodel,sw_thread=None):
     genmodel: GenericModel
     tmodel: tuple (single_model,parallel_model) or a Keras.Model instance
     """
+    import time
+    from datetime import timedelta
+    
     npfile = False
     checkpath = None
-
+    stime = None
+    
     if not sw_thread is None:
         last_thread = None
         if isinstance(sw_thread,list):
@@ -36,7 +40,10 @@ def load_model_weights(config,genmodel,tmodel,sw_thread=None):
     if npfile and not os.path.isfile(checkpath):
         spath = genmodel.get_weights_cache()
         npfile = False
-            
+
+    if config.info:
+        stime = time.time()
+
             
     #Model can be loaded from previous acquisition train or from a fixed final model
     if config.gpu_count > 1:
@@ -82,6 +89,11 @@ def load_model_weights(config,genmodel,tmodel,sw_thread=None):
             pred_model.load_weights(spath,by_name=True)
             if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(spath))
+
+    if config.info:
+        etime = time.time()
+        td = timedelta(seconds=(etime-stime))
+        print("Weights loading took: {}".format(td))
 
     return pred_model
 

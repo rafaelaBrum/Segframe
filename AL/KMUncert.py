@@ -95,8 +95,10 @@ def _km_uncert(trained_models,generator,data_size,**kwargs):
         km.labels_ = np.delete(km.labels_,acquired)
     else:
         #Run feature extraction and clustering
+        ext_time = None
         if config.info:
             print("Starting feature extraction ({} batches)...".format(len(generator)))
+            ext_time = time.time()
 
         if hasattr(model,'build_extractor'):
             pred_model = model.build_extractor(model=trained_models,parallel=gpu_count>1,sw_thread=kwargs.get('sw_thread',None),new=True)
@@ -127,8 +129,9 @@ def _km_uncert(trained_models,generator,data_size,**kwargs):
             
         stime = None
         etime = None
-        if config.verbose > 0:
-            print("Done extraction...starting KMeans")
+        if config.info:
+            td = timedelta(seconds=(time.time() - ext_time))
+            print("Feature extraction took: {}".format(td))
             stime = time.time()
             
         if data_size < 10000:
@@ -156,7 +159,9 @@ def _km_uncert(trained_models,generator,data_size,**kwargs):
         cache_m.dump((generator.returnDataAsArray(),un_clusters,un_indexes),fid)
 
     del(model)
-    del(generator)
+
+    if not config.debug:
+        del(generator)
     #Check uncertainty by the indexes, lower indexes correspond to greater uncertainty
     ind = None
     posa = {}
