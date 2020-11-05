@@ -125,7 +125,7 @@ def csregen(superp,pool_size,generator_params,kwargs):
     config = None
     if 'config' in kwargs:
         config = kwargs['config']
-        clusters = config.clusters
+        clusters = 2*config.clusters
         gpu_count = config.gpu_count
         cpu_count = config.cpu_count
     else:
@@ -135,9 +135,9 @@ def csregen(superp,pool_size,generator_params,kwargs):
     
     #First - select space from superpool and setup generator
     if pool_size <= 1000:
-        sp_size = kwargs.get('space',4) * pool_size
+        sp_size = kwargs.get('space',10) * pool_size
     else:
-        sp_size = kwargs.get('space',3) * pool_size
+        sp_size = kwargs.get('space',5) * pool_size
     space_idx = np.random.choice(superp[0].shape[0],sp_size,replace=False)
     space = (superp[0][space_idx],superp[1][space_idx])
     generator_params['dps'] = space
