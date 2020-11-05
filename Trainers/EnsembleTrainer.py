@@ -143,11 +143,9 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                     if self._config.info:
                         print("[EnsembleTrainer] Waiting for model weights.", end='')
                     while True:
-                        pst = '.'
                         if sw_thread[-1].is_alive():
                             if self._config.info:
-                                pst = "{}{}".format(pst,'.')
-                                print(pst,end='')
+                                print('.',end='')
                             sw_thread[-1].join(60.0)
                         else:
                             print('')
