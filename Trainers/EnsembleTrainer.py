@@ -141,14 +141,11 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                 #Some models may take too long to save weights
                 if not sw_thread is None:
                     if self._config.info:
-                        print("[EnsembleTrainer] Waiting for model weights.", end='')
+                        print("[EnsembleTrainer] Waiting for model weights.")
                     while True:
                         if sw_thread[-1].is_alive():
-                            if self._config.info:
-                                print('.',end='')
                             sw_thread[-1].join(60.0)
                         else:
-                            print('')
                             break
                     
                 if hasattr(model,'register_ensemble'):
