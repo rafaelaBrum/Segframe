@@ -177,8 +177,10 @@ def extract_feature_from_function(function,generator):
     features = None
     for i in range(stp):
         start_idx = i*bsize
-        example = generator.next()
-        ff = function(example[0])[0] #Considering the model has a single output
+        inp = generator.next()[0]
+        if not isinstance(inp,list):
+            inp = [inp]
+        ff = function(inp)[0] #Considering the model has a single output
         if features is None:
             features = np.zeros(tuple([data_size]+list(ff.shape[1:])),dtype=np.float32)
         features[start_idx:start_idx+bsize] = ff
