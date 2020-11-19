@@ -182,9 +182,12 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                     if sw_thread[k].is_alive():
                         print("Waiting ensemble model {} weights' to become available...".format(k))
                         sw_thread[k].join()
-                        
+
             #Set load_full loads a full model stored in file
             predictor.run(self.test_x,self.test_y,load_full=end_train,net_model=model)
+
+            #Test target network if needed
+            self.test_target(predictor,r)
                 
             #Attempt to free GPU memory
             K.clear_session()
