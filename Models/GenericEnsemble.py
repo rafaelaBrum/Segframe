@@ -26,6 +26,7 @@ from keras.models import Model
 #Locals
 from Utils import CacheManager
 from Models.GenericModel import GenericModel
+from AL.Common import load_model_weights
 
 class GenericEnsemble(GenericModel):
     """
@@ -38,9 +39,20 @@ class GenericEnsemble(GenericModel):
     """
     def __init__(self,config,ds,name=None):
         super().__init__(config,ds,name=name)
+        self.tmodels = None
+        self.tmids = None
 
     def is_ensemble(self):
         return self._config.strategy == 'EnsembleTrainer'
+
+    def reset(self):
+        if hasattr(self,'_s_ensemble'):
+            del(self._s_ensemble)
+        if hasattr(self,'_p_ensemble'):
+            del(self._p_ensemble)
+
+        self.tmodels = None
+        self.tmids = None
 
     def get_npweights_cache(self,add_ext=False):
         """
@@ -83,113 +95,145 @@ class GenericEnsemble(GenericModel):
 
     def build_extractor(self,**kwargs):
         """
-        Builds a feature extractor.
-        
-        Weights should be loaded by caller!
+        Builds a feature extractor from an already built model.
+
+        Returns: Keras backend function
 
         Key word arguments:
+        model: constructs the extractor from this model, build and ensemble if a dict of models is given
         preload_w: return model with weights already loaded? True -> Yes
         parallel: return parallel model (overrides gpu_count avaliation)? True -> Yes
         """
         #Weight loading for the feature extraction is done latter by requesting party
-        kwargs['preload_w'] = False
-
-        if self.is_ensemble():
-            kwargs['npfile'] = True
-            kwargs['feature'] = True
-            s,p = self.build_ensemble(**kwargs)
-            if 'parallel' in kwargs and not kwargs['parallel']:
-                return (s,None)
-            else:
-                return (s,p)
-            
-        if 'parallel' in kwargs and not kwargs['parallel']:
-            s,p = self._build(**kwargs)
-            return (s,None)
+        model = None
+        parallel = kwargs.get('parallel',False)
+        
+        if not 'model' in kwargs:
+            print("[GenericEnsemble] A compiled model should be passed as the model argument")
+            return None
         else:
-            return self._build(**kwargs)        
+            model = kwargs['model']
+
+        if isinstance(model,dict):
+            if self._config.info:
+                print("Building ensemble from trained models: {}".format([hex(id(em)) for em in model.values()]))
+            kwargs['emodels'] = model
+            s_model,p_model = self.build_ensemble(**kwargs)
+            if parallel and not p_model is None:
+                model = p_model
+            else:
+                model = s_model
+
+        f = None
+        if self.is_ensemble():
+            if parallel:
+                 p_features = [model.get_layer('EM{}-inception_resnet_v2'.format(e)) for e in range(self._config.emodels)]
+                 layers = [imodel.get_layer('feature').output for imodel in p_features]
+            else:
+                 layers = [model.get_layer('EM{}-{}'.format(e,'feature')).output for e in range(self._config.emodels)]
+            x = Concatenate()(layers)
+            f = K.function(model.inputs, [x])
+        else:
+            layer = model.get_layer('feature')
+            f = K.function(model.inputs, [layer.output])
+
+        return f
         
     def build_ensemble(self,**kwargs):
         """
         Builds an ensemble of M Inception models.
 
-        Weights are loaded here because of the way ensembles should be built.
+        Weights are loaded here when new is set True because of the way ensembles should be built.
 
         Default build: avareges the output of the corresponding softmaxes
 
+        @param feature <boolean>: ensemble should be a feature extractor (no classification top)
         @param npfile <boolean>: loads weights from numpy files
-        @param new <boolean>: build a new ensemble body or use the last built
+        @param rbuild <boolean>: build a new ensemble body or use the last built
+        @param new <boolean>: create a new ensemble from emodels or use one already available
+        @param emodels <dict>: dictionary  keys (int - model number) -> ensemble tower
+        @param sw_thread <list/thread object>: wait on thread to load weights
+        @param allocated_gpus <int>: define the number of GPUs to distribute the model
+        @param load_weights <boolean>: load ensemble model weights during build
         """
-
+        
         if 'data_size' in kwargs:
             self.data_size = kwargs['data_size']
-            
-        if 'feature' in kwargs:
-            feature = kwargs['feature']
-        else:
-            feature = False
 
-        if 'npfile' in kwargs:
-            npfile = kwargs['npfile']
-        else:
-            npfile = False            
-
-        if 'new' in kwargs:
-            new = kwargs['new']
-        else:
-            new = True
-            
-        if 'allocated_gpus' in kwargs and not kwargs['allocated_gpus'] is None:
-            allocated_gpus = kwargs['allocated_gpus']
-        else:
-            allocated_gpus = self._config.gpu_count            
-
+        #Optional parameters
+        npfile = kwargs.get('npfile',False)
+        rbuild = kwargs.get('rbuild',False)
+        new = kwargs.get('new',False)
+        load_weights = kwargs.get('load_weights',False)        
+        emodels = kwargs.get('emodels',None)
+        sw_thread = kwargs.get('sw_thread',None)
+        allocated_gpus = kwargs.get('allocated_gpus',self._config.gpu_count)
+        feature = False
+        
         inputs = None
         s_models = None
         p_models = None
+
+        #Use cached models if needed
+        if not emodels is None:
+            ids = tuple([id(emodels[m]) for m in range(len(emodels))])
+            if ids != self.tmids:
+                self.tmids = ids
+                self.tmodels = emodels
+            else:
+                new = False
+                
+        if emodels is None and not self.tmodels is None:
+            emodels = self.tmodels
         
-        if new or not (hasattr(self,'_s_models') or hasattr(self,'_p_models')):
+        if rbuild or (emodels is None and not (hasattr(self,'_s_ensemble') or hasattr(self,'_p_ensemble'))):
             if self._config.info and not new:
                 print("[{}] No previous ensemble models stored, building new ones".format(self.name))
-            s_models,p_models,inputs = self._build_ensemble_body(feature,npfile,allocated_gpus)
-            self._s_models = s_models
-            self._p_models = p_models
-            self._en_inputs = inputs
-        else:
-            s_models = self._s_models
-            p_models = self._p_models
-            inputs = self._en_inputs
-
-        s_outputs = [out for s in s_models for out in s.outputs]
-        p_models = list(filter(lambda x: not x is None,p_models))
-        if len(p_models) > 0:
-            p_outputs = [out for p in p_models for out in p.outputs]
-        else:
-            p_outputs = None
-
-        #Build the ensemble output from individual models
-        s_model,p_model = None,None
-        ##Single GPU model
-        ## TODO: to enable full model reuse, we should convert feature extractor and classificator
-        ## between one another
-        if feature:
-            x = Concatenate()(s_outputs)
-        else:
-            x = Average()(s_outputs)
-        s_model = Model(inputs = inputs, outputs=x)
-
-        ##Parallel model
-        if not p_outputs is None:
-            if feature:
-                x = Concatenate()(p_outputs)
+            s_models,p_models,inputs = self._build_ensemble_body(feature,npfile,allocated_gpus,sw_thread)
+            p_models = list(filter(lambda x: not x is None,p_models))
+        elif not emodels is None and (new or not (hasattr(self,'_s_ensemble') and hasattr(self,'_p_ensemble'))):
+            #Build from trained models
+            inputs = []
+            outputs = []
+            for e in emodels:
+                if load_weights:
+                    self.register_ensemble(e)
+                    emodels[e] = load_model_weights(self._config,self,emodels[e],sw_thread)
+                for l in emodels[e].layers:
+                    l.name = 'EM{}-{}'.format(e,l.name)
+                inputs.extend(emodels[e].inputs)
+                outputs.append(emodels[e].layers[-1].output)
+            if allocated_gpus > 1:
+                p_models = list(emodels.values())
+                p_outputs = outputs
             else:
-                x = Average()(p_outputs)
+                s_models = list(emodels.values())
+                s_outputs = outputs
+        else:
+            return (self._s_ensemble,self._p_ensemble)
+
+        s_model,p_model = None,None            
+        if not s_models is None and len(s_models) > 0:
+            s_outputs = [out for s in s_models for out in s.outputs]
+            x = Average()(s_outputs)
+            s_model = Model(inputs = inputs, outputs=x)
+            
+        if not p_models is None and len(p_models) > 0:
+            p_outputs = [out for p in p_models for out in p.outputs]
+            x = Average()(p_outputs)
             p_model = Model(inputs=inputs,outputs=x)
 
+        if hasattr(self,'_s_ensemble'):
+            del(self._s_ensemble)
+        if hasattr(self,'_p_ensemble'):
+            del(self._p_ensemble)
+        
+        self._s_ensemble = s_model
+        self._p_ensemble = p_model
+        
         return s_model,p_model
 
-
-    def _build_ensemble_body(self,feature,npfile,allocated_gpus):
+    def _build_ensemble_body(self,feature,npfile,allocated_gpus,sw_thread=None):
         s_models = []
         p_models = []
         inputs = []
@@ -214,7 +258,7 @@ class GenericEnsemble(GenericModel):
                 
             single,parallel = self._configure_compile(model,allocated_gpus)
             
-            single,parallel = self._load_weights(single,parallel,npfile,m)
+            single,parallel = self._load_weights(single,parallel,npfile,m,sw_thread)
             
             s_models.append(single)
             p_models.append(parallel)        
@@ -222,7 +266,19 @@ class GenericEnsemble(GenericModel):
         return s_models,p_models,inputs    
 
 
-    def _load_weights(self,single,parallel,npfile,m=''):
+    def _load_weights(self,single,parallel,npfile,m='',sw_thread=None):
+
+        if not sw_thread is None:
+            last_thread = None
+            if isinstance(sw_thread,list):
+                last_thread = sw_thread[-1]
+            else:
+                last_thread = sw_thread
+            if last_thread.is_alive():
+                if self._config.info:
+                    print("[GenericEnsemble] Waiting for model weights to become available...")
+                last_thread.join()
+            
         if not parallel is None:
             #Updates all layer names to avoid repeated name error
             for layer in parallel.layers:

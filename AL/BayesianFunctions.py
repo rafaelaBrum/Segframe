@@ -4,6 +4,7 @@
 import numpy as np
 import os
 from tqdm import tqdm
+from .Common import load_model_weights
 
 from scipy.stats import mode
 
@@ -17,6 +18,20 @@ All acquisition functions should receive:
 Returns: numpy array of element indexes
 """
 
+def _build_load_model(genmodel,data_size,config,sw_thread=None):
+
+    if sw_thread is None and config.info:
+        print("[BayesianFunctions] Building bayesian model...")
+    elif sw_thread.is_alive():
+        if config.info:
+            print("[ALTrainer] Waiting for model weights...")
+        sw_thread.join()        
+        
+    single,parallel = genmodel.build(data_size=data_size,training=True,allocated_gpus=config.gpu_count,keep_model=False)
+
+    pred_model = load_model_weights(config,genmodel,(single,parallel),sw_thread=None)
+
+    return pred_model
     
 def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     """
@@ -51,6 +66,14 @@ def bayesian_varratios(pred_model,generator,data_size,**kwargs):
     if 'acquisition' in kwargs:
         r = kwargs['acquisition']
 
+    if 'model' in kwargs:
+        model = kwargs['model']
+    else:
+        print("[bayesian_varratios] GenericModel is needed by ensemble_varratios. Set model kw argument")
+        return None
+    
+    pred_model = _build_load_model(model,data_size,config,kwargs.get('sw_thread',None))
+    
     fidp = None
     if save_var:
         fid = 'al-uncertainty-{1}-r{0}.pik'.format(r,config.ac_function)
@@ -153,6 +176,14 @@ def bayesian_bald(pred_model,generator,data_size,**kwargs):
     if 'acquisition' in kwargs:
         r = kwargs['acquisition']
 
+    if 'model' in kwargs:
+        model = kwargs['model']
+    else:
+        print("[bayesian_varratios] GenericModel is needed by ensemble_varratios. Set model kw argument")
+        return None
+    
+    pred_model = _build_load_model(model,data_size,config,kwargs.get('sw_thread',None))
+    
     fidp = None
     if save_var:
         fid = 'al-uncertainty-{1}-r{0}.pik'.format(r,config.ac_function)

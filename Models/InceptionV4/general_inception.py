@@ -69,48 +69,16 @@ class Inception(GenericEnsemble):
         Returns path to model cache
         """
         return self.cache_m.fileLocation(self._mgpu_weightsCache)
-        
-    def build(self,**kwargs):
-        """
-        Optional params:
-        @param pre_trained <boolean>: returned model should be pre-trained or not
-        @param data_size <int>: size of the training dataset
-        @param feature <boolean>: return features instead of softmax classification
-        """
-        model,parallel_model = self._build(**kwargs)
-        
-        self.single = model
-        self.parallel = parallel_model
-        
-        return (model,parallel_model)
     
-    def _build(self,**kwargs):
-
-        width,height,channels = self._check_input_shape()
-
-        if 'data_size' in kwargs:
-            self.data_size = kwargs['data_size']
-
-        if 'training' in kwargs:
-            training = kwargs['training']
-        else:
-            training = True
-            
-        if 'feature' in kwargs:
-            feature = kwargs['feature']
-        else:
-            feature = False
-
-        if 'preload_w' in kwargs:
-            preload = kwargs['preload_w']
-        else:
-            preload = False
-
-        if 'allocated_gpus' in kwargs and not kwargs['allocated_gpus'] is None:
-            allocated_gpus = kwargs['allocated_gpus']
-        else:
-            allocated_gpus = self._config.gpu_count
-            
+    def _build(self,width,height,channels,**kwargs):
+        """
+        Custom build process
+        """
+        training = kwargs.get('training',None)
+        feature = kwargs.get('feature')
+        preload = kwargs.get('preload')
+        allocated_gpus = kwargs.get('allocated_gpus')
+        
         if K.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
         else:
@@ -170,7 +138,7 @@ class Inception(GenericEnsemble):
         """
         Parameters:
         - training <boolean>: sets network to training mode, wich enables dropout if there are DP layers
-        - feature <boolean>: build a feature extractor
+        - feature <boolean>: build a feature extractor - DEPRECATED
         - preload <boolean>: preload Imagenet weights
         - ensemble <boolean>: builds an ensemble of networks from the Inception architecture
 

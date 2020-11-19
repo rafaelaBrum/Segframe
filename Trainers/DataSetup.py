@@ -28,7 +28,7 @@ def _split_origins(config,x_data,t_idx):
     selected = set(random.choices(wsis,k=config.wsi_split))
     selected_idx = []
 
-    if self._config.info:
+    if config.info:
         print("[DataSetup] WSIs selected to provide test patches:\n{}".format("\n".join(selected)))
             
     for i in range(len(x_data)):
@@ -83,3 +83,118 @@ def split_test(config,ds):
         X,Y = fX,fY
 
     return test_x,test_y,X,Y
+
+def csregen(superp,pool_size,generator_params,kwargs):
+    """
+    Regenerates the pool extracting pool_size elements from superpool.
+    
+    Uses CoreSet to select the samples that will be in the pool.
+
+    Uses KMedian to select initial members, based on a limited subsample of the superpool 
+
+    Arguments:
+    - superp <tuple>: (superpool X, superpool Y)
+    - pool_size <int>: size of the returned set
+    - generator_params <dict>: parameters to be passed to a ThreadedGenerator
+
+    Optional arguments:
+    - space <int>: sets the observation space as space*pool_size. Defaul is 3.
+    - clusters <int>: clusters space in this many groups
+    """
+    from sklearn.cluster import KMeans,MiniBatchKMeans
+    from sklearn.decomposition import PCA
+    from sklearn.metrics import pairwise_distances_argmin_min
+    from datetime import timedelta
+    import time
+    from Trainers import ThreadedGenerator
+    from AL.Common import extract_feature_from_function,load_model_weights
+    from AL import cs_select_batch
+
+    
+    #Checks params
+    model = None
+    tmodels = None
+    if not 'model' in kwargs or not 'emodels' in kwargs:
+        print('[csregen] Generic model or trained models unavailable, falling back to random selection.')
+        return np.random.choice(superp.shape[0],pool_size,replace=False)
+    else:
+        model = kwargs['model']
+        tmodels = kwargs['emodels']
+
+    sw_thread = kwargs.get('sw_thread',None)
+    config = None
+    if 'config' in kwargs:
+        config = kwargs['config']
+        clusters = config.clusters
+        gpu_count = config.gpu_count
+        cpu_count = config.cpu_count
+    else:
+        cpu_count = 1
+        gpu_count = 0
+        clusters = 20
+    
+    #First - select space from superpool and setup generator
+    if pool_size <= 1000:
+        sp_size = kwargs.get('space',4) * pool_size
+    else:
+        sp_size = kwargs.get('space',3) * pool_size
+    space_idx = np.random.choice(superp[0].shape[0],sp_size,replace=False)
+    space = (superp[0][space_idx],superp[1][space_idx])
+    generator_params['dps'] = space
+
+    generator = ThreadedGenerator(**generator_params)
+    
+    #Second - extract features from space, apply PCA
+    stime = time.time()
+    if hasattr(model,'build_extractor'):
+        pred_model = model.build_extractor(model=tmodels,parallel=gpu_count>1,sw_thread=sw_thread,new=True)
+    else:
+        if config.info:
+            print("[DataSetup] Model is not prepared to produce features. No feature extractor")
+        return None
+
+    if model.is_ensemble():
+        generator.set_input_n(config.emodels)
+            
+    #Extract features for all images in the pool
+    #Some model variables should be reinitialized
+    for m in tmodels:
+        model.register_ensemble(m)
+        load_model_weights(config,model,tmodels[m],sw_thread)
+        
+    features = extract_feature_from_function(pred_model,generator)
+
+    del(pred_model)
+    del(generator)
+    
+    if config.pca > 0:
+        if config.info:
+            print("[csregen] Starting PCA decomposition ({} features)...".format(config.pca))
+
+        pca = PCA(n_components = config.pca)
+        features = pca.fit_transform(features)
+        
+    #Third - Runs KMeans and divides feature space in k clusters (same as given by config - default 20)
+    if pool_size < 10000:
+        km = KMeans(n_clusters = clusters, init='k-means++',n_jobs=max(int(cpu_count/2),1)).fit(features)
+    else:
+        km = MiniBatchKMeans(n_clusters = clusters, init='k-means++',batch_size=500).fit(features)
+
+    centers, _ = pairwise_distances_argmin_min(km.cluster_centers_, features)
+
+    if config.verbose > 0:
+        print("[csregen] Selected centers cluster #: {}".format(km.labels_[centers]))
+    
+    #Fourth - CoreSet extracts pool_size samples from space (pass space features and cluster center features - already selected)
+    mask = np.ones(features.shape[0],dtype=bool)
+    mask[centers] = False
+    acquired = cs_select_batch(features[centers],features[mask],pool_size,cluster_centers=centers)
+    del(features)
+    
+    if config.verbose > 0:
+        etime = time.time()
+        td = timedelta(seconds=(etime-stime))
+        print("Pool setup step took: {}".format(td))
+        
+    #Fifth - return the index for selected samples, relative to superpool
+    return space_idx[acquired]

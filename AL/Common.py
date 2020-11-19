@@ -8,33 +8,58 @@ __doc__ = """
 Utility functions for acquisition functions and independent functions
 """
 
-def load_model_weights(config,model,single_m,parallel_m):
+def load_model_weights(config,genmodel,tmodel,sw_thread=None):
 
+    """
+    genmodel: GenericModel
+    tmodel: tuple (single_model,parallel_model) or a Keras.Model instance
+    """
+    import time
+    from datetime import timedelta
+    
     npfile = False
     checkpath = None
+    stime = None
     
-    if hasattr(model,'get_npweights_cache'):
-        checkpath = model.get_npweights_cache(add_ext=True)
+    if not sw_thread is None:
+        last_thread = None
+        if isinstance(sw_thread,list):
+            last_thread = sw_thread[-1]
+        else:
+            last_thread = sw_thread
+        if config.ffeat is None and last_thread.is_alive():
+            if config.info:
+                print("[load_model_weights] Waiting for model weights to become available...")
+            last_thread.join()
+    
+    if hasattr(genmodel,'get_npweights_cache'):
+        checkpath = genmodel.get_npweights_cache(add_ext=True)
         spath = checkpath
         npfile = True
         
     if npfile and not os.path.isfile(checkpath):
-        spath = model.get_weights_cache()
+        spath = genmodel.get_weights_cache()
         npfile = False
-            
+
+    if config.info:
+        stime = time.time()
+
             
     #Model can be loaded from previous acquisition train or from a fixed final model
-    if config.gpu_count > 1 and not parallel_m is None:
-        if hasattr(model,'get_npmgpu_weights_cache'):
-            checkpath = model.get_npmgpu_weights_cache(add_ext=True)
+    if config.gpu_count > 1:
+        if hasattr(genmodel,'get_npmgpu_weights_cache'):
+            checkpath = genmodel.get_npmgpu_weights_cache(add_ext=True)
             ppath = checkpath
             npfile = True
         
         if npfile and not os.path.isfile(checkpath):
-            ppath = model.get_mgpu_weights_cache()
+            ppath = genmodel.get_mgpu_weights_cache()
             npfile = False
-            
-        pred_model = parallel_m
+
+        if isinstance(tmodel,tuple):
+            pred_model = tmodel[1]
+        else:
+            pred_model = tmodel
         if not config.ffeat is None and os.path.isfile(config.ffeat):
             pred_model.load_weights(config.ffeat,by_name=True)
             if config.info and not config.progressbar:
@@ -48,7 +73,10 @@ def load_model_weights(config,model,single_m,parallel_m):
             if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(ppath))
     else:
-        pred_model = single_m
+        if isinstance(tmodel,tuple):
+            pred_model = tmodel[0]
+        else:
+            pred_model = tmodel
         if not config.ffeat is None and os.path.isfile(config.ffeat):
             pred_model.load_weights(config.ffeat,by_name=True)
             if config.info and not config.progressbar:
@@ -61,6 +89,11 @@ def load_model_weights(config,model,single_m,parallel_m):
             pred_model.load_weights(spath,by_name=True)
             if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(spath))
+
+    if config.info:
+        etime = time.time()
+        td = timedelta(seconds=(etime-stime))
+        print("Weights loading took: {}".format(td))
 
     return pred_model
 
@@ -134,3 +167,22 @@ def debug_acquisition(s_expected,s_probs,classes,cache_m,config,fidp):
     PrintConfusionMatrix(s_pred,s_expected,classes,config,"Selected images (AL)")
     if config.save_var:
         cache_m.dump((s_expected,s_probs),fidp)
+
+
+def extract_feature_from_function(function,generator):
+
+    data_size = generator.returnDataSize()
+    bsize = generator.batch_size
+    stp = int(np.ceil(data_size / bsize))
+    features = None
+    for i in range(stp):
+        start_idx = i*bsize
+        inp = generator.next()[0]
+        if not isinstance(inp,list):
+            inp = [inp]
+        ff = function(inp)[0] #Considering the model has a single output
+        if features is None:
+            features = np.zeros(tuple([data_size]+list(ff.shape[1:])),dtype=np.float32)
+        features[start_idx:start_idx+bsize] = ff
+
+    return features

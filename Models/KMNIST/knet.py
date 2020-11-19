@@ -17,7 +17,6 @@ from keras.utils import multi_gpu_model
 from keras.applications import vgg16
 from keras import regularizers
 from keras_contrib.layers import GroupNormalization
-from keras import backend as K
 
 #Locals
 from Utils import CacheManager
@@ -62,45 +61,21 @@ class KNet(GenericEnsemble):
         """
         return self.cache_m.fileLocation(self._mgpu_weightsCache)
 
-        
-    def build(self,**kwargs):
-
-        model,parallel_model = self._build(**kwargs)
-        
-        self.single = model
-        self.parallel = parallel_model
-        
-        return (model,parallel_model)
     
-    def _build(self,**kwargs):
+    def _build(self,width,height,channels,**kwargs):
         """
         @param pre_trained <boolean>: returned model should be pre-trained or not
         @param data_size <int>: size of the training dataset
         """
-        width,height,channels = self._check_input_shape()
-
-        if 'data_size' in kwargs:
-            self.data_size = kwargs['data_size']
-
-        if 'training' in kwargs:
-            training = kwargs['training']
-        else:
-            training = True
-            
-        if 'feature' in kwargs:
-            feature = kwargs['feature']
-        else:
-            feature = False
-            
+        training = kwargs.get('training',None)
+        feature = kwargs.get('feature')
+        preload = kwargs.get('preload')
+        allocated_gpus = kwargs.get('allocated_gpus')
+        
         if backend.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
         else:
             input_shape = (height, width, channels)
-
-        if 'allocated_gpus' in kwargs and not kwargs['allocated_gpus'] is None:
-            allocated_gpus = kwargs['allocated_gpus']
-        else:
-            allocated_gpus = self._config.gpu_count            
 
         self.cache_m = CacheManager()
         
@@ -198,11 +173,7 @@ class BayesKNet(KNet):
                     name='block1_conv2')(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        x = Dropout(0.25)(x,training=training)
-
-        if feature:
-            output = x
-            return Model(inp,output)
+        x = Dropout(0.25)(x,name='feature',training=training)
         
         x = Flatten()(x)
         x = Dense(128,kernel_regularizer=regularizers.l2(weight_decay))(x)
@@ -259,19 +230,15 @@ class GalKNet(KNet):
                     name='block2_conv2')(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        x = Dropout(0.25)(x,training=training)
-        
-        if feature:
-            body = Model(inp,x)
-        
+        x = Dropout(0.25)(x,name='feature',training=training)
+                
         x = Flatten()(x)
         x = Dense(128,kernel_regularizer=regularizers.l2(weight_decay))(x)
         x = Dropout(0.5)(x,training=training)
         x = Dense(self._ds.nclasses)(x)
         output = Activation('softmax')(x)
 
-        if not feature:
-            body = Model(inp,output)
+        body = Model(inp,output)
         
         if ensemble:
             return (body,inp)

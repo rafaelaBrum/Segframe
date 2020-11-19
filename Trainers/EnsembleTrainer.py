@@ -59,9 +59,12 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         super().__init__(config)
         self.tower = None
 
-    def _initializer(self,gpus,processes):
+    def _initializer(self,**kwargs):
 
         #initialize tensorflow session
+        gpus = kwargs.get('gpus',0)
+        processes = kwargs.get('processes',1)
+        
         gpu_options = None
         if gpus > 0:
             gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=1.0)
@@ -100,39 +103,24 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             
         print("Train set: {0} items".format(len(train_data[0])))
         print("Validate set: {0} items".format(len(val_data[0])))
-        
-    def run(self):
+
+    def _build_predictor(self):
+        return Predictor(self._config,keepImg=self._config.keepimg,build_ensemble=True)
+    
+    def run_al(self,model,function,predictor,cache_m):
         """
         Coordenates the AL process
         """
         from keras import backend as K
-        
-        #Loaded CNN model and Datasource
-        model = self.load_modules()
-        self._rex = self._rex.format(model.name)
-        #Define initial sets
-        self.configure_sets()
-        #AL components
-        cache_m = CacheManager()
-        predictor = Predictor(self._config,keepImg=self._config.keepimg,build_ensemble=True)
-        function = None
-        
-        if not self._config.ac_function is None:
-            acq = importlib.import_module('AL','AcquisitionFunctions')
-            function = getattr(acq,self._config.ac_function)
-        else:
-            print("You should specify an acquisition function")
-            sys.exit(Exitcodes.RUNTIME_ERROR)
 
         stime = None
         etime = None
         train_time = None
+        sw_thread = None
         end_train = False
-        self._initializer(self._config.gpu_count,self._config.cpu_count)
-
-        #Starting from scratch or restoring?
-        if self.initial_acq > 0:
-            self.initial_acq += 1
+        t_models = {}
+        
+        self._initializer(gpus=self._config.gpu_count,processes=self._config.cpu_count)
 
         final_acq = self.initial_acq+self._config.acquisition_steps
         for r in range(self.initial_acq,final_acq):
@@ -153,16 +141,11 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                 #Some models may take too long to save weights
                 if not sw_thread is None:
                     if self._config.info:
-                        print("[EnsembleTrainer] Waiting for model weights.", end='')
+                        print("[EnsembleTrainer] Waiting for model weights.")
                     while True:
-                        pst = '.'
                         if sw_thread[-1].is_alive():
-                            if self._config.info:
-                                pst = "{}{}".format(pst,'.')
-                                print(pst,end='')
                             sw_thread[-1].join(60.0)
                         else:
-                            print('')
                             break
                     
                 if hasattr(model,'register_ensemble'):
@@ -174,9 +157,10 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                 if self._config.info:
                     print("[EnsembleTrainer] Starting model {} training".format(m))
                     
-                st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
+                tm,st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
                                                 set_session=False,stats=False,summary=False,
                                                 clear_sess=True,save_numpy=True)
+                t_models[m] = tm
                 if sw_thread is None:
                     sw_thread = [st]
                 else:
@@ -185,11 +169,13 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
                 
-            if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
+            if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,emodels=t_models,sw_thread=sw_thread):
                 if self._config.info:
                     print("[EnsembleTrainer] No more acquisitions are in order")
                 end_train = True
-
+                model.reset() #Last AL iteration, force ensemble build for prediction
+                model.tmodels = t_models
+                
             #If sw_thread was provided, we should check the availability of model weights
             if not sw_thread is None:
                 for k in range(len(sw_thread)):
@@ -197,9 +183,9 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                         print("Waiting ensemble model {} weights' to become available...".format(k))
                         sw_thread[k].join()
                         
-            #Set load_full to false so dropout is disabled
-            predictor.run(self.test_x,self.test_y,load_full=False,net_model=model)
-            
+            #Set load_full loads a full model stored in file
+            predictor.run(self.test_x,self.test_y,load_full=end_train,net_model=model)
+                
             #Attempt to free GPU memory
             K.clear_session()
             
@@ -211,99 +197,4 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             if end_train:
                 return None
 
-    def acquire(self,function,model,**kwargs):
-        """
-        Adds items to training and validation sets, according to split ratio defined in configuration. 
-        Test set is fixed in the begining.
-
-        Returns True if acquisition was sucessful
-        """
-        from Trainers import ThreadedGenerator
-        import gc
-
-        #Regenerate pool if defined
-        if self._config.spool > 0 and ((kwargs['acquisition'] + 1) % (self._config.spool)) == 0:
-            self._refresh_pool(kwargs['acquisition'],model.name)
-            
-        #Clear some memory before acquisitions
-        gc.collect()
         
-        #An acquisition function should return a NP array with the indexes of all items from the pool that 
-        #should be inserted into training and validation sets
-        if self.pool_x.shape[0] < self._config.acquire:
-            return False
-
-        if kwargs is None:
-            kwargs = {}
-
-        kwargs['config'] = self._config
-
-        #Some acquisition functions may need access to GenericModel
-        kwargs['model'] = model
-        kwargs['train_data'] = (self.train_x,self.train_y)
-        
-        if not self._config.tdim is None:
-            fix_dim = self._config.tdim
-        else:
-            fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
-
-        #Pools are big, use a data generator
-        pool_prep = ImageDataGenerator(
-            samplewise_center=self._config.batch_norm,
-            samplewise_std_normalization=self._config.batch_norm)
-
-        #Acquisition functions that require a generator to load data
-        generator_params = {
-            'dps':(self.pool_x,self.pool_y),
-            'classes':self._ds.nclasses,
-            'dim':fix_dim,
-            'batch_size':self._config.gpu_count * self._config.batch_size if self._config.gpu_count > 0 else self._config.batch_size,
-            'image_generator':pool_prep,
-            'shuffle':False, #DO NOT SET TRUE!
-            'verbose':self._config.verbose,
-            'input_n':1}
-
-        generator = ThreadedGenerator(**generator_params)
-
-        if self._config.verbose > 0:
-            print("\nStarting acquisition...(pool size: {})".format(self.pool_x.shape[0]))
-
-        if self._config.verbose > 1:
-            print("Starting acquisition using model: {0}".format(hex(id(pred_model))))
-
-        if self._config.debug:
-            print("GC stats:\n {}".format(gc.get_stats()))
-
-        #Track acquisition time
-        ac_time = time.time()            
-        pooled_idx = function(None,generator,self.pool_x.shape[0],**kwargs)
-        if self._config.info:
-            print("Acquisition step took: {}".format(timedelta(seconds=time.time() - ac_time)))
-            
-        if pooled_idx is None:
-            if self._config.info:
-                print("[EnsembleTrainer] No indexes returned. Something is wrong.")
-            sys.exit(1)
-
-        #Store acquired patches indexes in pool set
-        if self._config.spool > 0:
-            if self.acq_idx is None:
-                self.acq_idx = self.sample_idx[pooled_idx]
-            else:
-                self.acq_idx = np.concatenate((self.acq_idx,self.sample_idx[pooled_idx]),axis=0)
-            self.sample_idx = np.delete(self.sample_idx,pooled_idx)
-                
-        self.train_x = np.concatenate((self.train_x,self.pool_x[pooled_idx]),axis=0)
-        self.train_y = np.concatenate((self.train_y,self.pool_y[pooled_idx]),axis=0)
-        self.pool_x = np.delete(self.pool_x,pooled_idx)
-        self.pool_y = np.delete(self.pool_y,pooled_idx)
-
-        del(generator)
-        
-        if self._config.debug:
-            print("GC stats:\n {}".format(gc.get_stats()))
-
-        #Clear some memory after acquisitions
-        gc.collect()
-        
-        return True        

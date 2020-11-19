@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH -p GPU-AI
-#SBATCH -t 40:00:00
+#SBATCH -t 12:00:00
 #SBATCH --gres=gpu:volta16:2
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=alsmeirelles@gmail.com
@@ -8,7 +8,7 @@
 #echo commands to stdout
 #set -x
 
-DIRID="EN-90"
+DIRID="EN-114"
 export PYTHONPATH=$HOME/.local/lib/python3.6/site-packages:/pylon5/ac3uump/alsm/lib64/python3.6/site-packages:$PYTHONPATH
 
 if [ ! -d $LOCAL/test ]
@@ -33,7 +33,7 @@ module load cuda/9.0
 echo '[START] training'
 date +"%D %T"
 
-time python3 main.py -i -v --al -strategy EnsembleTrainer -predst /pylon5/ac3uump/alsm/active-learning/data/nds300 -split 0.90 0.01 0.09 -net Inception -data CellRep -init_train 500 -ac_steps 10 -emodels 3 -ac_function kmng_uncert -un_function ensemble_bald -acquire 200 -d -e 50 -b 62 -tdim 240 240 -clusters 20 -f1 25 -out logs/ -cpu 6 -gpu 2 -tn -sv -nsw -wpath results/$DIRID -model_dir results/$DIRID -logdir results/$DIRID -cache results/$DIRID -pca 50 -sample 2000 -wsi_split 5 -pred_size 15000 -load_train -spool 2 -restore 
+time python3 main.py -i -v --al -strategy EnsembleTrainer -predst /pylon5/ac3uump/alsm/active-learning/data/nds300 -split 0.90 0.01 0.09 -net Inception -data CellRep -init_train 500 -ac_steps 10 -emodels 3 -ac_function kmng_uncert -un_function ensemble_bald -acquire 200 -d -e 50 -b 60 -tdim 240 240 -clusters 20 -f1 25 -out logs/ -cpu 6 -gpu 2 -tn -sv -nsw -wpath results/$DIRID -model_dir results/$DIRID -logdir results/$DIRID -cache results/$DIRID -pca 50 -sample 1000 -wsi_split 5 -pred_size 15000 -load_train -spool 2 -spool_f csregen 
 
 echo '[FINAL] done training'
 

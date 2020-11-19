@@ -107,7 +107,7 @@ class Predictor(object):
 
         If provided x_test and y_test data, runs prediction with them.
 
-        @param load_full <boolean>: loads full model with load_model function
+        @param load_full <boolean>: loads full model with load_model function. If ensemble, load individual model weights
         @param net_model <GenericModel subclass>: performs predictions with this model
         """
         net_name = self._config.network
@@ -171,20 +171,19 @@ class Predictor(object):
 
         # session setup
         sess = K.get_session()
-        ses_config = tf.ConfigProto(
-            device_count={"CPU":self._config.cpu_count,"GPU":self._config.gpu_count},
-            intra_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count, 
-            inter_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count,
-            log_device_placement=True if self._verbose > 1 else False
-            )
-        sess.config = ses_config
-        K.set_session(sess)
+        #ses_config = tf.ConfigProto(
+        #    device_count={"CPU":self._config.cpu_count,"GPU":self._config.gpu_count},
+        #    intra_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count, 
+        #    inter_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count,
+        #    log_device_placement=True if self._verbose > 1 else False
+        #    )
+        #sess.config = ses_config
+        #K.set_session(sess)
         
-        #During test phase multi-gpu mode is not used (maybe done latter)
         if self._ensemble:
             #Weights should be loaded during ensemble build
             if hasattr(model,'build_ensemble'):
-                single,parallel = model.build_ensemble(training=False,npfile=True,new=True)
+                single,parallel = model.build_ensemble(training=False,npfile=True,new=False,load_weights=load_full)
                 if parallel:
                     if self._config.info:
                         print("Using multigpu model for predictions.")
@@ -216,7 +215,7 @@ class Predictor(object):
                 print("No trained model or weights file found")
             return None
 
-        bsize = self._config.batch_size
+        bsize = 2*self._config.batch_size
         stp = int(np.ceil(len(X) / bsize))
 
         image_generator = ImageDataGenerator(samplewise_center=self._config.batch_norm, 
@@ -230,7 +229,7 @@ class Predictor(object):
             test_generator = ThreadedGenerator(dps=(X,Y),
                                                 classes=self._ds.nclasses,
                                                 dim=fix_dim,
-                                                batch_size=self._config.batch_size,
+                                                batch_size=bsize,
                                                 image_generator=image_generator,
                                                 extra_aug=self._config.augment,
                                                 shuffle=False,
@@ -250,7 +249,9 @@ class Predictor(object):
         for i in range(stp):
             start_idx = i*bsize
             example = test_generator.next()
-            Y_pred[start_idx:start_idx+bsize] = pred_model.predict_on_batch(example[0])
+            with sess.as_default():
+                with sess.graph.as_default():
+                    Y_pred[start_idx:start_idx+bsize] = pred_model.predict_on_batch(example[0])
             if self._config.progressbar:
                 l.update(1)
             elif self._config.info:

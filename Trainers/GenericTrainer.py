@@ -6,6 +6,8 @@ import os,sys
 import re
 import numpy as np
 import threading
+import time
+from datetime import timedelta
 
 #Filter warnings
 import warnings
@@ -234,7 +236,7 @@ class Trainer(object):
         if 'allocated_gpus' in kwargs:
             allocated_gpus = kwargs['allocated_gpus']
         else:
-            allocated_gpus = None
+            allocated_gpus = self._config.gpu_count
             
         if 'save_numpy' in kwargs:
             save_numpy = kwargs['save_numpy']
@@ -285,7 +287,7 @@ class Trainer(object):
         else:
             training_model = single
             
-        # try to resume the training
+        # try to resume the training - TODO: consider numpy weights file
         weights = list(filter(lambda f: f.endswith(".h5") and f.startswith(model.name),os.listdir(self._config.weights_path)))
         weights.sort()
         old_e_offset = 0
@@ -355,13 +357,16 @@ class Trainer(object):
 
         sw_thread = threading.Thread(target=self._save_weights,name='save_weights',args=(model,single,parallel,clear_sess,save_numpy))
         sw_thread.start()
-        return sw_thread
+        return (training_model,sw_thread)
         
     def _save_weights(self,model,single,parallel,clear_sess,save_numpy):
         #Save weights for single tower model and for multigpu model (if defined)
         cache_m = CacheManager()
+        stime = None
         if self._config.info:
+            stime = time.time()
             print("Saving weights, this could take a while...")
+            
         if save_numpy and hasattr(model,'get_npweights_cache'):
             np.save(model.get_npweights_cache(),single.get_weights())
         else:
@@ -373,7 +378,11 @@ class Trainer(object):
                 np.save(model.get_npmgpu_weights_cache(),parallel.get_weights())
             else:
                 parallel.save_weights(model.get_mgpu_weights_cache())
-        cache_m.dump(tuple(self._config.split),'split_ratio.pik')
+
+        if self._config.info:
+                etime = time.time()
+                td = timedelta(seconds=(etime-stime))
+                print("Weight saving took: {}".format(td))
 
         if clear_sess:
             K.clear_session()
