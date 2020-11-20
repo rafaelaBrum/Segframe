@@ -62,6 +62,7 @@ linestyle = [
 
 #markers = ['','*','+','x','^','.','2','v']
 markers = ['*','+','x','^','.','2','v','s','p','D',8,9,10,'4','']
+patterns = ["+", ".", "/" , "\\" , "|" , "-","o"]
 
 class Plotter(object):
 
@@ -116,7 +117,6 @@ class Plotter(object):
             cmax = 0.0
             if k == sub_acq and subfig:
                 from mpl_toolkits.axes_grid.inset_locator import inset_axes
-                #ax = fig.add_subplot(111)
                 palette = plt.get_cmap('tab20')
                 inset_ax = inset_axes(ax, 
                     width="51%", # width = 52% of parent_bbox
@@ -297,7 +297,7 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
         
-    def draw_data(self,data,title='',xlabel='Trainset size',metric=None):
+    def draw_data(self,data,title='',xlabel='Trainset size',metric=None,color=0,xtick=200):
 
         fig = plt.figure(1)
         fig.suptitle(title)
@@ -310,7 +310,7 @@ class Plotter(object):
             tdata = data[metric]
         else:
             tdata = None
-            
+
         #Train size x Acquisition step time (if that was logged)
         if not tdata is None:
             fig_pos = 211
@@ -323,13 +323,12 @@ class Plotter(object):
 
         if tdata.shape[0] > 0:
             ax = plt.subplot(fig_pos)
-            plt.plot(data['trainset'][:maxi],tdata[:maxi],'bo')
-            plt.axis([data['trainset'][0]-100,data['trainset'].max()+100,0.0,tdata.max()+.2])
-            fig.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
-            #ax.yaxis_date()
+            plt.bar(data['trainset'][:maxi],tdata,width=30,color=palette(color),edgecolor='black',hatch=patterns[color%len(patterns)])
+            ax.set_xticks(np.arange(data['trainset'][0],data['trainset'].max()+50,xtick))
+            plt.axis([data['trainset'][0]-50,data['trainset'].max()+50,0.0,tdata.max()+.2])
+            #fig.gca().xaxis.set_major_locator(MaxNLocator(integer=True))
             formatter = FuncFormatter(self.format_func)
             ax.yaxis.set_major_formatter(formatter)
-            #plt.gcf().autofmt_xdate()
             plt.xlabel(xlabel)
             if metric == 'time':
                 plt.ylabel('AL step time \n(hh:min:sec)')
@@ -337,6 +336,10 @@ class Plotter(object):
                 plt.ylabel('Acquisition step time \n(hh:min:sec)')
             elif metric == 'traintime':
                 plt.ylabel('Training step time \n(hh:min:sec)')
+            elif metric == 'wsave':
+                plt.ylabel('Weights saving time \n(hh:min:sec)')
+            elif metric == 'wload':
+                plt.ylabel('Weights loading time \n(hh:min:sec)')
             else:
                 plt.ylabel('Time frame not defined')
 
@@ -365,6 +368,59 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
 
+    def draw_multitime(self,data,title,xtick,metrics,colors=None,labels=None):
+        """
+        Plot multiple time references for the same experiment. Timing parameters are given by the metrics
+        """
+        import matplotlib.patches as mpatches
+        from matplotlib.legend_handler import HandlerPatch
+        
+        color = 0
+        hatch_color = 'black'
+        min_x = []
+        max_x = []
+        min_t = []
+        max_t = []
+        metric_patches = []
+        lbcount = 0
+        nexp = len(metrics)
+        
+        plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
+        ax = plt.subplot(111)
+
+        for k in metrics:
+            if data['trainset'].shape[0] > data[k].shape[0]:
+                print("Shape mismatch:\n Trainset: {}; {}:{}".format(data['trainset'].shape,k,data[k].shape))
+                data[k] = np.hstack((data[k],data[k][-1:]))
+
+            if labels is None:
+                lb = k
+            else:
+                lb = labels[lbcount]
+
+            if not colors is None and colors[lbcount] >= 0:
+                color = colors[lbcount]
+            elif 'color' in data:
+                color = data['color']                
+
+            bar_x = data['trainset'] + (lbcount-(nexp/2))*30
+            plt.bar(bar_x,data[k],width=30,color=palette(color),edgecolor='black',hatch=patterns[color%len(patterns)])
+            metric_patches.append(mpatches.Patch(facecolor=palette(color),label=lb,hatch=patterns[color%len(patterns)],edgecolor=hatch_color))
+            lbcount += 1
+            
+        formatter = FuncFormatter(self.format_func)
+        ax.yaxis.set_major_formatter(formatter)
+        plt.legend(handles=metric_patches,loc=2,ncol=2,prop=dict(weight='bold'))
+        ax.set_xticks(np.arange(data['trainset'].min(), data['trainset'].max()+1, xtick))
+        if data['trainset'].max() > 1000:
+            plt.setp(ax.get_xticklabels(),rotation=30)
+        plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
+        ax.set_xlabel("Training set size")
+        ax.set_ylabel("Time\n(hh:mm:ss)")
+        plt.tight_layout()
+        plt.grid(True, linestyle='--', which='major',color='grey', alpha=.25,axis='y')
+        plt.show()
+        
     def draw_multilabel(self,data,title,xtick,metrics,labels=None):
         lbcount = 0
         color = 0
@@ -698,7 +754,6 @@ class Plotter(object):
                 max_x.append(data[k]['trainset'].max())
                 min_y.append(data[k]['auc'].min())
                 max_y.append(data[k]['auc'].max())
-                print(data[k]['trainset'])
             elif not other is None:
                 nmetrics = len(other)
                 if nmetrics > 1:
@@ -741,9 +796,6 @@ class Plotter(object):
 
                 print("{}:\n - X:{};\n - Y:{}".format(lb,bar_x,tdata))
 
-                #patterns = ["+" , "x", "o", "O", ".", "*", "/" , "\\" , "|" , "-"]
-                patterns = ["+", ".", "/" , "\\" , "|" , "-","o"]
-                
                 if nmetrics > 1:
                     bottom = np.zeros(len(tdata))
                     colorf = np.asarray((1.4,1.4,1.4,0.85))
@@ -1037,11 +1089,19 @@ class Plotter(object):
                 'trainset':[],
                 'accuracy':[],
                 'labels':[],
+                'wsave':[],
+                'wload':[],
+                'kmeans':[],
+                'feature':[],
                 'cluster':{}}
         start_line = 0
         timerex = r'AL step took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
         trainrex = r'Training step took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
         acqrex = r'Acquisition step took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
+        wsaverex = r'Weight saving took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
+        wloadrex = r'Weights loading took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
+        kmeansrex = r'KMeans took (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
+        featrex = r'Feature extraction took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
         aucrex = r'AUC: (?P<auc>0.[0-9]+)'
         accrex = r'Accuracy: (?P<acc>0.[0-9]+)'
         trainsetrex = r'Train set: (?P<set>[0-9]+) items'
@@ -1052,6 +1112,10 @@ class Plotter(object):
         timerc = re.compile(timerex)
         trainrc = re.compile(trainrex)
         acqrc = re.compile(acqrex)
+        wsaverc = re.compile(wsaverex)
+        wloadrc = re.compile(wloadrex)
+        kmeansrc = re.compile(kmeansrex)
+        featrc = re.compile(featrex)
         aucrc = re.compile(aucrex)
         trainsetrc = re.compile(trainsetrex)
         accrc = re.compile(accrex)
@@ -1062,11 +1126,17 @@ class Plotter(object):
         #Set a time reference
         #zero = datetime.datetime(2020,1,1)
         #zero_num = mdates.date2num(zero)
+        wstime = None
+        wltime = None
         for line in lines:
             lstrip = line.strip()
             trainmatch = trainrc.fullmatch(lstrip)
             acqmatch = acqrc.fullmatch(lstrip)
             tmatch = timerc.fullmatch(lstrip)
+            wsavematch = wsaverc.fullmatch(lstrip)
+            wloadmatch = wloadrc.fullmatch(lstrip)
+            kmeansmatch = kmeansrc.fullmatch(lstrip)
+            featmatch = featrc.fullmatch(lstrip)
             aucmatch = aucrc.fullmatch(lstrip)
             trmatch = trainsetrc.fullmatch(lstrip)
             accmatch = accrc.fullmatch(lstrip)
@@ -1082,12 +1152,36 @@ class Plotter(object):
             if tmatch:
                 td = datetime.timedelta(hours=int(tmatch.group('hours')),minutes=int(tmatch.group('min')),seconds=round(float(tmatch.group('sec'))))
                 data['time'].append(td.total_seconds())
+                if not wstime is None:
+                    data['wsave'].append(wstime.total_seconds())
+                    wstime = None
+                if not wltime is None:
+                    data['wload'].append(wltime.total_seconds())
+                    wltime = None
             if trainmatch:
                 td = datetime.timedelta(hours=int(trainmatch.group('hours')),minutes=int(trainmatch.group('min')),seconds=round(float(trainmatch.group('sec'))))
                 data['traintime'].append(td.total_seconds())
             if acqmatch:
                 td = datetime.timedelta(hours=int(acqmatch.group('hours')),minutes=int(acqmatch.group('min')),seconds=round(float(acqmatch.group('sec'))))
                 data['acqtime'].append(td.total_seconds())
+            if wsavematch:
+                td = datetime.timedelta(hours=int(wsavematch.group('hours')),minutes=int(wsavematch.group('min')),seconds=round(float(wsavematch.group('sec'))))
+                if wstime is None:
+                    wstime = td
+                else:
+                    wstime += td
+            if wloadmatch:
+                td = datetime.timedelta(hours=int(wloadmatch.group('hours')),minutes=int(wloadmatch.group('min')),seconds=round(float(wloadmatch.group('sec'))))
+                if wltime is None:
+                    wltime = td
+                else:
+                    wltime += td
+            if kmeansmatch:
+                td = datetime.timedelta(hours=int(kmeansmatch.group('hours')),minutes=int(kmeansmatch.group('min')),seconds=round(float(kmeansmatch.group('sec'))))
+                data['kmeans'].append(td.total_seconds())
+            if featmatch:
+                td = datetime.timedelta(hours=int(featmatch.group('hours')),minutes=int(featmatch.group('min')),seconds=round(float(featmatch.group('sec'))))
+                data['feature'].append(td.total_seconds())
             if aucmatch:
                 data['auc'].append(float(aucmatch.group('auc')))
             if accmatch:
@@ -1113,6 +1207,10 @@ class Plotter(object):
         data['traintime'] = np.asarray(data['traintime'])
         data['acqtime'] = np.asarray(data['acqtime'])
         data['time'] = np.asarray(data['time'])
+        data['wsave'] = np.asarray(data['wsave'])
+        data['wload'] = np.asarray(data['wload'])
+        data['kmeans'] = np.asarray(data['kmeans'])
+        data['feature'] = np.asarray(data['feature'])
         data['auc'] = np.asarray(data['auc'])
         data['trainset'] = np.asarray(data['trainset'])
         data['accuracy'] = np.asarray(data['accuracy'])
@@ -1130,6 +1228,10 @@ class Plotter(object):
             data['time'] = data['time'][:upl]
             data['traintime'] = data['traintime'][:upl]
             data['acqtime'] = data['acqtime'][:upl]
+            data['wsave'] = data['wsave'][:upl]
+            data['wload'] = data['wload'][:upl]
+            data['kmeans'] = data['kmeans'][:upl]
+            data['feature'] = data['feature'][:upl]            
             data['auc'] = data['auc'][:upl]
             data['trainset'] = data['trainset'][:upl]
             data['accuracy'] = data['accuracy'][:upl]
@@ -1423,13 +1525,17 @@ if __name__ == "__main__":
         time - AL iteration time; \n \
         traintime - Train step time; \n \
         acqtime - Acquisition step time; \n \
+        wsave - Weights saving time; \n \
+        wload - Weights loading time; \n \
+        kmeans - KMeans execution time; \n \
+        feature - Feature extraction time; \n \
         auc - AUC; \n \
         acc - Accuracy; \n \
         labels - Positive labeled patches acquired; \n \
         pmean - Mean # of patches acquired from each WSI; \n \
         wsicount - # of WSIs used in each acquisition step; \n \
         wsimeandis - Mean distance, in pixels, from patches to its cluster centers.',
-       choices=['time','auc','acc','labels','traintime','acqtime','pmean','wsicount','wsimeandis'],default=None)    
+       choices=['time','auc','acc','labels','traintime','acqtime','pmean','wsicount','wsimeandis','wsave','wload','kmeans','feature'],default=None)    
     parser.add_argument('-type', dest='tmode', type=str, nargs='+',
         help='Experiment type: \n \
         AL - General active learning experiment; \n \
@@ -1437,6 +1543,10 @@ if __name__ == "__main__":
        choices=['AL','MN','DB','OR','KM','EN'],default='AL')
     parser.add_argument('-yscale', action='store_true', dest='yscale', default=False, 
         help='Scale y axis ticks to data.')    
+
+    ##Multitime
+    parser.add_argument('--mtime', action='store_true', dest='mtime', default=False, 
+        help='Plot timing slices from a single experiment.')
     
     ##Single experiment plot
     parser.add_argument('--single', action='store_true', dest='single', default=False, 
@@ -1529,10 +1639,17 @@ if __name__ == "__main__":
     elif config.single:
         p = Plotter(path=config.sdir)
         if not config.metrics is None:
-            p.draw_data(p.parseSlurm(),config.title,metric=config.metrics[0])
+            p.draw_data(p.parseSlurm(),config.title,metric=config.metrics[0],color=config.colors[0])
         else:
-            p.draw_data(p.parseSlurm(),config.title)
+            p.draw_data(p.parseSlurm(),config.title,color=config.colors[0])
 
+    elif config.mtime:
+        p = Plotter(path=config.sdir)
+        if not config.metrics is None:
+            p.draw_multitime(p.parseSlurm(),config.title,config.xtick,metrics=config.metrics,colors=config.colors,labels=config.labels)
+        else:
+            p.draw_data(p.parseSlurm(),config.title,color=config.colors[0])
+            
     elif config.unc:
         p = Plotter()
 

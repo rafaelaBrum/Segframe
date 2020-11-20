@@ -42,7 +42,7 @@ def run_prediction(config,locations=None):
         predictor = Predictor(config,build_ensemble=build_ensemble)
         predictor.run()
 
-def print_prediction(config):
+def print_prediction(config,target=True):
     cache_m = CacheManager()
 
     if not os.path.isfile(cache_m.fileLocation('test_pred.pik')):
@@ -66,10 +66,16 @@ def print_prediction(config):
     if nclasses == 2:
         scores = Y_pred.transpose()[1]
         fpr,tpr,thresholds = metrics.roc_curve(expected,scores,pos_label=1)
-        print("AUC: {0:f}".format(metrics.roc_auc_score(expected,scores)))
+        if target:
+            print("AUC: {0:f}".format(metrics.roc_auc_score(expected,scores)))
+        else:
+            print("FN AUC: {0:f}".format(metrics.roc_auc_score(expected,scores)))
 
-    print("Accuracy: {0:.3f}".format(m_conf[nclasses+2][nclasses]))
-
+    if target:
+        print("Accuracy: {0:.3f}".format(m_conf[nclasses+2][nclasses]))
+    else:
+        print("FN Accuracy: {0:.3f}".format(m_conf[nclasses+2][nclasses]))
+        
     if config.verbose > 1:
         print("False positive rates: {0}".format(fpr))
         print("True positive rates: {0}".format(tpr))
@@ -97,7 +103,7 @@ class Predictor(object):
         else:
             self._ensemble = False
 
-    def run(self,x_test=None,y_test=None,load_full=True,net_model=None):
+    def run(self,x_test=None,y_test=None,load_full=True,net_model=None,target=True):
         """
         Checks configurations, loads correct module, loads data
         Trains!
@@ -109,6 +115,7 @@ class Predictor(object):
 
         @param load_full <boolean>: loads full model with load_model function. If ensemble, load individual model weights
         @param net_model <GenericModel subclass>: performs predictions with this model
+        @param target <boolean>: Target network predicitons?
         """
         net_name = self._config.network
         if net_name is None or net_name == '':
@@ -134,9 +141,9 @@ class Predictor(object):
         if x_test is None or y_test is None:
             x_test,y_test,_,_ = split_test(self._config,self._ds)
 
-        self.run_test(net_model,x_test,y_test,load_full)
+        self.run_test(net_model,x_test,y_test,load_full,target)
         
-    def run_test(self,model,x_test,y_test,load_full=True):
+    def run_test(self,model,x_test,y_test,load_full=True,target=True):
         """
         This should be executed after a model has been trained
         """
@@ -171,14 +178,6 @@ class Predictor(object):
 
         # session setup
         sess = K.get_session()
-        #ses_config = tf.ConfigProto(
-        #    device_count={"CPU":self._config.cpu_count,"GPU":self._config.gpu_count},
-        #    intra_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count, 
-        #    inter_op_parallelism_threads=self._config.cpu_count if self._config.gpu_count == 0 else self._config.gpu_count,
-        #    log_device_placement=True if self._verbose > 1 else False
-        #    )
-        #sess.config = ses_config
-        #K.set_session(sess)
         
         if self._ensemble:
             #Weights should be loaded during ensemble build
@@ -285,4 +284,4 @@ class Predictor(object):
         cache_m.dump((expected,Y_pred,self._ds.nclasses),'test_pred.pik')
 
         #Output metrics
-        print_prediction(self._config)
+        print_prediction(self._config,target)

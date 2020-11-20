@@ -118,7 +118,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         train_time = None
         sw_thread = None
         end_train = False
-        t_models = {}
+        t_models = None
         
         self._initializer(gpus=self._config.gpu_count,processes=self._config.cpu_count)
 
@@ -137,34 +137,8 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             sw_thread = None
             #Track training time
             train_time = time.time()
-            for m in range(self._config.emodels):
-                #Some models may take too long to save weights
-                if not sw_thread is None:
-                    if self._config.info:
-                        print("[EnsembleTrainer] Waiting for model weights.")
-                    while True:
-                        if sw_thread[-1].is_alive():
-                            sw_thread[-1].join(60.0)
-                        else:
-                            break
-                    
-                if hasattr(model,'register_ensemble'):
-                    model.register_ensemble(m)
-                else:
-                    print("Model not ready for ensembling. Implement register_ensemble method")
-                    raise AttributeError
 
-                if self._config.info:
-                    print("[EnsembleTrainer] Starting model {} training".format(m))
-                    
-                tm,st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
-                                                set_session=False,stats=False,summary=False,
-                                                clear_sess=True,save_numpy=True)
-                t_models[m] = tm
-                if sw_thread is None:
-                    sw_thread = [st]
-                else:
-                    sw_thread.append(st)
+            t_models,sw_thread = self._target_net_train(model,reset=False)
 
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
@@ -182,10 +156,12 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                     if sw_thread[k].is_alive():
                         print("Waiting ensemble model {} weights' to become available...".format(k))
                         sw_thread[k].join()
-                        
+
             #Set load_full loads a full model stored in file
-            predictor.run(self.test_x,self.test_y,load_full=end_train,net_model=model)
-                
+            #Test target network if needed
+            if not self.test_target(predictor,r,end_train):
+                predictor.run(self.test_x,self.test_y,load_full=end_train,net_model=model,target=False)
+
             #Attempt to free GPU memory
             K.clear_session()
             
@@ -198,3 +174,34 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                 return None
 
         
+    def _target_net_train(self,model,reset=True):
+
+        t_models, sw_thread = {},[]
+        for m in range(self._config.emodels):
+            #Some models may take too long to save weights
+            while True:
+                if len(sw_thread) > 0 and sw_thread[-1].is_alive():
+                    print("[EnsembleTrainer] Waiting for model weights.")
+                    sw_thread[-1].join(60.0)
+                else:
+                    break
+                    
+            if hasattr(model,'register_ensemble'):
+                model.register_ensemble(m)
+            else:
+                print("Model not ready for ensembling. Implement register_ensemble method")
+                raise AttributeError
+
+            if self._config.info:
+                print("[EnsembleTrainer] Starting model {} training".format(m))
+                    
+            tm,st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
+                                         set_session=False,stats=False,summary=False,
+                                         clear_sess=True,save_numpy=True)
+            t_models[m] = tm
+            sw_thread.append(st)
+
+        if reset:
+            model.reset() #Last AL iteration, force ensemble build for prediction
+            model.tmodels = t_models
+        return t_models,sw_thread

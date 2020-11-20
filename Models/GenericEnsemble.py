@@ -42,9 +42,6 @@ class GenericEnsemble(GenericModel):
         self.tmodels = None
         self.tmids = None
 
-    def is_ensemble(self):
-        return self._config.strategy == 'EnsembleTrainer'
-
     def reset(self):
         if hasattr(self,'_s_ensemble'):
             del(self._s_ensemble)

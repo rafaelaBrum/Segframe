@@ -80,8 +80,9 @@ class Trainer(object):
         self._ds = None
         self._rex = r'{0}-t(?P<try>[0-9]+)e(?P<epoch>[0-9]+).h5'
 
-    def load_modules(self):
-        net_name = self._config.network
+    def load_modules(self,net_name = None):
+        if net_name is None:
+            net_name = self._config.network
         if net_name is None or net_name == '':
             print("A network should be specified")
             return Exitcodes.RUNTIME_ERROR
