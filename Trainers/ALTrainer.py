@@ -376,10 +376,9 @@ class ActiveLearningTrainer(Trainer):
                 sw_thread.join()
                     
             #Set load_full to false so dropout is disabled
-            predictor.run(self.test_x,self.test_y,load_full=False,net_model=model)
-
             #Test target network if needed
-            self.test_target(predictor,r)
+            if not self.test_target(predictor,r,end_train):
+                predictor.run(self.test_x,self.test_y,load_full=False,net_model=model,target=False)
             
             #Attempt to free GPU memory
             K.clear_session()
@@ -501,31 +500,42 @@ class ActiveLearningTrainer(Trainer):
 
         return True
 
-    def test_target(self,predictor,acqn):
 
-        #Only run training/testing at every tnpred iterations
-        if self._config.tnpred > 0 and acqn > 0 and ((acqn + 1) % (self._config.tnpred)) != 0:
-            return None
-
-        model = self.load_modules(self._config.tnet)
-
-        if self._config.info:
-            print("Starting target network training...")
-
-        intime = time.time()
-        
+    def _target_net_train(self,model):
+        """
+        Override this function for AL Transfer training
+        """
         tm,st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
                                      set_session=False,stats=False,summary=False,
                                      clear_sess=True,save_numpy=True)
 
+        return [tm],[st]
+    
+    def test_target(self,predictor,acqn,end_train):
+
+        #Only run training/testing at every tnpred iterations
+        if not end_train and self._config.tnpred > 0 and ((acqn + 1) % (self._config.tnpred)) != 0:
+            return False
+
+        model = self.load_modules(self._config.tnet)
+
+        if self._config.info:
+            print("\nStarting target network training...")
+
+        intime = time.time()
+        
+        tm,st = self._target_net_train(model)
+
         #Some models may take too long to save weights
-        if not st is None and st.is_alive():
+        if not st is None and st[-1].is_alive():
             if self._config.info:
                 print("[ALTrainer] Waiting for model weights...")
-            st.join()
+            st[-1].join()
                     
         #Set load_full to false so dropout is disabled
-        predictor.run(self.test_x,self.test_y,load_full=False,net_model=model)        
+        predictor.run(self.test_x,self.test_y,load_full=model.is_ensemble(),net_model=model,target=True)        
 
         if self._config.info:
              print("Target net evaluation took: {}".format(timedelta(seconds=time.time() - intime)))
+
+        return True

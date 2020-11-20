@@ -102,3 +102,5 @@ class GenericModel(ABC):
     def get_ds(self):
         return self._ds
         
+    def is_ensemble(self):
+        return self._config.strategy == 'EnsembleTrainer'

@@ -10,7 +10,7 @@ import tensorflow as tf
 #Network
 from keras.models import Sequential,Model
 from keras.layers import Input,Activation
-from keras.layers import Dense, Dropout, Flatten
+from keras.layers import Dense, Dropout, Flatten, GlobalAveragePooling2D
 from keras.layers import ZeroPadding2D,Convolution2D, MaxPooling2D
 from keras import backend, optimizers
 from keras.utils import multi_gpu_model
@@ -22,7 +22,7 @@ from keras_contrib.layers import GroupNormalization
 from Utils import CacheManager
 from Models.GenericEnsemble import GenericEnsemble
 
-class KNet(GenericEnsemble):
+class SNet(GenericEnsemble):
     """
     Implements abstract methods from GenericModel.
     Model is the same as in: https://keras.io/examples/mnist_cnn/
@@ -30,7 +30,7 @@ class KNet(GenericEnsemble):
     def __init__(self,config,ds,name=None):
         super().__init__(config,ds,name=name)
         if name is None:
-            self.name = "KerasNet"
+            self.name = "SNet"
         self._modelCache = "{0}-model.h5".format(self.name)
         self._weightsCache = "{0}-weights.h5".format(self.name)
         self._mgpu_weightsCache = "{0}-mgpu-weights.h5".format(self.name)
@@ -138,58 +138,13 @@ class KNet(GenericEnsemble):
 
         return model
 
-class BayesKNet(KNet):
+
+class SmallNet(SNet):
     """
     Bayesian model for the KNet
     """
     def __init__(self,config,ds):
-        super(BayesKNet,self).__init__(config=config,ds=ds,name = "BayesKNet")
-
-    def build_extractor(self,**kwargs):
-        """
-        Builds a feature extractor
-        """
-
-        return self._build(**kwargs)
-    
-    def _build_architecture(self,input_shape,training,feature):
-        if hasattr(self,'data_size'):
-            weight_decay = 2.5/float(self.data_size)
-            if self._config.verbose > 1:
-                print("Setting weight decay to: {0}".format(weight_decay))
-        else:
-            weight_decay = 0.01
-            
-        inp = Input(shape=input_shape)
-
-        x = Convolution2D(32, (3, 3),input_shape=input_shape,
-                        strides=1,
-                        padding='valid',
-                        name='block1_conv1')(inp)
-        x = Activation('relu')(x)
-        x = Convolution2D(32, (3, 3),
-                        strides=1,
-                        padding='valid',
-                    name='block1_conv2')(x)
-        x = Activation('relu')(x)
-        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        x = Dropout(0.25)(x,name='feature',training=training)
-        
-        x = Flatten()(x)
-        x = Dense(128,kernel_regularizer=regularizers.l2(weight_decay))(x)
-        x = Activation('relu')(x)        
-        x = Dropout(0.5)(x,training=training)
-        x = Dense(self._ds.nclasses)(x)
-        output = Activation('softmax')(x)
-        
-        return Model(inp,output)
-
-class GalKNet(KNet):
-    """
-    Bayesian model for the KNet
-    """
-    def __init__(self,config,ds):
-        super(GalKNet,self).__init__(config=config,ds=ds,name = "GalKNet")
+        super(SmallNet,self).__init__(config=config,ds=ds,name = "SmallNet")
 
 
     def _build_architecture(self,input_shape,training,feature,preload=True,ensemble=False):
@@ -199,7 +154,7 @@ class GalKNet(KNet):
                 print("Setting weight decay to: {0}".format(weight_decay))
         else:
             weight_decay = 0.01
-
+        
         inp = Input(shape=input_shape)
 
         #Block 1
@@ -229,10 +184,16 @@ class GalKNet(KNet):
                         padding='valid',
                     name='block2_conv2')(x)
         x = Activation('relu')(x)
-        x = MaxPooling2D(pool_size=(2, 2),strides=2,name='feature')(x)
+        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
         x = Dropout(0.25)(x,training=training)
-                
-        x = Flatten()(x)
+
+        #Feature blocl
+        x = Convolution2D(1536, 1,
+                        strides=1,
+                        padding='valid')(x)
+        x = GlobalAveragePooling2D(name='feature')(x)
+        
+        #x = Flatten()(x)
         x = Dense(128,kernel_regularizer=regularizers.l2(weight_decay))(x)
         x = Dropout(0.5)(x,training=training)
         x = Dense(self._ds.nclasses)(x)
