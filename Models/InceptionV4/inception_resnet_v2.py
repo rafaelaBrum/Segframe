@@ -246,11 +246,8 @@ def InceptionResNetV2(include_top=True,
             img_input = input_tensor
 
     use_bn = kwargs['batch_n']
-    
-    if 'use_dp' in kwargs:
-        use_dp = kwargs['use_dp']
-    else:
-        use_dp = True
+    use_dp = kwargs.get('use_dp',True)
+    name = kwargs.get('name','Inception')
     
     # Stem block: 35 x 35 x 192
     x = conv2d_bn(img_input, 32, 3, strides=2, padding='valid', use_bn=use_bn)
@@ -370,7 +367,7 @@ def InceptionResNetV2(include_top=True,
         
     # Create model.
     with tf.device('/cpu:0'):
-        model = models.Model(inputs, x, name='inception_resnet_v2')
+        model = models.Model(inputs, x, name=name)
     
     # Load weights.
     if 'preload' in kwargs and kwargs['preload']:

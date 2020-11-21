@@ -124,7 +124,7 @@ class GenericEnsemble(GenericModel):
         f = None
         if self.is_ensemble():
             if parallel:
-                 p_features = [model.get_layer('EM{}-inception_resnet_v2'.format(e)) for e in range(self._config.emodels)]
+                 p_features = [model.get_layer('EM{}-{}'.format(e,self.name)) for e in range(self._config.emodels)]
                  layers = [imodel.get_layer('feature').output for imodel in p_features]
             else:
                  layers = [model.get_layer('EM{}-{}'.format(e,'feature')).output for e in range(self._config.emodels)]

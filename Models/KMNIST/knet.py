@@ -182,7 +182,7 @@ class BayesKNet(KNet):
         x = Dense(self._ds.nclasses)(x)
         output = Activation('softmax')(x)
         
-        return Model(inp,output)
+        return Model(inp,output,name=self.name)
 
 class GalKNet(KNet):
     """
@@ -238,7 +238,7 @@ class GalKNet(KNet):
         x = Dense(self._ds.nclasses)(x)
         output = Activation('softmax')(x)
 
-        body = Model(inp,output)
+        body = Model(inp,output,name=self.name)
         
         if ensemble:
             return (body,inp)
