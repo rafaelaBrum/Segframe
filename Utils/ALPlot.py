@@ -421,7 +421,7 @@ class Plotter(object):
         plt.grid(True, linestyle='--', which='major',color='grey', alpha=.25,axis='y')
         plt.show()
         
-    def draw_multilabel(self,data,title,xtick,metrics,labels=None):
+    def draw_multilabel(self,data,title,xtick,metrics,labels=None,scale=True):
         lbcount = 0
         color = 0
 
@@ -430,7 +430,8 @@ class Plotter(object):
             sys.exit(1)
 
         plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
-        fig, ax1 = plt.subplots()
+        fig = plt.gcf()
+        ax1 = plt.gca()
         ax2 = None
 
         for k in metrics:
@@ -462,10 +463,15 @@ class Plotter(object):
                     ax2.set_yticks(np.arange(max(0,min(yd)-10), min(100,10+max(yd)), 5))
                 color += 1
                 
-            elif k == 'auc' and data[k].shape[0] > 0:
+            elif (k == 'auc' or k == 'fnauc') and data[k].shape[0] > 0:
                 #Repeat last point if needed
-                if data['trainset'].shape[0] > data[k].shape[0]:
-                    print("Shape mismatch:\n Trainset: {}; AUC:{}".format(data['trainset'].shape,data[k].shape))
+                if k == 'auc':
+                    xdata = data['trainset']
+                else:
+                    xdata = data['fntrainset']
+                    
+                if xdata.shape[0] > data[k].shape[0]:
+                    print("Shape mismatch:\n Trainset: {}; AUC:{}".format(xdata.shape,data[k].shape))
                     data[k] = np.hstack((data[k],data[k][-1:]))
 
                 if labels is None:
@@ -476,15 +482,21 @@ class Plotter(object):
 
                 if ax2 is None:
                     ax1.set_ylabel("AUC",color=palette(color))
-                    ax1.plot(data['trainset'],data[k], marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
+                    ax1.plot(xdata,data[k], marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
                     ax1.tick_params(axis='y', labelcolor=palette(color))
-                    ax1.set_yticks(np.arange(data[k].min(), 1.0, 0.06))
+                    if scale:
+                        ax1.set_yticks(np.arange(data[k].min(), 1.0, 0.06))
+                    else:
+                        ax1.set_yticks(np.arange(0.6, 1.0, 0.05))
                     ax2 = ax1.twinx()
                 else:
                     ax2.set_ylabel("AUC",color=palette(color))
-                    ax2.plot(data['trainset'],data[k], marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
+                    ax2.plot(xdata,data[k], marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
                     ax2.tick_params(axis='y', labelcolor=palette(color))
-                    ax2.set_yticks(np.arange(data[k].min(), 1.0, 0.06))
+                    if scale:
+                        ax2.set_yticks(np.arange(data[k].min(), 1.0, 0.06))
+                    else:
+                        ax2.set_yticks(np.arange(0.6, 1.0, 0.05))
                 color += 1
                 
             elif k == 'accuracy' and data[k].shape[0] > 0:
@@ -513,8 +525,13 @@ class Plotter(object):
                     
                 color += 1
 
-        fig.legend(bbox_to_anchor=(0.5,0.8),loc=4,ncol=2,labels=config.labels,prop=dict(weight='bold'))
-        ax1.set_xticks(np.arange(data['trainset'].min(), data['trainset'].max()+1, xtick))
+        fig.legend(bbox_to_anchor=(0.15,0.9),loc=2,ncol=2,labels=config.labels,prop=dict(weight='bold'))
+        if 'fntrainset' in data:
+            lx = min(data['trainset'].min(),data['fntrainset'].min())
+            mx = max(data['trainset'].max(),data['fntrainset'].max())
+            ax1.set_xticks(np.arange(lx,mx+1, xtick))
+        else:
+            ax1.set_xticks(np.arange(data['trainset'].min(), data['trainset'].max()+1, xtick))
         if data['trainset'].max() > 1000:
             plt.setp(ax1.get_xticklabels(),rotation=30)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
@@ -675,10 +692,19 @@ class Plotter(object):
         ax1.grid(True)
         plt.show()
         
-    def draw_multiline(self,data,title,xtick,labels=None,pos=False,auc=False,other=None,colors=None,maxy=None,scale=True):
+    def draw_multiline(self,data,title,xtick,**kwargs):
         
         import matplotlib.patches as mpatches
         from matplotlib.legend_handler import HandlerPatch
+
+        labels=kwargs.get('labels',None)
+        pos=kwargs.get('pos',False)
+        auc=kwargs.get('auc',False)
+        other=kwargs.get('other',None)
+        colors=kwargs.get('colors',None)
+        maxy=kwargs.get('maxy',0.0)
+        scale=kwargs.get('scale',True)
+        merge=kwargs.get('merge',False)
         
         color = 0
         hatch_color = 'black'
@@ -746,7 +772,7 @@ class Plotter(object):
                 else:
                     lb = labels[lbcount]
                     lbcount += 1
-                    
+
                 plt.plot(data[k]['trainset'],data[k]['auc'], marker=markers[marker],color=palette(color),
                              linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb,markersize=10)
                 plotAUC = True
@@ -772,9 +798,15 @@ class Plotter(object):
 
                 if metric_patches is None:
                     metric_patches = []
+
+                #Check current trainset
+                if 'fntrainset' in data[k]:
+                    (tset,_),(_,tdata) = self.return_fndata(data[k],metric,merge)
+                else:
+                    tset = data[k]['trainset']
                     
                 #Repeat last point if needed
-                if data[k]['trainset'].shape[0] > tdata.shape[0]:
+                if tset.shape[0] > tdata.shape[0]:
                     print("Shape mismatch:\n Trainset: {}; {}:{}".format(data[k]['trainset'].shape,tdata.shape,metric))
                     tdata = np.hstack((tdata,tdata[-1:]))
 
@@ -792,7 +824,7 @@ class Plotter(object):
                     lb = labels[lbcount]
                     lbcount += 1
 
-                bar_x = data[k]['trainset'] + (lbcount-(nexp/2))*30
+                bar_x = tset + (lbcount-(nexp/2))*30
 
                 print("{}:\n - X:{};\n - Y:{}".format(lb,bar_x,tdata))
 
@@ -805,7 +837,8 @@ class Plotter(object):
                             colorf *= 0.75
                         mcolor = np.clip(np.asarray(palette(color)) * colorf,0.0,1.0)
                         #Repeat last point if needed
-                        bar_y = data[k][other[m]]
+                        #bar_y = data[k][other[m]]
+                        _,bar_y = self.return_fndata(data[k],other[m],merge)[1]
                         if bar_x.shape[0] > bar_y.shape[0]:
                             bar_y = np.hstack((bar_y,bar_y[-1:]))
                         plt.bar(bar_x,bar_y,width=30,color=mcolor,bottom=bottom,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
@@ -882,8 +915,8 @@ class Plotter(object):
             axis_t.extend([ticks.min(),ticks.max()])
             plt.yticks(ticks)
         else:
-            if scale:
-                ticks = np.linspace(min(0.6,0.9*min(min_y)), maxy, 8)
+            if scale or maxy == 0.0:
+                ticks = np.linspace(min(0.6,0.9*min(min_y)), max(max_y)+0.1, 8)
                 np.round(ticks,2,ticks)
             else:
                 ticks = np.arange(0.5,maxy,0.05)
@@ -930,6 +963,8 @@ class Plotter(object):
             else:
                 split_data[k] = data[k]
         split_data['trainset'] = data['trainset']
+        if 'fntrainset' in data:
+            split_data['fntrainset'] = data['fntrainset']
 
         return split_data
 
@@ -1029,6 +1064,22 @@ class Plotter(object):
             data['wsimeandis'] = data['wsimeandis'][:upl]
 
         return data
+
+
+    def return_fndata(self,data,key,merge=False):
+        """
+        When feature network data is present, it should be split from target net data before plotting
+
+        Returns: ( (X,Y) from target net, (X,Y) from feature net)
+
+        If merge is True, return merged trainset, merged Y
+        """
+        if not 'fnidx' in data:
+            return ((data['trainset'],data[key]),(data['trainset'],data[key]))
+        elif merge:
+            return ((np.hstack((data['trainset'],data['fntrainset'])),[]),([],np.hstack((data[key][data['tnidx']],data[key][data['fnidx']]))))
+        else:
+            return ((data['trainset'],data[key][data['tnidx']]),(data['fntrainset'],data[key][data['fnidx']]))
         
     def format_func(self,x, pos):
         hours = int(x//3600)
@@ -1086,8 +1137,10 @@ class Plotter(object):
                 'acqtime':[],
                 'traintime':[],
                 'auc':[],
+                'fnauc':[],
                 'trainset':[],
                 'accuracy':[],
+                'fnaccuracy':[],
                 'labels':[],
                 'wsave':[],
                 'wload':[],
@@ -1103,7 +1156,9 @@ class Plotter(object):
         kmeansrex = r'KMeans took (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
         featrex = r'Feature extraction took: (?P<hours>[0-9]+):(?P<min>[0-9]+):(?P<sec>[0-9]+.[0-9]+)'
         aucrex = r'AUC: (?P<auc>0.[0-9]+)'
+        fnaucrex = r'FN AUC: (?P<auc>0.[0-9]+)'
         accrex = r'Accuracy: (?P<acc>0.[0-9]+)'
+        fnaccrex = r'FN Accuracy: (?P<acc>0.[0-9]+)'
         trainsetrex = r'Train set: (?P<set>[0-9]+) items'
         clusterrex = r'Cluster (?P<cln>[0-9]+) labels: (?P<neg>[0-9]+) are 0; (?P<pos>[0-9]+) are 1;'
         labelrex = r'Train labels: (?P<neg>[0-9]+) are 0; (?P<pos>[0-9]+) are 1;'
@@ -1117,8 +1172,10 @@ class Plotter(object):
         kmeansrc = re.compile(kmeansrex)
         featrc = re.compile(featrex)
         aucrc = re.compile(aucrex)
+        fnaucrc = re.compile(fnaucrex)
         trainsetrc = re.compile(trainsetrex)
         accrc = re.compile(accrex)
+        fnaccrc = re.compile(fnaccrex)        
         clusterrc = re.compile(clusterrex)
         labelrc = re.compile(labelrex)
         colorrc = re.compile(colorrex)
@@ -1138,8 +1195,10 @@ class Plotter(object):
             kmeansmatch = kmeansrc.fullmatch(lstrip)
             featmatch = featrc.fullmatch(lstrip)
             aucmatch = aucrc.fullmatch(lstrip)
+            fnaucmatch = fnaucrc.fullmatch(lstrip)
             trmatch = trainsetrc.fullmatch(lstrip)
             accmatch = accrc.fullmatch(lstrip)
+            fnaccmatch = fnaccrc.fullmatch(lstrip)
             clustermatch = clusterrc.fullmatch(lstrip)
             labelmatch = labelrc.fullmatch(lstrip)
             colormatch = colorrc.fullmatch(lstrip)
@@ -1184,8 +1243,14 @@ class Plotter(object):
                 data['feature'].append(td.total_seconds())
             if aucmatch:
                 data['auc'].append(float(aucmatch.group('auc')))
+            if fnaucmatch:
+                data['fnauc'].append(float(fnaucmatch.group('auc')))
+                data.setdefault('fntrainset',[])
+                data['fntrainset'].append(len(data['trainset']) - 1)
             if accmatch:
                 data['accuracy'].append(float(accmatch.group('acc')))
+            if fnaccmatch:
+                data['fnaccuracy'].append(float(fnaccmatch.group('acc')))                
             if labelmatch:
                 data['labels'].append((int(labelmatch.group('pos')),int(labelmatch.group('neg'))))
             if colormatch:
@@ -1212,10 +1277,12 @@ class Plotter(object):
         data['kmeans'] = np.asarray(data['kmeans'])
         data['feature'] = np.asarray(data['feature'])
         data['auc'] = np.asarray(data['auc'])
+        data['fnauc'] = np.asarray(data['fnauc'])
         data['trainset'] = np.asarray(data['trainset'])
         data['accuracy'] = np.asarray(data['accuracy'])
+        data['fnaccuracy'] = np.asarray(data['fnaccuracy'])        
         data['labels'] = np.asarray(data['labels'])
-
+            
         if not maxx is None:
             if maxx > np.max(data['trainset']):
                 print("Slurm file ({}) does not have that many samples ({}). Maximum is {}.".format(slurm_path,maxx,np.max(data['trainset'])))
@@ -1237,6 +1304,23 @@ class Plotter(object):
             data['accuracy'] = data['accuracy'][:upl]
             data['labels'] = data['labels'][:upl]
 
+        #Generate indexes that correspond to data from Feature Net and Target Net
+        if data['fnauc'].shape[0] > 0:
+            data['fntrainset'] = np.asarray(data['fntrainset'])
+            fnids = np.zeros(data['trainset'].shape[0],dtype=np.int32)
+            if np.max(data['fntrainset'] > fnids.shape[0]):
+                upl = np.where(data['fntrainset'] >= fnids.shape[0])[0][0]
+                data['fntrainset'] = data['fntrainset'][:upl] #Don't use indexes already removed by maxx
+                data['auc'] = data['auc'][:upl]
+                data['fnauc'] = data['fnauc'][:upl]
+                data['accuracy'] = data['accuracy'][:upl]
+                data['fnaccuracy'] = data['fnaccuracy'][:upl]
+            fnids[data['fntrainset']] = 1
+            data['fnidx'] = data['fntrainset']
+            data['fntrainset'] = data['trainset'][data['fnidx']]
+            data['tnidx'] = np.logical_xor(fnids,1)
+            data['trainset'] = data['trainset'][data['tnidx']]
+            
         #Round AUC to 2 decimal places
         np.around(data['auc'],2,data['auc'])
         
@@ -1501,7 +1585,9 @@ if __name__ == "__main__":
     parser.add_argument('--multi', action='store_true', dest='multi', default=False, 
         help='Plot multiple lines from slurm files.')
     parser.add_argument('-pos', action='store_true', dest='pos', default=False, 
-        help='Plot percentage of positive patches during aquisition.')    
+        help='Plot percentage of positive patches during aquisition.')
+    parser.add_argument('-merge', action='store_true', dest='merge', default=False, 
+        help='In AL Transfer, merge plots from FN and TN in the same figure.')    
     parser.add_argument('-ids', dest='ids', nargs='+', type=int, 
         help='Experiment IDs to plot.', default=None,required=False)
     parser.add_argument('-colors', dest='colors', nargs='+', type=int, 
@@ -1513,7 +1599,7 @@ if __name__ == "__main__":
     parser.add_argument('-maxx', dest='maxx', type=int, 
         help='Plot maximum X.', default=None,required=False)
     parser.add_argument('-maxy', dest='maxy', type=float, 
-        help='Plot maximum X.', default=0.9,required=False)
+        help='Plot maximum X.', default=0.0,required=False)
     parser.add_argument('-t', dest='title', type=str,default='', 
         help='Figure title.')
     parser.add_argument('-labels', dest='labels', nargs='+', type=str, 
@@ -1531,11 +1617,14 @@ if __name__ == "__main__":
         feature - Feature extraction time; \n \
         auc - AUC; \n \
         acc - Accuracy; \n \
+        fnauc - Feature network AUC; \n \
+        fnacc - Feature network Accuracy; \n \
         labels - Positive labeled patches acquired; \n \
         pmean - Mean # of patches acquired from each WSI; \n \
         wsicount - # of WSIs used in each acquisition step; \n \
         wsimeandis - Mean distance, in pixels, from patches to its cluster centers.',
-       choices=['time','auc','acc','labels','traintime','acqtime','pmean','wsicount','wsimeandis','wsave','wload','kmeans','feature'],default=None)    
+       choices=['time','auc','acc','labels','traintime','acqtime','pmean','wsicount','wsimeandis','wsave','wload','kmeans','feature','fnauc','fnacc'],
+                            default=None)    
     parser.add_argument('-type', dest='tmode', type=str, nargs='+',
         help='Experiment type: \n \
         AL - General active learning experiment; \n \
@@ -1628,13 +1717,15 @@ if __name__ == "__main__":
         if not config.metrics is None and len(config.ids) == 1:
             ex_dir = "{}-{}".format(exp_type,str(config.ids[0]))
             data = p.parseMetrics(p.parseSlurm(ex_dir,config.maxx),config.ids[0],config.metrics)
-            p.draw_multilabel(data,config.title,config.xtick,config.metrics,config.labels)
+            p.draw_multilabel(data,config.title,config.xtick,config.metrics,config.labels,config.yscale)
         else:
             data = p.parseResults(exp_type,config.ids,maxx=config.maxx,concat=config.concat)
             if len(data) == 0:
                 print("Something is wrong with your command options. No data to plot")
-                sys.exit(1)        
-            p.draw_multiline(data,config.title,config.xtick,config.labels,config.pos,config.auc_only,config.metrics,config.colors,maxy=config.maxy,scale=config.yscale)
+                sys.exit(1)
+            kwargs = {'labels':config.labels,'pos':config.pos,'auc':config.auc_only,'other':config.metrics,'colors':config.colors,
+                          'maxy':config.maxy,'scale':config.yscale,'merge':config.merge}
+            p.draw_multiline(data,config.title,config.xtick,**kwargs)
                 
     elif config.single:
         p = Plotter(path=config.sdir)

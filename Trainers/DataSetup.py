@@ -23,9 +23,13 @@ def _split_origins(config,x_data,t_idx):
 
     for k in x_data:
         wsis.add(k.getOrigin())
-            
+
+    #Defines slides to provide test set patches
     wsis = list(wsis)
-    selected = set(random.choices(wsis,k=config.wsi_split))
+    if config.wsilist is None:
+        selected = set(random.choices(wsis,k=config.wsi_split))
+    else:
+        selected = set(config.wsilist)
     selected_idx = []
 
     if config.info:
