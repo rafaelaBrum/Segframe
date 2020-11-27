@@ -125,7 +125,7 @@ def csregen(superp,pool_size,generator_params,kwargs):
     config = None
     if 'config' in kwargs:
         config = kwargs['config']
-        clusters = 2*config.clusters
+        clusters = 3*config.clusters
         gpu_count = config.gpu_count
         cpu_count = config.cpu_count
     else:
