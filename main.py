@@ -311,7 +311,7 @@ if __name__ == "__main__":
         help='Runs prediction on a different set of images stored in dir.')
     parser.add_argument('-wsi_split', dest='wsi_split', type=int,
         help='Randomly select this number of WSIs to choose test patches from (Default 0, means use all).', default=0)
-   parser.add_argument('-wsilist', dest='wsilist', type=str, nargs='+', default=None)
+    parser.add_argument('-wsilist', dest='wsilist', type=str, nargs='+', default=None)
     
     ##System tests
     test_args = parser.add_argument_group('Tests')
