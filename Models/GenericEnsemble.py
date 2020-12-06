@@ -235,7 +235,7 @@ class GenericEnsemble(GenericModel):
         p_models = []
         inputs = []
         
-        width,height,channels = self._check_input_shape()
+        width,height,channels = self.check_input_shape()
         if K.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
         else:

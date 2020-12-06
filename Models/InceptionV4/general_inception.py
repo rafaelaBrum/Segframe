@@ -145,14 +145,15 @@ class Inception(GenericEnsemble):
         OBS: self.is_ensemble() returns if the ensemble strategy is in use
         """
         from . import inception_resnet_v2
-
+        
         kwargs = {'training':training,
                     'feature':feature,
                     'custom_top':False,
                     'preload':preload,
                     'name':self.name,
                     'batch_n':True if self._config.gpu_count <= 1 else False,
-                    'use_dp': True } #False if self.is_ensemble() else True}
+                    'use_dp': True, #False if self.is_ensemble() else True
+                    'model':self} 
 
         inp = Input(shape=input_shape)
                 
@@ -172,3 +173,58 @@ class Inception(GenericEnsemble):
                                 
 
 
+class EFInception(Inception):
+    """
+    Runs efficient rescaled Inception
+    """
+
+    def __init__(self,config,ds,name=None):
+        super().__init__(config,ds,name=name)
+        if name is None:
+            self.name = "EFInception"
+        self._modelCache = "{0}-model.h5".format(self.name)
+        self._weightsCache = "{0}-weights.h5".format(self.name)
+        self._mgpu_weightsCache = "{0}-mgpu-weights.h5".format(self.name)
+ 
+        self.cache_m = CacheManager()
+        self.cache_m.registerFile(os.path.join(config.model_path,self._modelCache),self._modelCache)
+        self.cache_m.registerFile(os.path.join(config.weights_path,self._weightsCache),self._weightsCache)
+        self.cache_m.registerFile(os.path.join(config.weights_path,self._mgpu_weightsCache),self._mgpu_weightsCache)
+
+    def _build_architecture(self,input_shape,training=None,feature=False,preload=True,ensemble=False):
+
+        """
+        Parameters:
+        - training <boolean>: sets network to training mode, wich enables dropout if there are DP layers
+        - feature <boolean>: build a feature extractor - DEPRECATED
+        - preload <boolean>: preload Imagenet weights
+        - ensemble <boolean>: builds an ensemble of networks from the Inception architecture
+
+        OBS: self.is_ensemble() returns if the ensemble strategy is in use
+        """
+        from . import EfficientInception as inception_resnet_v2
+        
+        kwargs = {'training':training,
+                    'feature':feature,
+                    'custom_top':False,
+                    'preload':preload,
+                    'name':self.name,
+                    'batch_n':True if self._config.gpu_count <= 1 else False,
+                    'use_dp': True, #False if self.is_ensemble() else True
+                    'model':self} 
+
+        inp = Input(shape=input_shape)
+                
+        inception_body = inception_resnet_v2.InceptionResNetV2(include_top=False,
+                                                                weights='imagenet',
+                                                                input_tensor=inp,
+                                                                input_shape=input_shape,
+                                                                pooling='avg',
+                                                                classes=self._ds.nclasses,
+                                                                **kwargs)
+        
+
+        if ensemble:
+            return (inception_body,inp)
+        else:
+            return inception_body

@@ -378,7 +378,7 @@ class ActiveLearningTrainer(Trainer):
             #Set load_full to false so dropout is disabled
             #Test target network if needed
             if not self.test_target(predictor,r,end_train):
-                predictor.run(self.test_x,self.test_y,load_full=False,net_model=model,target=False)
+                predictor.run(self.test_x,self.test_y,load_full=False,net_model=model,target=self._config.network == self._config.tnet)
             
             #Attempt to free GPU memory
             K.clear_session()
@@ -415,11 +415,12 @@ class ActiveLearningTrainer(Trainer):
         #should be inserted into training and validation sets
         if self.pool_x.shape[0] < self._config.acquire:
             return False
-        
-        if not self._config.tdim is None:
-            fix_dim = self._config.tdim
-        else:
-            fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
+
+        fix_dim = model.check_input_shape()
+        #if not self._config.tdim is None:
+        #    fix_dim = self._config.tdim
+        #else:
+        #    fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
 
         #Pools are big, use a data generator
         pool_prep = ImageDataGenerator(
