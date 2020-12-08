@@ -221,10 +221,8 @@ class Predictor(object):
                                             samplewise_std_normalization=self._config.batch_norm)
 
         if self._ensemble or not self._keep:
-            if not self._config.tdim is None:
-                fix_dim = self._config.tdim
-            else:
-                fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
+            fix_dim = model.check_input_shape()
+
             test_generator = ThreadedGenerator(dps=(X,Y),
                                                 classes=self._ds.nclasses,
                                                 dim=fix_dim,
@@ -240,7 +238,8 @@ class Predictor(object):
                                                 y=Y,
                                                 batch_size=bsize,
                                                 shuffle=False)
-        
+
+            
         if self._config.progressbar:
             l = tqdm(desc="Making predictions...",total=stp)
 

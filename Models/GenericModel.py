@@ -2,6 +2,8 @@
 #-*- coding: utf-8
 
 from abc import ABC,abstractmethod
+import math
+import numpy as np
 
 class GenericModel(ABC):
     """
@@ -19,7 +21,13 @@ class GenericModel(ABC):
         self.single = None
         self.parallel = None
 
-    def _check_input_shape(self):
+    def rescaleEnabled(self):
+        """
+        Returns if the network is rescalable
+        """
+        return False
+    
+    def check_input_shape(self):
         #Image shape by OpenCV reports height x width
         if not self._config.tdim is None:
             if len(self._config.tdim) == 2:
@@ -34,7 +42,11 @@ class GenericModel(ABC):
         #Dataset may have images of different sizes. What to do? Currently, chooses the smallest....
         _,width,height,channels = dims[0]
 
-        return (width,height,channels)
+        if self.rescaleEnabled() and self._config.phi > 1:
+            width,height = self.rescale('resolution',(width,height))
+            return (width,height,channels)
+        else:
+            return (width,height,channels)
 
     @abstractmethod
     def get_model_cache(self):
@@ -66,7 +78,7 @@ class GenericModel(ABC):
         @param keep_model <boolean>: store created model as an instance atribute.
         """
 
-        width,height,channels = self._check_input_shape()
+        width,height,channels = self.check_input_shape()
 
         if 'data_size' in kwargs:
             self.data_size = kwargs['data_size']
@@ -104,3 +116,47 @@ class GenericModel(ABC):
         
     def is_ensemble(self):
         return self._config.strategy == 'EnsembleTrainer'
+
+    def rescale(self,dim,full_size):
+        """
+        Rescales down a network according to inversed EfficientNet strategy.
+        - [Efficientnet: Rethinking model scaling for convolutional neural networks ] (https://arxiv.org/pdf/1905.11946)
+
+        Params:
+        - dim <string>: 'depth', 'width' or 'resolution';
+        - phi <int>: rescaling factor (should be compatible with network architecture). Equivalent to reducing resources
+        by 1/phi;
+        - full_size <int,list,tuple>: original size which will be scaled down.
+
+        Return: returns rescaled dimension of tuple if full_size is a list 
+        """
+        alpha = 1.2
+        beta = 1.1
+        gama = 1.15
+        phi = self._config.phi
+
+        if not dim in ['depth', 'width', 'resolution']:
+            print("[GenericModel] Dim should be one of 'depth', 'width' or 'resolution'")
+            return full_size
+
+        if dim == 'depth':
+            rd = 1/math.pow(alpha,phi)
+        elif dim == 'width':
+            rd = 1/math.pow(beta,phi)
+        else:
+            rd = 1/math.pow(gama,phi)
+        
+        if isinstance(full_size,list) or isinstance(full_size,tuple):
+            full_size = np.asarray(full_size,dtype=np.float32)
+            full_size *= rd
+            full_size.round(out=full_size)
+            full_size = full_size.astype(np.int32)
+            np.clip(full_size,a_min=1,a_max=full_size.max(),out=full_size)
+            full_size = tuple(full_size)
+        else:
+            full_size *= rd
+            full_size = int(round(full_size))
+            full_size = 1 if full_size < 1 else full_size
+
+        return full_size
+            

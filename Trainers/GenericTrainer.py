@@ -126,7 +126,7 @@ class Trainer(object):
         sw_thread = self.train_model(net_model,train_data,val_data)
         return sw_thread.join()
 
-    def _choose_generator(self,train_data,val_data):
+    def _choose_generator(self,train_data,val_data,fix_dim):
         """
         Returns a tuple with two batch generators: (train_generator,val_generator)
         The type of generator depends on the config.delay_load option
@@ -157,13 +157,8 @@ class Trainer(object):
             val_prep = ImageDataGenerator(
                 samplewise_center=self._config.batch_norm,
                 samplewise_std_normalization=self._config.batch_norm)
-        
-        if not self._config.tdim is None:
-            fix_dim = self._config.tdim
-        else:
-            fix_dim = self._ds.get_dataset_dimensions()[0][1:] #Only smallest image dimensions matter here
 
-        if self._config.delay_load:
+        if self._config.delay_load or self._config.phi > 1:
             from Trainers import ThreadedGenerator
             
             train_generator = ThreadedGenerator(dps=train_data,
@@ -280,7 +275,7 @@ class Trainer(object):
             print("Train set: {0} items".format(len(train_data[0])))
             print("Validate set: {0} items".format(len(val_data[0])))
 
-        train_generator,val_generator = self._choose_generator(train_data,val_data)
+        train_generator,val_generator = self._choose_generator(train_data,val_data,model.check_input_shape())
         
         single,parallel = model.build(data_size=len(train_data[0]),allocated_gpus=allocated_gpus)
         if not parallel is None:

@@ -3,4 +3,5 @@
 
 __all__ = ['InceptionV4']
 
-from .general_inception import Inception
+from .general_inception import Inception,EFInception
+
