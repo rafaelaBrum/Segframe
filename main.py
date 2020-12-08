@@ -245,7 +245,7 @@ if __name__ == "__main__":
         help='Use this function to regenerate - check docs. Default is None (random sample).',default=None)
     al_args.add_argument('-restore', dest='restore', action='store_true', default=False,
         help='Restore a previous experimet data and continue from where it left of.')
-    al_args.add_argument('-tnet',dest='tnet',type=str,default='Inception',help='Target network for AL Transfer.\n \
+    al_args.add_argument('-tnet',dest='tnet',type=str,default=None,help='Target network for AL Transfer.\n \
     Check documentation for available models.')
     al_args.add_argument('-tnpred', dest='tnpred', type=int, 
         help='Train the target network and run prediction on this interval of AL iterations. Default = 0 (do not train/test).',default=0)

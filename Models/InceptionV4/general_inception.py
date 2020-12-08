@@ -228,3 +228,9 @@ class EFInception(Inception):
             return (inception_body,inp)
         else:
             return inception_body
+
+    def rescaleEnabled(self):
+        """
+        Returns if the network is rescalable
+        """
+        return True

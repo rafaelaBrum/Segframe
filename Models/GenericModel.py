@@ -21,6 +21,12 @@ class GenericModel(ABC):
         self.single = None
         self.parallel = None
 
+    def rescaleEnabled(self):
+        """
+        Returns if the network is rescalable
+        """
+        return False
+    
     def check_input_shape(self):
         #Image shape by OpenCV reports height x width
         if not self._config.tdim is None:
@@ -36,7 +42,7 @@ class GenericModel(ABC):
         #Dataset may have images of different sizes. What to do? Currently, chooses the smallest....
         _,width,height,channels = dims[0]
 
-        if self._config.phi > 1:
+        if self.rescaleEnabled() and self._config.phi > 1:
             width,height = self.rescale('resolution',(width,height))
             return (width,height,channels)
         else:
@@ -134,20 +140,23 @@ class GenericModel(ABC):
             return full_size
 
         if dim == 'depth':
-            rd = 1/math.pow(alpha,(1-1/phi))
+            rd = 1/math.pow(alpha,phi)
         elif dim == 'width':
-            rd = 1/math.pow(beta,(1-1/phi))
+            rd = 1/math.pow(beta,phi)
         else:
-            rd = 1/math.pow(gama,(1-1/phi))
+            rd = 1/math.pow(gama,phi)
         
         if isinstance(full_size,list) or isinstance(full_size,tuple):
             full_size = np.asarray(full_size,dtype=np.float32)
             full_size *= rd
             full_size.round(out=full_size)
+            full_size = full_size.astype(np.int32)
+            np.clip(full_size,a_min=1,a_max=full_size.max(),out=full_size)
             full_size = tuple(full_size)
         else:
             full_size *= rd
-            full_size = round(full_size)
+            full_size = int(round(full_size))
+            full_size = 1 if full_size < 1 else full_size
 
         return full_size
             
