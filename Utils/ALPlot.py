@@ -221,7 +221,7 @@ class Plotter(object):
         plt.grid(True)
         plt.show()
         
-    def draw_stats(self,data,xticks,auc_only,labels=None,spread=1,title='',colors=None,yscale=False):
+    def draw_stats(self,data,xticks,auc_only,labels=None,spread=1,title='',colors=None,yscale=False,maxy=0.0):
         """
         @param data <list>: a list as returned by calculate_stats
         """
@@ -281,10 +281,10 @@ class Plotter(object):
         plt.legend(plots,labels=labels,loc=0,ncol=2,prop=dict(weight='bold'))
         #ydelta = (1.0 - low)/10
         ydelta = 0.05
-        if yscale:
+        if yscale or maxy == 0.0:
             yrg = np.clip(np.arange(max(low,0.0), up + ydelta, ydelta),0.0,1.0)
         else:
-            yrg = np.clip(np.arange(0.55, 0.9, ydelta),0.0,1.0)
+            yrg = np.clip(np.arange(0.65, maxy, ydelta),0.0,1.0)
         np.around(yrg,2,yrg)
         plt.yticks(yrg)
         xrg = np.arange(min(x_data), xmax+xticks, xticks)
@@ -801,7 +801,10 @@ class Plotter(object):
 
                 #Check current trainset
                 if 'fntrainset' in data[k]:
-                    (tset,_),(_,tdata) = self.return_fndata(data[k],metric,merge)
+                    if not merge:
+                        (_,_),(tset,tdata) = self.return_fndata(data[k],metric,merge)
+                    else:
+                        (tset,_),(_,tdata) = self.return_fndata(data[k],metric,merge)
                 else:
                     tset = data[k]['trainset']
                     
@@ -824,7 +827,7 @@ class Plotter(object):
                     lb = labels[lbcount]
                     lbcount += 1
 
-                bar_x = tset + (lbcount-(nexp/2))*30
+                bar_x = tset + (lbcount-(nexp/2))*40
 
                 print("{}:\n - X:{};\n - Y:{}".format(lb,bar_x,tdata))
 
@@ -841,15 +844,15 @@ class Plotter(object):
                         _,bar_y = self.return_fndata(data[k],other[m],merge)[1]
                         if bar_x.shape[0] > bar_y.shape[0]:
                             bar_y = np.hstack((bar_y,bar_y[-1:]))
-                        plt.bar(bar_x,bar_y,width=30,color=mcolor,bottom=bottom,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
-                    plt.bar(bar_x,tdata-bar_y,width=30,color=palette(color),label=lb,bottom=bar_y,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
+                        plt.bar(bar_x,bar_y,width=40,color=mcolor,bottom=bottom,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
+                    plt.bar(bar_x,tdata-bar_y,width=40,color=palette(color),label=lb,bottom=bar_y,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
                 else:
-                    plt.bar(bar_x,tdata,width=30,color=palette(color),label=lb,edgecolor=hatch_color,hatch=patterns[color%len(patterns)])
+                    plt.bar(bar_x,tdata,width=40,color=palette(color),label=lb,edgecolor=hatch_color,hatch=patterns[color%len(patterns)])
                 metric_patches.append(mpatches.Patch(facecolor=palette(color),label=lb,hatch=patterns[color%len(patterns)],edgecolor=hatch_color))
                 if not metric == 'auc':
                     formatter = FuncFormatter(self.format_func)
                     ax.yaxis.set_major_formatter(formatter)
-                min_x.append(data[k]['trainset'].min())
+                min_x.append(tset.min())
                 max_x.append(bar_x.max())
                 min_t.append(tdata.min())
                 max_t.append(tdata.max())
@@ -919,7 +922,7 @@ class Plotter(object):
                 ticks = np.linspace(min(0.6,0.9*min(min_y)), max(max_y)+0.1, 8)
                 np.round(ticks,2,ticks)
             else:
-                ticks = np.arange(0.5,maxy,0.05)
+                ticks = np.arange(0.65,maxy,0.05)
                 np.round(ticks,2,ticks)
             axis_t.extend([ticks.min(),ticks.max()])
             plt.yticks(ticks)
@@ -1079,7 +1082,8 @@ class Plotter(object):
         elif merge:
             return ((np.hstack((data['trainset'],data['fntrainset'])),[]),([],np.hstack((data[key][data['tnidx']],data[key][data['fnidx']]))))
         else:
-            return ((data['trainset'],data[key][data['tnidx']]),(data['fntrainset'],data[key][data['fnidx']]))
+            m = data[key].shape[0]
+            return ((data['trainset'],data[key][data['tnidx'][:m]]),(data['fntrainset'],data[key][data['fnidx'][:m]]))
         
     def format_func(self,x, pos):
         hours = int(x//3600)
@@ -1308,7 +1312,7 @@ class Plotter(object):
         if data['fnauc'].shape[0] > 0:
             data['fntrainset'] = np.asarray(data['fntrainset'])
             fnids = np.zeros(data['trainset'].shape[0],dtype=np.int32)
-            if np.max(data['fntrainset'] > fnids.shape[0]):
+            if np.max(data['fntrainset']) >= fnids.shape[0]:
                 upl = np.where(data['fntrainset'] >= fnids.shape[0])[0][0]
                 data['fntrainset'] = data['fntrainset'][:upl] #Don't use indexes already removed by maxx
                 data['auc'] = data['auc'][:upl]
@@ -1599,7 +1603,7 @@ if __name__ == "__main__":
     parser.add_argument('-maxx', dest='maxx', type=int, 
         help='Plot maximum X.', default=None,required=False)
     parser.add_argument('-maxy', dest='maxy', type=float, 
-        help='Plot maximum X.', default=0.0,required=False)
+        help='Plot maximum Y.', default=0.0,required=False)
     parser.add_argument('-t', dest='title', type=str,default='', 
         help='Figure title.')
     parser.add_argument('-labels', dest='labels', nargs='+', type=str, 
@@ -1797,7 +1801,7 @@ if __name__ == "__main__":
             print("Something is wrong with your command options. No data to plot")
             sys.exit(1)
 
-        p.draw_stats(data,config.xtick,config.auc_only,config.labels,config.spread,config.title,config.colors,yscale=config.yscale)
+        p.draw_stats(data,config.xtick,config.auc_only,config.labels,config.spread,config.title,config.colors,yscale=config.yscale,maxy=config.maxy)
 
     elif config.debug:
 
