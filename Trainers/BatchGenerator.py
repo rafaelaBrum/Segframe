@@ -309,13 +309,11 @@ class ThreadedGenerator(GenericIterator):
         futures = []
 
         for i,j in enumerate(index_array):
-            t_x = X[j]
-            t_y = Y[j]
-            futures.append(self._executor.submit(self._thread_run_images,t_x,t_y))
-            
-        for i in range(len(futures)):
+            futures.append(self._executor.submit(self._thread_run_images,X[j],Y[j]))
+
+        for f in concurrent.futures.as_completed(futures):
             # add point to x_batch and diagnoses to y
-            example,t_y = futures[i].result()
+            example,t_y = f.result()
             if batch_x is None:
                 self.shape = example.shape
                 batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)),dtype=np.float32)            
