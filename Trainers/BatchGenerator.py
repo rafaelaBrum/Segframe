@@ -311,6 +311,7 @@ class ThreadedGenerator(GenericIterator):
         for i,j in enumerate(index_array):
             futures.append(self._executor.submit(self._thread_run_images,X[j],Y[j]))
 
+        i=0
         for f in concurrent.futures.as_completed(futures):
             # add point to x_batch and diagnoses to y
             example,t_y = f.result()
@@ -319,6 +320,7 @@ class ThreadedGenerator(GenericIterator):
                 batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)),dtype=np.float32)            
             batch_x[i] = example
             y[i] = t_y
+            i += 1
 
         #Always normalize
         batch_x = self.image_generator.standardize(batch_x)
