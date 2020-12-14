@@ -168,7 +168,8 @@ class Trainer(object):
                                                 image_generator=train_prep,
                                                 extra_aug=self._config.augment,
                                                 shuffle=True,
-                                                verbose=self._verbose)
+                                                verbose=self._verbose,
+                                                keep=self._config.keepimg)
             
             val_generator = ThreadedGenerator(dps=val_data,
                                                 classes=self._ds.nclasses,
@@ -177,7 +178,8 @@ class Trainer(object):
                                                 image_generator=val_prep,
                                                 extra_aug=self._config.augment,
                                                 shuffle=True,
-                                                verbose=self._verbose)
+                                                verbose=self._verbose,
+                                                keep=self._config.keepimg)
         else:
             #Loads training images and validation images
             x_train,y_train = self._ds.load_data(split=None,keepImg=self._config.keepimg,data=train_data)

@@ -31,6 +31,7 @@ class GenericIterator(Iterator):
         data_mean: float, dataset mean for zero centering
         verbose: verbosity level.
         input_n: number of input sources (for multiple submodels in ensemble)
+        keep: keep images in memory
     """
 
     def __init__(self,
@@ -44,7 +45,8 @@ class GenericIterator(Iterator):
                      seed=173,
                      data_mean=0.0,
                      verbose=0,
-                     input_n=1):
+                     input_n=1,
+                     keep=False):
 
         self.data = data
         self.classes = classes
@@ -54,6 +56,7 @@ class GenericIterator(Iterator):
         self.verbose = verbose
         self.extra_aug = extra_aug
         self.input_n = input_n
+        self.keep = keep
 
         #Keep information of example shape as soon as the information is available
         self.shape = None
@@ -155,7 +158,8 @@ class SingleGenerator(GenericIterator):
                      data_mean=0.0,
                      verbose=0,
                      variable_shape=False,
-                     input_n=1):
+                     input_n=1,
+                     keep=False):
         
         #Set True if examples in the same dataset can have variable shapes
         self.variable_shape = variable_shape
@@ -170,7 +174,8 @@ class SingleGenerator(GenericIterator):
                                                 seed=seed,
                                                 data_mean=data_mean,
                                                 verbose=verbose,
-                                                input_n=input_n)
+                                                input_n=input_n,
+                                                keep=keep)
 
 
     def _get_batches_of_transformed_samples(self,index_array):
@@ -251,7 +256,8 @@ class ThreadedGenerator(GenericIterator):
                      data_mean=0.0,
                      verbose=0,
                      variable_shape=False,
-                     input_n=1):
+                     input_n=1,
+                     keep=False):
         
         #Set True if examples in the same dataset can have variable shapes
         self.variable_shape = variable_shape
@@ -268,7 +274,8 @@ class ThreadedGenerator(GenericIterator):
                                                 seed=seed,
                                                 data_mean=data_mean,
                                                 verbose=verbose,
-                                                input_n=input_n)
+                                                input_n=input_n,
+                                                keep=keep)
 
 
     def _get_batches_of_transformed_samples(self,index_array):
@@ -306,21 +313,21 @@ class ThreadedGenerator(GenericIterator):
         # generate a random batch of points
         X = self.data[0]
         Y = self.data[1]
-        futures = []
+        futures = {}
 
         for i,j in enumerate(index_array):
-            futures.append(self._executor.submit(self._thread_run_images,X[j],Y[j]))
+            futures[self._executor.submit(self._thread_run_images,X[j],Y[j],self.keep)] = i
 
         i=0
         for f in concurrent.futures.as_completed(futures):
             # add point to x_batch and diagnoses to y
             example,t_y = f.result()
+            i = futures[f]
             if batch_x is None:
                 self.shape = example.shape
                 batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)),dtype=np.float32)            
             batch_x[i] = example
             y[i] = t_y
-            i += 1
 
         #Always normalize
         batch_x = self.image_generator.standardize(batch_x)
@@ -343,8 +350,8 @@ class ThreadedGenerator(GenericIterator):
         output = (batch_x, keras.utils.to_categorical(y, self.classes))
         return output
 
-    def _thread_run_images(self,t_x,t_y):
-        example = t_x.readImage(keepImg=False,size=self.dim,verbose=self.verbose)
+    def _thread_run_images(self,t_x,t_y,keep):
+        example = t_x.readImage(keepImg=keep,size=self.dim,verbose=self.verbose)
             
         if not self.image_generator is None:
             example = self.image_generator.random_transform(example,self.seed)
