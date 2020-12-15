@@ -51,7 +51,7 @@ class PImage(SegImage):
         if not verbose is None:
             self._verbose = verbose
             
-        if self._data is None:
+        if self._data is None or size != self._dim:
             if self._verbose > 1:
                 print("Reading image: {0}".format(self._path))
                 
