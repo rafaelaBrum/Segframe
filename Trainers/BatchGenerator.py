@@ -247,7 +247,7 @@ class ThreadedGenerator(GenericIterator):
     def __init__(self, 
                      dps,
                      classes,
-                     dim=None,
+                     dim,
                      batch_size=8,
                      image_generator=None,
                      extra_aug=False,
@@ -329,7 +329,7 @@ class ThreadedGenerator(GenericIterator):
             batch_x[i] = example
             y[i] = t_y
 
-        #Always normalize
+           #Always normalize
         batch_x = self.image_generator.standardize(batch_x)
         #Apply extra augmentation
         if self.extra_aug:
