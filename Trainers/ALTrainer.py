@@ -194,12 +194,6 @@ class ActiveLearningTrainer(Trainer):
         if self._config.verbose > 0:
             to_remove = self.acq_idx.shape[0] if not self.acq_idx is None else 0
             print("[ALTrainer] To be removed from super pool ({1}): {0}".format(self.acq_idx,to_remove))
-            
-        #if cache_m.checkFileExistence(fid):
-            #self.pool_x,self.pool_y,_ = cache_m.load(fid)
-            #if self._config.info:
-                #print("[ALTrainer] Subpool restoration not available, resampling...")
-                #print("[ALTrainer] Loaded resampled pool from: {}".format(cache_m.fileLocation(fid)))
 
         if not self.acq_idx is None:
             self.superp_x = np.delete(self.superp_x,self.acq_idx)
