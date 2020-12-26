@@ -92,21 +92,6 @@ class GenericIterator(Iterator):
             raise ValueError("[GenericIterator] data should be a tuple of lists or ndarrays")
         self.data = data
         self.reset()
-
-    def next(self):
-        """
-        For python 2.x.
-        # Returns
-        The next batch.
-        """
-            
-        # Keeps under lock only the mechanism which advances
-        # the indexing of each batch.
-        with self.lock:
-            index_array = next(self.index_generator)
-        # The transformation of images is not under thread lock
-        # so it can be done in parallel
-        return self._get_batches_of_transformed_samples(index_array)
             
     def returnDataInOrder(self,idx):
         """
@@ -261,9 +246,8 @@ class ThreadedGenerator(GenericIterator):
         
         #Set True if examples in the same dataset can have variable shapes
         self.variable_shape = variable_shape
-        self._executor = None
         self._aug = None
-        
+
         super(ThreadedGenerator, self).__init__(data=dps,
                                                 classes=classes,
                                                 dim=dim,
@@ -277,6 +261,10 @@ class ThreadedGenerator(GenericIterator):
                                                 input_n=input_n,
                                                 keep=keep)
 
+        #Start thread pool if not already started
+        workers = round((self.batch_size/3 + (self.batch_size%3>0) +0.5))
+        self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
+
 
     def _get_batches_of_transformed_samples(self,index_array):
         """
@@ -287,20 +275,11 @@ class ThreadedGenerator(GenericIterator):
         # Returns 
             a batch of transformed samples
         """
-        #Start thread pool if not already started
-        if self._executor is None:
-            workers = round((self.batch_size/3 + (self.batch_size%3>0) +0.5))
-            self._executor = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
-
         #Additional data augmentation
         if self.extra_aug and self._aug is None:
             self._aug = iaa.Sometimes(0.5,
                 iaa.ContrastNormalization((0.75,1.5))
                 )
-
-        #For debuging
-        if self.verbose > 1:
-            print(" index_array: {0}".format(index_array))
             
         # calculate dimensions of each data point
         #Should only create the batches of appropriate size
@@ -329,7 +308,7 @@ class ThreadedGenerator(GenericIterator):
             batch_x[i] = example
             y[i] = t_y
 
-           #Always normalize
+        #Always normalize
         batch_x = self.image_generator.standardize(batch_x)
         #Apply extra augmentation
         if self.extra_aug:
