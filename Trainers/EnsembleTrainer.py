@@ -197,7 +197,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                     
             tm,st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
                                          set_session=False,stats=False,summary=False,
-                                         clear_sess=True,save_numpy=True)
+                                         clear_sess=False,save_numpy=True)
             t_models[m] = tm
             sw_thread.append(st)
 
