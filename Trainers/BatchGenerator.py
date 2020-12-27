@@ -304,6 +304,7 @@ class ThreadedGenerator(GenericIterator):
             i = futures[f]
             if batch_x is None:
                 self.shape = example.shape
+                print("Image batch shape: {}".format(self.shape))
                 batch_x = np.zeros(tuple([len(index_array)] + list(self.shape)),dtype=np.float32)            
             batch_x[i] = example
             y[i] = t_y

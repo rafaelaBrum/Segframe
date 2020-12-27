@@ -1633,7 +1633,7 @@ if __name__ == "__main__":
         help='Experiment type: \n \
         AL - General active learning experiment; \n \
         MN - MNIST dataset experiment.',
-       choices=['AL','MN','DB','OR','KM','EN'],default='AL')
+       choices=['AL','MN','DB','OR','KM','EN','TMP'],default='AL')
     parser.add_argument('-yscale', action='store_true', dest='yscale', default=False, 
         help='Scale y axis ticks to data.')    
 
