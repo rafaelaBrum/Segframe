@@ -159,6 +159,10 @@ class Predictor(object):
         if self._config.verbose > 0:
             unique,count = np.unique(y_test,return_counts=True)
             l_count = dict(zip(unique,count))
+            if target:
+                print("\n[Predictions] Starting target net evaluatioin")
+            else:
+                print("\n[Predictions] Starting prediction phase")
             if len(unique) > 2:
                 print("Test items:")
                 print("\n".join(["label {0}: {1} items" .format(key,l_count[key]) for key in unique]))

@@ -533,5 +533,6 @@ class ActiveLearningTrainer(Trainer):
 
         if self._config.info:
              print("Target net evaluation took: {}".format(timedelta(seconds=time.time() - intime)))
+             print("\n")
 
         return True
