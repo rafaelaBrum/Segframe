@@ -126,6 +126,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         final_acq = self.initial_acq+self._config.acquisition_steps
         for r in range(self.initial_acq,final_acq):
             if self._config.info:
+                print("\n--------------------------------")
                 print("[EnsembleTrainer] Starting acquisition step {0}/{1}".format(r+1,final_acq))
                 stime = time.time()
 
