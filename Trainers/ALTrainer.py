@@ -340,6 +340,7 @@ class ActiveLearningTrainer(Trainer):
         train_time = None
         sw_thread = None
         end_train = False
+        run_pred = False
         
         final_acq = self.initial_acq+self._config.acquisition_steps
         for r in range(self.initial_acq,final_acq):
@@ -357,6 +358,8 @@ class ActiveLearningTrainer(Trainer):
             tmodel,sw_thread = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y))
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
+
+            run_pred = self.test_target(predictor,r,end_train)
                 
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
@@ -371,7 +374,7 @@ class ActiveLearningTrainer(Trainer):
                     
             #Set load_full to false so dropout is disabled
             #Test target network if needed
-            if not self.test_target(predictor,r,end_train):
+            if not run_pred:
                 predictor.run(self.test_x,self.test_y,load_full=False,net_model=model,target=self._config.tnet is None or self._config.network == self._config.tnet)
             
             #Attempt to free GPU memory

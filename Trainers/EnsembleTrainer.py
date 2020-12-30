@@ -119,6 +119,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         sw_thread = None
         end_train = False
         t_models = None
+        run_pred = False
         
         self._initializer(gpus=self._config.gpu_count,processes=self._config.cpu_count)
 
@@ -142,6 +143,8 @@ class EnsembleALTrainer(ActiveLearningTrainer):
 
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
+
+            run_pred = self.test_target(predictor,r,end_train)
                 
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,emodels=t_models,sw_thread=sw_thread):
                 if self._config.info:
@@ -159,7 +162,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
 
             #Set load_full loads a full model stored in file
             #Test target network if needed
-            if not self.test_target(predictor,r,end_train):
+            if not run_pred:
                 predictor.run(self.test_x,self.test_y,load_full=end_train,net_model=model,target=self._config.tnet is None or self._config.network == self._config.tnet)
 
             #Attempt to free GPU memory
