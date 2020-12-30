@@ -144,6 +144,13 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
 
+            #If sw_thread was provided, we should check the availability of model weights
+            if not sw_thread is None:
+                for k in range(len(sw_thread)):
+                    if sw_thread[k].is_alive():
+                        print("Waiting ensemble model {} weights' to become available...".format(k))
+                        sw_thread[k].join()
+
             run_pred = self.test_target(predictor,r,end_train)
                 
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,emodels=t_models,sw_thread=sw_thread):
@@ -153,13 +160,6 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                 model.reset() #Last AL iteration, force ensemble build for prediction
                 model.tmodels = t_models
                 
-            #If sw_thread was provided, we should check the availability of model weights
-            if not sw_thread is None:
-                for k in range(len(sw_thread)):
-                    if sw_thread[k].is_alive():
-                        print("Waiting ensemble model {} weights' to become available...".format(k))
-                        sw_thread[k].join()
-
             #Set load_full loads a full model stored in file
             #Test target network if needed
             if not run_pred:
