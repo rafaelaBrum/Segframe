@@ -123,7 +123,7 @@ class GenericModel(ABC):
         - [Efficientnet: Rethinking model scaling for convolutional neural networks ] (https://arxiv.org/pdf/1905.11946)
 
         Params:
-        - dim <string>: 'depth', 'width' or 'resolution';
+        - dim <string>: 'depth', 'width', 'resolution' or 'lr';
         - phi <int>: rescaling factor (should be compatible with network architecture). Equivalent to reducing resources
         by 1/phi;
         - full_size <int,list,tuple>: original size which will be scaled down.
@@ -135,16 +135,21 @@ class GenericModel(ABC):
         gama = 1.15
         phi = self._config.phi
 
-        if not dim in ['depth', 'width', 'resolution']:
-            print("[GenericModel] Dim should be one of 'depth', 'width' or 'resolution'")
+        if phi == 1:
+            return full_size
+
+        if not dim in ['depth', 'width', 'resolution','lr']:
+            print("[GenericModel] Dim should be one of 'depth', 'width', 'resolution' or 'lr'")
             return full_size
 
         if dim == 'depth':
             rd = 1/math.pow(alpha,phi)
         elif dim == 'width':
             rd = 1/math.pow(beta,phi)
-        else:
+        elif dim == 'resolution':
             rd = 1/math.pow(gama,phi)
+        else:
+            rd = 2.5*phi
         
         if isinstance(full_size,list) or isinstance(full_size,tuple):
             full_size = np.asarray(full_size,dtype=np.float32)
@@ -153,10 +158,12 @@ class GenericModel(ABC):
             full_size = full_size.astype(np.int32)
             np.clip(full_size,a_min=1,a_max=full_size.max(),out=full_size)
             full_size = tuple(full_size)
-        else:
+        elif isinstance(full_size,int):
             full_size *= rd
             full_size = int(round(full_size))
             full_size = 1 if full_size < 1 else full_size
+        else:
+            full_size *= rd
 
         return full_size
             

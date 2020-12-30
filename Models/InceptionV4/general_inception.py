@@ -229,6 +229,51 @@ class EFInception(Inception):
         else:
             return inception_body
 
+    def _configure_compile(self,model,allocated_gpus):
+        """
+        Configures, compiles, generates parallel model if needed
+
+        @param model <Keras.Model>
+        """
+        #Check if previous training and LR is saved, if so, use it
+        lr_cache = "{0}_learning_rate.txt".format(self.name)
+        self.cache_m.registerFile(os.path.join(self._config.cache,lr_cache),lr_cache)
+        l_rate = self._config.learn_r
+        if os.path.isfile(self.cache_m.fileLocation(lr_cache)) and not self._config.new_net:
+            l_rate = float(self.cache_m.read(lr_cache))
+            if self._config.info:
+                print("Found previous learning rate: {0}".format(l_rate))
+        
+        #opt = optimizers.SGD(lr=l_rate, decay=1.5e-4, momentum=0.9, nesterov=True)
+        l_rate = self.rescale('lr',l_rate)
+        opt = optimizers.Adam(lr = l_rate)
+        #opt = optimizers.Adadelta(lr=l_rate)
+
+        #Return parallel model if multiple GPUs are available
+        parallel_model = None
+       
+        if allocated_gpus > 1:
+            with tf.device('/cpu:0'):
+                model.compile(loss='categorical_crossentropy',
+                    optimizer=opt,
+                    metrics=['accuracy'])
+            parallel_model = multi_gpu_model(model,gpus=allocated_gpus)
+            parallel_model.compile(loss='categorical_crossentropy',
+                                       optimizer=opt,
+                                       metrics=['accuracy'],
+                                       #options=p_opt, 
+                                       #run_metadata=p_mtd
+                                       )
+        else:
+            model.compile(loss='categorical_crossentropy',
+                optimizer=opt,
+                metrics=['accuracy'],
+                #options=p_opt, 
+                #run_metadata=p_mtd
+                )
+
+        return (model,parallel_model)
+
     def rescaleEnabled(self):
         """
         Returns if the network is rescalable
