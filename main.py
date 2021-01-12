@@ -314,7 +314,8 @@ if __name__ == "__main__":
     parser.add_argument('-wsi_split', dest='wsi_split', type=int,
         help='Randomly select this number of WSIs to choose test patches from (Default 0, means use all).', default=0)
     parser.add_argument('-wsilist', dest='wsilist', type=str, nargs='+', default=None)
-    
+    parser.add_argument('-wsimax', dest='wsimax', type=float, nargs='+', help="Define % of patches of each slide to use in testing",default=None)
+        
     ##System tests
     test_args = parser.add_argument_group('Tests')
     arg_groups.append(test_args)

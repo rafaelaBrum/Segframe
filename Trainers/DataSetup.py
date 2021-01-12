@@ -34,11 +34,30 @@ def _split_origins(config,x_data,t_idx):
 
     if config.info:
         print("[DataSetup] WSIs selected to provide test patches:\n{}".format("\n".join(selected)))
-            
-    for i in range(len(x_data)):
-        if x_data[i].getOrigin() in selected:
-            selected_idx.append(i)
 
+    patch_count = {}
+        
+    for i in range(len(x_data)):
+        w = x_data[i].getOrigin()
+        if w in selected:
+            patch_count.setdefault(w,[])
+            patch_count[w].append(i)
+
+    if config.wsimax is None or len(config.wsimax) != len(config.wsilist):
+        for w in patch_count:
+            if config.info:
+                print("[Datasetup] Using all {} patches from slide {}".format(len(patch_count[w]),w))
+            selected_idx.extend(patch_count[w])
+    else:
+        for i in range(len(config.wsilist)):
+            w = config.wsilist[i]
+            pc = int(config.wsimax[i] * len(patch_count[w]))
+            pc = min(pc,len(patch_count[w]))
+            selected_idx.extend(patch_count[w][:pc])
+            if config.info:
+                print("[Datasetup] Using {} ({:.2f}%) patches from slide {}".format(pc,100*pc/len(patch_count[w]),w))
+                
+    
     t_idx = min(len(selected_idx),t_idx)
     samples = np.random.choice(selected_idx,t_idx,replace=False)
     full_id = np.asarray(selected_idx,dtype=np.int32)
@@ -64,7 +83,7 @@ def split_test(config,ds):
     t_idx = min(config.pred_size,t_idx) if config.pred_size > 0 else t_idx
 
     if config.testdir is None or not os.path.isdir(config.testdir):
-        if config.wsi_split > 0:
+        if config.wsi_split > 0 or not config.wsilist is None:
             full_id,samples = _split_origins(config,fX,t_idx)
             test_x = fX[samples]
             test_y = fY[samples]
