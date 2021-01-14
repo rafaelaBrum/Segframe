@@ -20,6 +20,7 @@ import os
 import re
 import sys
 import argparse
+import scipy.stats
 
 font = {'family' : 'DejaVu Sans',
         'weight' : 'normal',
@@ -1501,7 +1502,7 @@ class Plotter(object):
             
         return data
 
-    def calculate_stats(self,data,auc_only,ci):
+    def calculate_stats(self,data,auc_only,ci,metrics = None):
         """
         @param data <dict>: a dictionary as returned by parseResults
 
@@ -1517,8 +1518,6 @@ class Plotter(object):
         stats = []
 
         def calc_ci(val,ci):
-            import scipy.stats
-
             a = np.zeros(shape=val.shape[0],dtype=np.float32)
             for k in range(a.shape[0]):
                 n = val[k].shape[0]
@@ -1526,16 +1525,26 @@ class Plotter(object):
                 a[k] = se * scipy.stats.t.ppf((1 + ci) / 2., n-1)
             return a
 
+        metric = None
+        if metrics is None or len(metrics) == 0:
+            metric = 'auc'
+        elif len(metrics) >= 1:
+            metric = metrics[0]
+            
         max_samples = np.inf
         #Check if all experiments had the same number of samples
         for k in data:
-            if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
+            if not metric in data[k] or data[k][metric].shape[0] == 0:
+                print("Requested metric not available: {}. AUC values will be used.".format(metric))
+                metric = 'auc'
+                auc_only = True
+            if auc_only and data[k]['auc'].shape[0] > 0:
                 max_samples = min(max_samples,len(data[k]['trainset']))
-            if not auc_only and 'accuracy' in data[k] and data[k]['accuracy'].shape[0] > 0:
-                max_samples = min(max_samples,len(data[k]['trainset']))
+            elif not auc_only and data[k][metric].shape[0] > 0:
+                max_samples = min(max_samples,len(data[k]['fntrainset']))
                 
         for k in data:
-            if 'auc' in data[k] and data[k]['auc'].shape[0] > 0:
+            if auc_only and data[k]['auc'].shape[0] > 0:
                 if auc_value is None:
                     trainset = data[k]['trainset']
                     shape = (len(data),max_samples)
@@ -1545,16 +1554,16 @@ class Plotter(object):
                     print("Experiment {}: repeating last item for AUC data".format(k))
                     data[k]['auc'] = np.concatenate((data[k]['auc'],data[k]['auc'][-1:]),axis=0)
                 auc_value[i] = data[k]['auc'][:max_samples]
-            if not auc_only and 'accuracy' in data[k] and data[k]['accuracy'].shape[0] > 0:
+            if not auc_only and data[k][metric].shape[0] > 0:
                 if acc_value is None:
-                    trainset = data[k]['trainset']
+                    trainset = data[k]['trainset'] if metric.startswith('fn') else data[k]['fntrainset']
                     shape = (len(data),max_samples)
                     acc_value = np.ndarray(shape=shape,dtype=np.float32)
                 #Repeat last point if needed
-                if acc_value.shape[1] > data[k]['accuracy'].shape[0]:
-                    print("Repeating last item for ACCURACY data")
-                    data[k]['accuracy'] = np.concatenate((data[k]['accuracy'],data[k]['accuracy'][-1:]),axis=0)
-                acc_value[i] = data[k]['accuracy'][:max_samples]
+                if acc_value.shape[1] > data[k][metric].shape[0]:
+                    print("Repeating last item for {} data".format(metric))
+                    data[k]['accuracy'] = np.concatenate((data[k][metric],data[k][metric][-1:]),axis=0)
+                acc_value[i] = data[k][metric][:max_samples]
                 
             if 'color' in data[k]:
                 color = data[k]['color']
@@ -1572,8 +1581,8 @@ class Plotter(object):
             print("Max AUC: {:1.3f}; Mean AUC ({} acquisitions): {:1.3f}".format(np.max(d[1]), d[1].shape[0],np.mean(d[1])))
             return [d]
         else:
-            d = (trainset[:max_samples],np.mean(acc_value.transpose(),axis=1),calc_ci(acc_value.transpose(),ci),"Accuracy",color)
-            print("Mean Accuracy ({} acquisitions): {}".format(d[1].shape[0],np.mean(d[1])))
+            d = (trainset[:max_samples],np.mean(acc_value.transpose(),axis=1),calc_ci(acc_value.transpose(),ci),metric,color)
+            print("Max {0}: {1:1.3f}; Mean {0} ({2} acquisitions): {3:1.3f}".format(metric,np.max(d[1]),d[1].shape[0],np.mean(d[1])))
             return [d]
                                                                                                               
     
@@ -1791,11 +1800,11 @@ if __name__ == "__main__":
             for i in config.n_exp:
                 if i > 0:
                     print("Calculating statistics for experiments {}".format(config.ids[idx:idx+i]))
-                    c.extend(p.calculate_stats({k:data[k] for k in config.ids[idx:idx+i]},config.auc_only,config.confidence))
+                    c.extend(p.calculate_stats({k:data[k] for k in config.ids[idx:idx+i]},config.auc_only,config.confidence,config.metrics))
                     idx += i
             data = c
         else:
-            data = p.calculate_stats(data,config.auc_only,config.confidence)
+            data = p.calculate_stats(data,config.auc_only,config.confidence,config.metrics)
             
         if len(data) == 0:
             print("Something is wrong with your command options. No data to plot")

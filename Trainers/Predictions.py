@@ -224,7 +224,7 @@ class Predictor(object):
         image_generator = ImageDataGenerator(samplewise_center=self._config.batch_norm, 
                                             samplewise_std_normalization=self._config.batch_norm)
 
-        if self._ensemble or not self._keep:
+        if self._ensemble or self._config.delay_load:
             fix_dim = model.check_input_shape()
 
             test_generator = ThreadedGenerator(dps=(X,Y),
@@ -235,7 +235,8 @@ class Predictor(object):
                                                 extra_aug=self._config.augment,
                                                 shuffle=False,
                                                 verbose=self._verbose,
-                                                input_n=self._config.emodels if self._ensemble else 1)
+                                                input_n=self._config.emodels if self._ensemble else 1,
+                                                keep=self._config.keepimg)
         else:
             Y = to_categorical(Y,self._ds.nclasses)
             test_generator = image_generator.flow(x=X,
