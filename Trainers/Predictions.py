@@ -172,7 +172,7 @@ class Predictor(object):
                 print("Test labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
             print("Test set: {} items".format(len(y_test)))
 
-        if self._ensemble or not self._keep:
+        if self._ensemble or self._config.delay_load:
             X,Y = x_test,y_test
         else:
             X,Y = self._ds.load_data(data=(x_test,y_test),keepImg=self._keep)
@@ -236,7 +236,7 @@ class Predictor(object):
                                                 shuffle=False,
                                                 verbose=self._verbose,
                                                 input_n=self._config.emodels if self._ensemble else 1,
-                                                keep=self._config.keepimg)
+                                                keep=self._keep)
         else:
             Y = to_categorical(Y,self._ds.nclasses)
             test_generator = image_generator.flow(x=X,
