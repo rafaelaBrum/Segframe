@@ -270,7 +270,7 @@ class Predictor(object):
             l.close()
 
         y_pred = np.argmax(Y_pred, axis=1)
-        if self._ensemble or not self._keep:
+        if self._ensemble or self._config.delay_load:
             expected = np.asarray(Y)
             del(Y)
         else:
