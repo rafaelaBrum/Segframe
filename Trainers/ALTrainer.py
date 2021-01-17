@@ -359,18 +359,18 @@ class ActiveLearningTrainer(Trainer):
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
 
+            #Some models may take too long to save weights
+            if not sw_thread is None and sw_thread.is_alive():
+                if self._config.info:
+                    print("[ALTrainer] Waiting for model weights...")
+                sw_thread.join()
+                
             run_pred = self.test_target(predictor,r,end_train)
                 
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
                     print("[ALTrainer] No more acquisitions are in order")
                 end_train = True
-                
-            #Some models may take too long to save weights
-            if not sw_thread is None and sw_thread.is_alive():
-                if self._config.info:
-                    print("[ALTrainer] Waiting for model weights...")
-                sw_thread.join()
                     
             #Set load_full to false so dropout is disabled
             #Test target network if needed
@@ -501,7 +501,7 @@ class ActiveLearningTrainer(Trainer):
         """
         tm,st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
                                      set_session=False,stats=False,summary=False,
-                                     clear_sess=True,save_numpy=True)
+                                     clear_sess=False,save_numpy=True)
 
         return [tm],[st]
     
