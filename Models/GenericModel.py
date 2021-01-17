@@ -83,32 +83,23 @@ class GenericModel(ABC):
         if 'data_size' in kwargs:
             self.data_size = kwargs['data_size']
 
-        if 'training' in kwargs:
-            training = kwargs['training']
-        else:
-            training = None
-            
-        if 'feature' in kwargs:
-            feature = kwargs['feature']
-        else:
-            feature = False
-
-        if 'preload_w' in kwargs:
-            preload = kwargs['preload_w']
-        else:
-            preload = False
-
+        training = kwargs.get('training',None)            
+        feature = kwargs.get('feature',False)
+        preload = kwargs.get('preload_w',False)
         keep_model = kwargs.get('keep_model',True)
-
+        new = kwargs.get('new',True)
+        
         if not 'allocated_gpus' in kwargs or kwargs['allocated_gpus'] is None:
             kwargs['allocated_gpus'] = self._config.gpu_count
-            
-        model,parallel_model = self._build(width,height,channels,**kwargs)
 
-        if keep_model:
-            self.single = model
-            self.parallel = parallel_model
-        
+        if new or (self.single is None and self.parallel is None):
+            model,parallel_model = self._build(width,height,channels,**kwargs)
+            if keep_model:
+                self.single = model
+                self.parallel = parallel_model
+        else:
+            model,parallel_model = self.single,self.parallel
+            
         return (model,parallel_model)
 
     def get_ds(self):

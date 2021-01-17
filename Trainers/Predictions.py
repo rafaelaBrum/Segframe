@@ -11,6 +11,7 @@ from .BatchGenerator import ThreadedGenerator
 from .DataSetup import split_test
 from Utils import SaveLRCallback
 from Utils import Exitcodes,CacheManager,PrintConfusionMatrix
+from AL.Common import load_model_weights
 
 #Keras
 from keras import backend as K
@@ -208,11 +209,8 @@ class Predictor(object):
                 if self._config.info:
                     print("Model weights loaded from: {0}".format(model.get_weights_cache()))
         elif os.path.isfile(model.get_weights_cache()):
-                pred_model,_ = model.build(training=False,pre_load_w=False)
-                pred_model.load_weights(model.get_weights_cache())
-                if self._config.info:
-                    print("Model weights loaded from: {0}".format(model.get_weights_cache()))
-                    
+                pms = model.build(training=False,pre_load_w=False,new=False)
+                pred_model= load_model_weights(self._config,model,pms)
         else:
             if self._config.info:
                 print("No trained model or weights file found")
