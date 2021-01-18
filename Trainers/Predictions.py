@@ -208,13 +208,11 @@ class Predictor(object):
                 pred_model.load_weights(model.get_weights_cache())
                 if self._config.info:
                     print("Model weights loaded from: {0}".format(model.get_weights_cache()))
-        elif os.path.isfile(model.get_weights_cache()):
-                pms = model.build(training=False,pre_load_w=False,new=False)
-                pred_model= load_model_weights(self._config,model,pms)
         else:
-            if self._config.info:
-                print("No trained model or weights file found")
-            return None
+            pms = model.build(training=False,pre_load_w=False,new=False)
+            pred_model = load_model_weights(self._config,model,pms)
+            if pred_model is None:
+                return None
 
         bsize = 2*self._config.batch_size
         stp = int(np.ceil(len(X) / bsize))

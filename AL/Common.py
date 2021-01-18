@@ -67,10 +67,14 @@ def load_model_weights(config,genmodel,tmodel,sw_thread=None):
             pred_model.set_weights(np.load(ppath,allow_pickle=True))
             if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(ppath))
-        else:
+        elif os.path.isfile(ppath):
             pred_model.load_weights(ppath,by_name=True)
             if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(ppath))
+        else:
+            if self._config.info:
+                print("No trained model or weights file found")
+            pred_model = None
     else:
         if isinstance(tmodel,tuple):
             pred_model = tmodel[0]
@@ -84,11 +88,15 @@ def load_model_weights(config,genmodel,tmodel,sw_thread=None):
             pred_model.set_weights(np.load(spath,allow_pickle=True))
             if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(spath))                
-        else:
+        elif os.path.isfile(spath):
             pred_model.load_weights(spath,by_name=True)
             if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(spath))
-
+        else:
+            if self._config.info:
+                print("No trained model or weights file found")
+            pred_model = None
+        
     if config.info:
         etime = time.time()
         td = timedelta(seconds=(etime-stime))
