@@ -83,7 +83,6 @@ class GenericEnsemble(GenericModel):
         self.cache_m.registerFile(os.path.join(self._config.weights_path,self._mgpu_weightsCache),self._mgpu_weightsCache)
         self.cache_m.registerFile(os.path.join(self._config.model_path,self._modelCache),self._modelCache)
 
-
     def return_model_n(self):
         if hasattr(self,'_model_n'):
             return self._model_n

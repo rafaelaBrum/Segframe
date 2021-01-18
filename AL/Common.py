@@ -43,7 +43,6 @@ def load_model_weights(config,genmodel,tmodel,sw_thread=None):
 
     if config.info:
         stime = time.time()
-
             
     #Model can be loaded from previous acquisition train or from a fixed final model
     if config.gpu_count > 1:
