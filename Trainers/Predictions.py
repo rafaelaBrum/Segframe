@@ -196,7 +196,7 @@ class Predictor(object):
                     pred_model = single
             else:
                 if self._config.info:
-                    print('[Predictor] Model not prepared to build ensembles, implement or choose other model')
+                    print('[Predictor] Model not prepared to build ensembles, implement or choose another model')
                 return None
         elif load_full and os.path.isfile(model.get_model_cache()):
             try:

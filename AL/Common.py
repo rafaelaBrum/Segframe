@@ -93,7 +93,7 @@ def load_model_weights(config,genmodel,tmodel,sw_thread=None):
             if config.info and not config.progressbar:
                 print("Model weights loaded from: {0}".format(spath))
         else:
-            if self._config.info:
+            if config.info:
                 print("No trained model or weights file found")
             pred_model = None
         

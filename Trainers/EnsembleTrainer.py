@@ -105,7 +105,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         print("Validate set: {0} items".format(len(val_data[0])))
 
     def _build_predictor(self):
-        return Predictor(self._config,keepImg=self._config.keepimg,build_ensemble=True)
+        return Predictor(self._config,keepImg=False,build_ensemble=True)
     
     def run_al(self,model,function,predictor,cache_m):
         """
