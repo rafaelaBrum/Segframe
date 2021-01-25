@@ -234,7 +234,8 @@ class Plotter(object):
         low = 1.0
         lbcount = 0
         xmax = 0
-
+        xmin = np.inf
+        
         plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
         if labels is None:
             labels = [l[3] for l in data]
@@ -253,7 +254,9 @@ class Plotter(object):
             color = color % len(palette.colors)
 
             local_max = np.max(x_data)
+            local_min = np.min(x_data)
             xmax = local_max if local_max > xmax else xmax
+            xmin = local_min if local_min < xmin else xmin
             if auc_only and y_label != 'AUC':
                 continue
             
@@ -285,14 +288,14 @@ class Plotter(object):
         if yscale or maxy == 0.0:
             yrg = np.clip(np.arange(max(low,0.0), up + ydelta, ydelta),0.0,1.0)
         else:
-            yrg = np.clip(np.arange(0.65, maxy, ydelta),0.0,1.0)
+            yrg = np.clip(np.arange(0.60, maxy, ydelta),0.0,1.0)
         np.around(yrg,2,yrg)
         plt.yticks(yrg)
-        xrg = np.arange(min(x_data), xmax+xticks, xticks)
+        xrg = np.arange(xmin, xmax+xticks, xticks)
         plt.xticks(xrg)
         plt.axis([min(xrg),max(xrg),min(yrg),max(yrg)])
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
-        if max(x_data) > 1000:
+        if xmax > 1000:
             plt.xticks(rotation=30)
         plt.tight_layout()
         plt.grid(True)
@@ -1535,7 +1538,7 @@ class Plotter(object):
         #Check if all experiments had the same number of samples
         for k in data:
             if not metric in data[k] or data[k][metric].shape[0] == 0:
-                print("Requested metric not available: {}. AUC values will be used.".format(metric))
+                print("Requested metric not available ({}). AUC values will be used.".format(metric))
                 metric = 'auc'
                 auc_only = True
             if auc_only and data[k]['auc'].shape[0] > 0:
@@ -1556,7 +1559,7 @@ class Plotter(object):
                 auc_value[i] = data[k]['auc'][:max_samples]
             if not auc_only and data[k][metric].shape[0] > 0:
                 if acc_value is None:
-                    trainset = data[k]['trainset'] if metric.startswith('fn') else data[k]['fntrainset']
+                    trainset = data[k]['fntrainset'] if metric.startswith('fn') else data[k]['trainset']
                     shape = (len(data),max_samples)
                     acc_value = np.ndarray(shape=shape,dtype=np.float32)
                 #Repeat last point if needed
