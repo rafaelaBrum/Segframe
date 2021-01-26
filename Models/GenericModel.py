@@ -126,7 +126,7 @@ class GenericModel(ABC):
         gama = 1.15
         phi = self._config.phi
 
-        if phi == 1:
+        if phi <= 1:
             return full_size
 
         if not dim in ['depth', 'width', 'resolution','lr']:
@@ -140,7 +140,10 @@ class GenericModel(ABC):
         elif dim == 'resolution':
             rd = 1/math.pow(gama,phi)
         else:
-            rd = 2.5*phi
+            if phi > 2:
+                rd = 2.5*(1+math.log(phi))
+            else:
+                rd = 2.5*phi
         
         if isinstance(full_size,list) or isinstance(full_size,tuple):
             full_size = np.asarray(full_size,dtype=np.float32)
