@@ -20,6 +20,7 @@ class GenericModel(ABC):
         self.name = name
         self.single = None
         self.parallel = None
+        self._phi = config.phi
 
     def rescaleEnabled(self):
         """
@@ -108,6 +109,16 @@ class GenericModel(ABC):
     def is_ensemble(self):
         return self._config.strategy == 'EnsembleTrainer'
 
+    def setPhi(self,phi):
+        assert(int(phi)>0), "Phi should be an integer/digit greater than zero."
+        self._phi = phi
+
+    def setName(self,name):
+        self.name = name
+
+    def getName(self):
+        return self.name
+    
     def rescale(self,dim,full_size):
         """
         Rescales down a network according to inversed EfficientNet strategy.
@@ -124,7 +135,7 @@ class GenericModel(ABC):
         alpha = 1.2
         beta = 1.1
         gama = 1.15
-        phi = self._config.phi
+        phi = self._phi
 
         if phi <= 1:
             return full_size

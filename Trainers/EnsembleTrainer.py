@@ -164,7 +164,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             #Set load_full loads a full model stored in file
             #Test target network if needed
             if not run_pred:
-                predictor.run(self.test_x,self.test_y,load_full=end_train,net_model=model,target=self._config.tnet is None or self._config.network == self._config.tnet)
+                predictor.run(self.test_x,self.test_y,load_full=end_train,net_model=model,target=self._config.tnet is None)
 
             #Attempt to free GPU memory
             K.clear_session()

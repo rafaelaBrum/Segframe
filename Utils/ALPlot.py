@@ -71,7 +71,10 @@ class Plotter(object):
         if not path is None and os.path.isdir(path):
             self.path = path
         else:
-            self.path = None            
+            self.path = None
+
+        self._nX = None
+        self._yIDX = None
 
     def draw_uncertainty(self,data,xticks,spread=1,title='',subfig=False,sub_acq=None):
         """
@@ -809,8 +812,14 @@ class Plotter(object):
                         (_,_),(tset,tdata) = self.return_fndata(data[k],metric,merge)
                     else:
                         (tset,_),(_,tdata) = self.return_fndata(data[k],metric,merge)
+                    self._nX = data[k]['fntrainset']
                 else:
-                    tset = data[k]['trainset']
+                    if not self._nX is None:
+                        self._yIDX = np.in1d(data[k]['trainset'],self._nX)
+                        tset = data[k]['trainset'][self._yIDX]
+                        tdata = tdata[self._yIDX]
+                    else:
+                        tset = data[k]['trainset']
                     
                 #Repeat last point if needed
                 if tset.shape[0] > tdata.shape[0]:
@@ -832,8 +841,10 @@ class Plotter(object):
                     lbcount += 1
 
                 bar_x = tset + (lbcount-(nexp/2))*40
-
                 print("{}:\n - X:{};\n - Y:{}".format(lb,bar_x,tdata))
+
+                if not self._yIDX is None:
+                    print("Plotting only predefined FN points")
 
                 if nmetrics > 1:
                     bottom = np.zeros(len(tdata))
@@ -844,8 +855,7 @@ class Plotter(object):
                             colorf *= 0.75
                         mcolor = np.clip(np.asarray(palette(color)) * colorf,0.0,1.0)
                         #Repeat last point if needed
-                        #bar_y = data[k][other[m]]
-                        _,bar_y = self.return_fndata(data[k],other[m],merge)[1]
+                        _,bar_y = self.return_fndata(data[k],other[m],merge,self._yIDX)[1]
                         if bar_x.shape[0] > bar_y.shape[0]:
                             bar_y = np.hstack((bar_y,bar_y[-1:]))
                         plt.bar(bar_x,bar_y,width=40,color=mcolor,bottom=bottom,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
@@ -1073,7 +1083,7 @@ class Plotter(object):
         return data
 
 
-    def return_fndata(self,data,key,merge=False):
+    def return_fndata(self,data,key,merge=False,idx=None):
         """
         When feature network data is present, it should be split from target net data before plotting
 
@@ -1082,7 +1092,10 @@ class Plotter(object):
         If merge is True, return merged trainset, merged Y
         """
         if not 'fnidx' in data:
-            return ((data['trainset'],data[key]),(data['trainset'],data[key]))
+            if idx is None:
+                return ((data['trainset'],data[key]),(data['trainset'],data[key]))
+            else:
+                return ((data['trainset'][idx],data[key][idx]),(data['trainset'][idx],data[key][idx]))
         elif merge:
             return ((np.hstack((data['trainset'],data['fntrainset'])),[]),([],np.hstack((data[key][data['tnidx']],data[key][data['fnidx']]))))
         else:

@@ -251,6 +251,8 @@ if __name__ == "__main__":
         help='Train the target network and run prediction on this interval of AL iterations. Default = 0 (do not train/test).',default=0)
     al_args.add_argument('-phi', dest='phi', type=int, 
         help='Phi defines network architecture reduction. Values bigger than 1 reduce nets by 1/phi. Default = 1 (use original sizes).',default=1)
+    al_args.add_argument('-tnphi', dest='tnphi', type=int, 
+        help='Phi defines network architecture reduction. Values bigger than 1 reduce nets by 1/phi. Default = 1 (use original sizes).',default=1)
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')
