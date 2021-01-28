@@ -375,7 +375,7 @@ class ActiveLearningTrainer(Trainer):
             #Set load_full to false so dropout is disabled
             #Test target network if needed
             if not run_pred:
-                predictor.run(self.test_x,self.test_y,load_full=end_train,net_model=model,target=self._config.tnet is None or self._config.network == self._config.tnet)
+                predictor.run(self.test_x,self.test_y,load_full=end_train,net_model=model,target=self._config.tnet is None)
             
             #Attempt to free GPU memory
             K.clear_session()
@@ -514,7 +514,11 @@ class ActiveLearningTrainer(Trainer):
             return False
 
         model = self.load_modules(self._config.tnet)
-
+        model.setName("{}-Test".format(model.getName()))
+        
+        if model.rescaleEnabled():
+            model.setPhi(self._config.tnphi)
+            
         if self._config.info:
             print("\nStarting target network training...")
 
