@@ -224,7 +224,166 @@ class Plotter(object):
         plt.tight_layout()
         plt.grid(True)
         plt.show()
+
+    def draw_time_stats(self,data,xticks,auc_only,metrics,labels=None,spread=1,title='',colors=None,yscale=False,maxy=0.0,merge=False):
+        """
+        @param data <list>: a list as returned by calculate_stats
+        """
+        import matplotlib.patches as mpatches
         
+        color = 0
+        line = 0
+        marker = 0
+        plots = []
+        lbcount = 0
+        xmax = 0
+        xmin = np.inf
+        tmax = 0
+        tmin = np.inf
+        metric_patches = []
+        tset = None
+        nexp = len(data)
+        hatch_color = 'black'
+        
+        plt.subplots_adjust(left=0.1, right=0.92, bottom=0.19, top=0.92)
+        ax = plt.subplot(111)
+
+        for d in data:
+            nmetrics = len(metrics)
+            if nmetrics > 1:
+                print("Stacked bar plot selected. Using the first metric provided ({}) as reference".format(metrics[0]))
+            metric = metrics[0]
+            if not metric in data[d]:
+                print("Requested metric not available in experiment ({}): {}".format(d,metric))
+                return None
+            else:
+                x_data,tdata,ci,y_label,color = data[d][metric]
+
+            if not colors is None and colors[d] >= 0:
+                color = colors[d]
+            elif color < 0:
+                color = 0
+
+            if labels is None:
+                lb = d
+            else:
+                lb = labels[d]
+                lbcount = d
+                
+            line = color%len(linestyle)
+            marker = color%len(markers)
+            color = color % len(palette.colors)
+
+            #Do nothing if requested metric is not available
+            if tdata.shape[0] == 0:
+                lbcount += 1
+                continue
+
+            #Check current trainset
+            if self._nX is None:
+                self._nX = x_data
+                tset = x_data
+            else:
+                if len(self._nX) < len(x_data):
+                    self._yIDX = np.in1d(x_data,self._nX)
+                    tset = x_data[self._yIDX]
+                    tdata = tdata[self._yIDX]
+                else:
+                    tset = x_data
+                    
+            #Repeat last point if needed
+            if tset.shape[0] > tdata.shape[0]:
+                print("Shape mismatch:\n Trainset: {}; {}:{}".format(tset.shape,tdata.shape,metric))
+                tdata = np.hstack((tdata,tdata[-1:]))
+
+            #Check lower and upper values to axis scaling
+            local_max = np.max(x_data)
+            local_min = np.min(x_data)
+            xmax = local_max if local_max > xmax else xmax
+            xmin = local_min if local_min < xmin else xmin
+            local_max = np.max(tdata)
+            local_min = np.min(tdata)
+            tmax = local_max if local_max > tmax else tmax
+            tmin = local_min if local_min < tmin else tmin            
+
+            bar_x = tset + (lbcount-(nexp/2))*40
+            print("{}:\n - X:{};\n - Y:{}".format(lb,bar_x,tdata))
+
+            if not self._yIDX is None:
+                print("Plotting only predefined FN points")
+
+            if nmetrics > 1:
+                bottom = np.zeros(len(tdata))
+                colorf = np.asarray((1.4,1.4,1.4,0.85))
+                for m in range(1,nmetrics):
+                    if m < nmetrics - 1:
+                        bottom += data[k][metrics[m+1]]
+                        colorf *= 0.75
+                    mcolor = np.clip(np.asarray(palette(color)) * colorf,0.0,1.0)
+                    #Repeat last point if needed
+                    _,bar_y,_,_,_ = data[d][metrics[m]]
+                    if bar_x.shape[0] > bar_y.shape[0]:
+                        bar_y = np.hstack((bar_y,bar_y[-1:]))
+                    else:
+                        bar_y = bar_y[:bar_x.shape[0]]
+                    plt.bar(bar_x,bar_y,width=40,color=mcolor,bottom=bottom,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
+                plt.bar(bar_x,tdata-bar_y,width=40,color=palette(color),label=lb,bottom=bar_y,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
+            else:
+                plt.bar(bar_x,tdata,width=40,color=palette(color),label=lb,edgecolor=hatch_color,hatch=patterns[color%len(patterns)])
+            metric_patches.append(mpatches.Patch(facecolor=palette(color),label=lb,hatch=patterns[color%len(patterns)],edgecolor=hatch_color))
+            
+            formatter = FuncFormatter(self.format_func)
+            ax.yaxis.set_major_formatter(formatter)
+
+        if not metrics is None:
+            plt.legend(handles=metric_patches,loc=2,ncol=2,prop=dict(weight='bold'))
+        else:
+            plt.legend(loc=0,ncol=2,labels=config.labels,prop=dict(weight='bold'))
+            
+        if xmax > 1000:
+            plt.xticks(rotation=30)
+
+        #Defining ticks
+        axis_t = []
+        xlim = xmax+(0.5*xticks)
+        mtick = np.arange(xmin, xlim, xticks)
+        axis_t.extend([mtick.min()*0.8,xlim])
+        plt.xticks(mtick)
+
+        if not metrics is None:
+            mtick = 1.1*tmax if maxy == 0.0 else maxy
+            ticks = np.linspace(0.0, mtick,7)
+            np.around(ticks,2,ticks)
+            axis_t.extend([ticks.min(),ticks.max()])
+            plt.yticks(ticks)
+        else:
+            if scale or maxy == 0.0:
+                ticks = np.linspace(min(0.6,0.9*tmin), tmax+0.1, 8)
+                np.round(ticks,2,ticks)
+            else:
+                ticks = np.arange(0.65,maxy,0.05)
+                np.round(ticks,2,ticks)
+            axis_t.extend([ticks.min(),ticks.max()])
+            plt.yticks(ticks)
+
+        plt.axis(axis_t)
+        plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
+        plt.xlabel("Training set size")
+
+        if not metrics is None:
+            plt.grid(True, linestyle='--', which='major',color='grey', alpha=.25,axis='y')
+            if metric == 'time':
+                plt.ylabel('AL step time \n(hh:min:sec)')
+            elif metric == 'acqtime':
+                plt.ylabel('Acquisition step time \n(hh:min:sec)')
+            elif metric == 'traintime':
+                plt.ylabel('Training step time \n(hh:min:sec)')
+            elif metric == 'auc':
+                plt.ylabel('AUC')
+
+        plt.tight_layout()
+        plt.show()            
+            
     def draw_stats(self,data,xticks,auc_only,labels=None,spread=1,title='',colors=None,yscale=False,maxy=0.0):
         """
         @param data <list>: a list as returned by calculate_stats
@@ -262,7 +421,7 @@ class Plotter(object):
             xmin = local_min if local_min < xmin else xmin
             if auc_only and y_label != 'AUC':
                 continue
-            
+
             c = plt.plot(x_data, y_data, lw = 2.0, marker=markers[marker],linestyle=linestyle[line][1],color=palette(color), alpha = 1)
             plots.append(c)
             # Shade the confidence interval
@@ -1526,13 +1685,12 @@ class Plotter(object):
 
         Returns a list of tuples (trainset,mean_values,std dev,label,color) for each AUC and Accuracy
         """
-        auc_value = None
-        acc_value = None
-        i = 0
         color = -1
         trainset = None
-        stats = []
-
+        stats = None
+        max_samples = None
+        mvalues = None
+        
         def calc_ci(val,ci):
             a = np.zeros(shape=val.shape[0],dtype=np.float32)
             for k in range(a.shape[0]):
@@ -1541,65 +1699,82 @@ class Plotter(object):
                 a[k] = se * scipy.stats.t.ppf((1 + ci) / 2., n-1)
             return a
 
+        def calc_metric(data,metric,auc_only):
+            max_samples = np.inf
+            trainset = None
+            mvalues = None
+            idx = None
+            i = 0
+            exp_n = len(data)
+            #Check if all experiments had the same number of samples
+            for k in data:
+                if not metric in data[k] or data[k][metric].shape[0] == 0:
+                    print("Requested metric not available ({}) in experiment {}".format(metric,k))
+                    exp_n -= 1
+                    continue
+                if (auc_only and data[k]['auc'].shape[0] > 0) or not 'fntrainset' in data[k]:
+                    max_samples = min(max_samples,len(data[k]['trainset']))
+                elif not auc_only and data[k][metric].shape[0] > 0:
+                    max_samples = min(max_samples,len(data[k]['fntrainset']))
+
+            mvalues = np.zeros(shape=(exp_n,max_samples),dtype=np.float32)
+            
+            for k in data:
+                if not metric in data[k] or data[k][metric].shape[0] == 0:
+                    continue
+                
+                if auc_only and data[k]['auc'].shape[0] > 0:
+                    dd = mvalues.shape[1] - data[k]['auc'].shape[0]
+                    trainset = data[k]['trainset']
+                    if dd > 0:
+                        print("Wrong dimensions. Expected {} points in experiment {} but got {}".format(mvalues.shape[1],k,data[k]['auc'].shape[0]))
+                        mvalues = np.delete(mvalues,mvalues.shape[1] - 1,axis=1)
+                        trainset = trainset[:-1]                    
+                    mvalues[i] = data[k]['auc'][:max_samples]
+                if not auc_only and data[k][metric].shape[0] > 0:                    
+                    trainset = data[k]['fntrainset'] if metric.startswith('fn') else data[k]['trainset']
+                    tdata = None
+                    (_,_),(_,tdata) = self.return_fndata(data[k],metric,False)
+                    if not tdata is None:
+                        dd = mvalues.shape[1] - tdata.shape[0]
+                        if dd > 0:
+                            print("Wrong dimensions. Expected {} points in experiment {} but got {}".format(mvalues.shape[1],k,tdata.shape[0]))
+                            mvalues = np.delete(mvalues,mvalues.shape[1] - 1,axis=1)
+                            trainset = trainset[:-1]
+                        mvalues[i] = tdata
+                    else:
+                        mvalues[i] = data[k][metric][:max_samples]
+                
+                if 'color' in data[k]:
+                    color = data[k]['color']
+                    
+                i += 1
+
+            return (trainset,mvalues,max_samples)
+
         metric = None
         if metrics is None or len(metrics) == 0:
             metric = 'auc'
+            trainset,mvalues,max_samples = calc_metric(data,metric,auc_only)
         elif len(metrics) >= 1:
-            metric = metrics[0]
-            
-        max_samples = np.inf
-        #Check if all experiments had the same number of samples
-        for k in data:
-            if not metric in data[k] or data[k][metric].shape[0] == 0:
-                print("Requested metric not available ({}). AUC values will be used.".format(metric))
-                metric = 'auc'
-                auc_only = True
-            if auc_only and data[k]['auc'].shape[0] > 0:
-                max_samples = min(max_samples,len(data[k]['trainset']))
-            elif not auc_only and data[k][metric].shape[0] > 0:
-                max_samples = min(max_samples,len(data[k]['fntrainset']))
-                
-        for k in data:
-            if auc_only and data[k]['auc'].shape[0] > 0:
-                if auc_value is None:
-                    trainset = data[k]['trainset']
-                    shape = (len(data),max_samples)
-                    auc_value = np.ndarray(shape=shape,dtype=np.float32)
-                #Repeat last point if needed
-                if auc_value.shape[1] > data[k]['auc'].shape[0]:
-                    print("Experiment {}: repeating last item for AUC data".format(k))
-                    data[k]['auc'] = np.concatenate((data[k]['auc'],data[k]['auc'][-1:]),axis=0)
-                auc_value[i] = data[k]['auc'][:max_samples]
-            if not auc_only and data[k][metric].shape[0] > 0:
-                if acc_value is None:
-                    trainset = data[k]['fntrainset'] if metric.startswith('fn') else data[k]['trainset']
-                    shape = (len(data),max_samples)
-                    acc_value = np.ndarray(shape=shape,dtype=np.float32)
-                #Repeat last point if needed
-                if acc_value.shape[1] > data[k][metric].shape[0]:
-                    print("Repeating last item for {} data".format(metric))
-                    data[k]['accuracy'] = np.concatenate((data[k][metric],data[k][metric][-1:]),axis=0)
-                acc_value[i] = data[k][metric][:max_samples]
-                
-            if 'color' in data[k]:
-                color = data[k]['color']
-                
-            i += 1
-
-        #if not auc_value is None:
-        #    stats.append((auc_value,"AUC"))
-        #if not acc_value is None:
-        #    stats.append((acc_value,"Accuracy"))
+            stats = {}
+            for m in metrics:
+                stats[m] = calc_metric(data,m,auc_only)
 
         #Return mean and STD dev
         if auc_only:
-            d = (trainset[:max_samples],np.mean(auc_value.transpose(),axis=1),calc_ci(auc_value.transpose(),ci),"AUC",color)
+            d = (trainset[:max_samples],np.mean(mvalues.transpose(),axis=1),calc_ci(mvalues.transpose(),ci),"AUC",color)
             print("Max AUC: {:1.3f}; Mean AUC ({} acquisitions): {:1.3f}".format(np.max(d[1]), d[1].shape[0],np.mean(d[1])))
             return [d]
         else:
-            d = (trainset[:max_samples],np.mean(acc_value.transpose(),axis=1),calc_ci(acc_value.transpose(),ci),metric,color)
-            print("Max {0}: {1:1.3f}; Mean {0} ({2} acquisitions): {3:1.3f}".format(metric,np.max(d[1]),d[1].shape[0],np.mean(d[1])))
-            return [d]
+            for m in stats:
+                trainset,mvalues,max_samples = stats[m]
+                if trainset is None or mvalues is None:
+                    continue
+                d = (trainset[:max_samples],np.mean(mvalues.transpose(),axis=1),calc_ci(mvalues.transpose(),ci),metric,color)
+                stats[m] = d
+                print("Max {0}: {1:1.3f}; Mean {0} ({2} acquisitions): {3:1.3f}".format(m,np.max(d[1]),d[1].shape[0],np.mean(d[1])))
+            return stats
                                                                                                               
     
 if __name__ == "__main__":
@@ -1813,12 +1988,20 @@ if __name__ == "__main__":
         if config.multi:
             idx = 0
             c = []
-            for i in config.n_exp:
+            d = {}
+            for z in range(len(config.n_exp)):
+                i = config.n_exp[z]
                 if i > 0:
-                    print("Calculating statistics for experiments {}".format(config.ids[idx:idx+i]))
-                    c.extend(p.calculate_stats({k:data[k] for k in config.ids[idx:idx+i]},config.auc_only,config.confidence,config.metrics))
+                    print("\n***Calculating statistics for experiments {}".format(config.ids[idx:idx+i]))
+                    if config.auc_only:
+                        c.extend(p.calculate_stats({k:data[k] for k in config.ids[idx:idx+i]},config.auc_only,config.confidence,config.metrics))
+                    else:
+                        d[z] = p.calculate_stats({k:data[k] for k in config.ids[idx:idx+i]},config.auc_only,config.confidence,config.metrics)
                     idx += i
-            data = c
+            if config.auc_only:
+                data = c
+            else:
+                data = d
         else:
             data = p.calculate_stats(data,config.auc_only,config.confidence,config.metrics)
             
@@ -1826,7 +2009,11 @@ if __name__ == "__main__":
             print("Something is wrong with your command options. No data to plot")
             sys.exit(1)
 
-        p.draw_stats(data,config.xtick,config.auc_only,config.labels,config.spread,config.title,config.colors,yscale=config.yscale,maxy=config.maxy)
+        if config.auc_only:
+            p.draw_stats(data,config.xtick,config.auc_only,config.labels,config.spread,config.title,config.colors,yscale=config.yscale,maxy=config.maxy)
+        else:
+            p.draw_time_stats(data,config.xtick,config.auc_only,config.metrics,config.labels,config.spread,
+                                  config.title,config.colors,yscale=config.yscale,maxy=config.maxy,merge=config.merge)
 
     elif config.debug:
 
