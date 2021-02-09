@@ -248,6 +248,7 @@ def InceptionResNetV2(include_top=True,
     use_bn = kwargs['batch_n']
     use_dp = kwargs.get('use_dp',True)
     name = kwargs.get('name','Inception')
+    lf = kwargs.get('layer_freeze',0)
     
     # Stem block: 35 x 35 x 192
     x = conv2d_bn(img_input, 32, 3, strides=2, padding='valid', use_bn=use_bn)
@@ -393,5 +394,15 @@ def InceptionResNetV2(include_top=True,
         elif weights is not None:
             model.load_weights(weights,by_name=True)
 
+        if lf > 0:
+            count = 0
+            convs = 0
+            for l in model.layers:
+                if isinstance(l,layers.Conv2D):
+                    if count < lf:
+                        l.trainable = False
+                        count += 1
+                    convs += 1
+            print("Froze first {} conv layers (total convs:{})".format(count,convs))
 
     return model

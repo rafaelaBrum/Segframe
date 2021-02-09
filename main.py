@@ -188,6 +188,10 @@ if __name__ == "__main__":
         help='Applies batch normalization during training.',default=False)
     train_args.add_argument('-aug', action='store_true', dest='augment',
         help='Applies data augmentation during training.',default=False)
+    train_args.add_argument('-plw', action='store_true', dest='plw',
+        help='Preload Imagenet weights after single model build.',default=False)
+    train_args.add_argument('-lyf', dest='lyf', type=int, 
+        help='Freeze this number of layers for training (Default=0).', default=0)
     train_args.add_argument('-wpath', dest='weights_path',
         help='Use weights file contained in path - usefull for sequential training (Default: None).',
         default='ModelWeights')

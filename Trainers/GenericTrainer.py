@@ -279,7 +279,7 @@ class Trainer(object):
 
         train_generator,val_generator = self._choose_generator(train_data,val_data,model.check_input_shape())
         
-        single,parallel = model.build(data_size=len(train_data[0]),allocated_gpus=allocated_gpus)
+        single,parallel = model.build(data_size=len(train_data[0]),allocated_gpus=allocated_gpus,preload_w=self._config.plw,layer_freeze=self._config.lyf)
         if not parallel is None:
             training_model = parallel
         else:

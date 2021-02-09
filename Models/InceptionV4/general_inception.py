@@ -76,15 +76,16 @@ class Inception(GenericEnsemble):
         """
         training = kwargs.get('training',None)
         feature = kwargs.get('feature')
-        preload = kwargs.get('preload')
+        preload = kwargs.get('preload_w')
+        lf = kwargs.get('layer_freeze')
         allocated_gpus = kwargs.get('allocated_gpus')
         
         if K.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
         else:
             input_shape = (height, width, channels)
-        
-        model = self._build_architecture(input_shape,training,feature,preload)
+
+        model = self._build_architecture(input_shape,training,feature,preload,layer_freeze=lf)
 
         return self._configure_compile(model,allocated_gpus)
 
@@ -133,7 +134,7 @@ class Inception(GenericEnsemble):
         return (model,parallel_model)        
 
 
-    def _build_architecture(self,input_shape,training=None,feature=False,preload=True,ensemble=False):
+    def _build_architecture(self,input_shape,training=None,feature=False,preload=True,ensemble=False,layer_freeze=0):
 
         """
         Parameters:
@@ -150,13 +151,14 @@ class Inception(GenericEnsemble):
                     'feature':feature,
                     'custom_top':False,
                     'preload':preload,
+                    'layer_freeze':layer_freeze,
                     'name':self.name,
                     'batch_n':True if self._config.gpu_count <= 1 else False,
                     'use_dp': True, #False if self.is_ensemble() else True
                     'model':self} 
 
         inp = Input(shape=input_shape)
-                
+
         inception_body = inception_resnet_v2.InceptionResNetV2(include_top=False,
                                                                 weights='imagenet',
                                                                 input_tensor=inp,

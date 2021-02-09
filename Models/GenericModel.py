@@ -77,6 +77,7 @@ class GenericModel(ABC):
         @param allocated_gpus <int>: number of GPU availables
         @param pre_trained <boolean>: returned model should be pre-trained or not
         @param keep_model <boolean>: store created model as an instance atribute.
+        @param layer_freeze <int>: freeze this many layers for training
         """
 
         width,height,channels = self.check_input_shape()
@@ -84,11 +85,12 @@ class GenericModel(ABC):
         if 'data_size' in kwargs:
             self.data_size = kwargs['data_size']
 
-        training = kwargs.get('training',None)            
-        feature = kwargs.get('feature',False)
-        preload = kwargs.get('preload_w',False)
-        keep_model = kwargs.get('keep_model',True)
-        new = kwargs.get('new',True)
+        training = kwargs.setdefault('training',None)            
+        feature = kwargs.setdefault('feature',False)
+        preload = kwargs.setdefault('preload_w',False)
+        keep_model = kwargs.setdefault('keep_model',True)
+        layer_freeze = kwargs.setdefault('layer_freeze',0)
+        new = kwargs.setdefault('new',True)
         
         if not 'allocated_gpus' in kwargs or kwargs['allocated_gpus'] is None:
             kwargs['allocated_gpus'] = self._config.gpu_count
