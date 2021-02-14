@@ -209,10 +209,11 @@ def _acq_ng_logic(posa,clusters,un_clusters,query,config,verbose,cache_m):
         cln = n % clusters
         q = un_clusters[cln]
         cl_aq = int(np.ceil(frac[cln]*query))
-        if len(q) >= sel[cln] + cl_aq:
-            acquired.extend(q[sel[cln]:cl_aq])
+        first = sel[cln]
+        if len(q) >= first + cl_aq:
+            acquired.extend(q[first:first+cl_aq])
             ac_count += cl_aq
-            sel[cln] = cl_aq
+            sel[cln] = first+cl_aq
             n = j
             if config.debug:
                 print("[km_uncert] Selected {} patches for acquisition from cluster {}".format(cl_aq,cln))
