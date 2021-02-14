@@ -199,27 +199,29 @@ def _acq_ng_logic(posa,clusters,un_clusters,query,config,verbose,cache_m):
     #Acquisition logic
     ac_count = 0
     acquired = []
-    j = 0
+    j,n = 0,0
     cmean = np.asarray([np.mean(posa[k]) for k in range(clusters)])
     glb = np.sum(cmean)
     frac = (glb/cmean)/np.sum(glb/cmean)
     frac[np.isnan(frac)] = 1/clusters #Prevent NaN values if cmean is zero
+    sel = np.zeros(clusters,dtype=np.int32)
     while ac_count < query:
-        cln = j % clusters
+        cln = n % clusters
         q = un_clusters[cln]
         cl_aq = int(np.ceil(frac[cln]*query))
-        if len(q) >= cl_aq:
-            acquired.extend(q[:cl_aq])
+        if len(q) >= sel[cln] + cl_aq:
+            acquired.extend(q[sel[cln]:cl_aq])
             ac_count += cl_aq
-            j += 1
+            sel[cln] = cl_aq
+            n = j
             if config.debug:
                 print("[km_uncert] Selected {} patches for acquisition from cluster {}".format(cl_aq,cln))
         else:
             sizes = [len(un_clusters[z]) for z in range(clusters)]
-            j = np.argmax(sizes)
+            n = np.argmax(sizes)
             if verbose > 0:
-                print("[km_uncert] Cluster {} exausted, will try to acquire patches from cluster {}".format(cln,(j)%clusters))
-
+                print("[km_uncert] Cluster {} exausted, will try to acquire patches from cluster {}".format(cln,(n)%clusters))
+        j += 1
     acquired = np.asarray(acquired[:query],dtype=np.int32)
     if config.recluster > 0:
         cache_m.dump((km,acquired),'clusters.pik')
