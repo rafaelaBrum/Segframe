@@ -345,7 +345,7 @@ class Plotter(object):
 
         #Defining ticks
         axis_t = []
-        xlim = xmax+(0.5*xticks)
+        xlim = xmax+(0.7*xticks)
         mtick = np.arange(xmin, xlim, xticks)
         axis_t.extend([mtick.min()*0.8,xlim])
         plt.xticks(mtick)
