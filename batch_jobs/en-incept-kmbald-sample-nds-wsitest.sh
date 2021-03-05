@@ -1,39 +1,32 @@
 #!/bin/bash
-#SBATCH -p GPU
-#SBATCH -t 35:00:00
-#SBATCH --gres=gpu:p100:2
+#SBATCH -p GPU-shared
+#SBATCH -N 1
+#SBATCH -t 30:00:00
+#SBATCH --gpus=2
 #SBATCH --mail-type=ALL
 #SBATCH --mail-user=alsmeirelles@gmail.com
 
 #echo commands to stdout
 #set -x
 
-DIRID="EN-147"
-export PYTHONPATH=$HOME/.local/lib/python3.6/site-packages:/pylon5/ac3uump/alsm/lib64/python3.6/site-packages:$PYTHONPATH
+DIRID="tmp"
+#export PYTHONPATH=$HOME/.local/lib/python3.6/site-packages:/pylon5/ac3uump/alsm/lib64/python3.6/site-packages:$PYTHONPATH
 
-if [ ! -d $LOCAL/test ]
-then
-    mkdir $LOCAL/test;
-fi
-
-cd $LOCAL/test/
-
-#echo 'Uncompressing data to LOCAL'
-
-#cp -r /pylon5/ac3uump/alsm/active-learning/data/extracted $LOCAL/test/
-#tar -xf lym_cnn_training_data.tar -C $LOCAL/test
-
-cd /pylon5/ac3uump/alsm/active-learning/Segframe
+cd /ocean/projects/asc130006p/alsm/active-learning/Segframe
 
 echo '[VIRTUALENV]'
-source /pylon5/ac3uump/alsm/venv/bin/activate
+source /ocean/projects/asc130006p/alsm/venv/bin/activate
 
-module load cuda/9.0
+#Load CUDA and set LD_LIBRARY_PATH
+module load cuda/10.2.0
+export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/jet/packages/spack/opt/spack/linux-centos8-zen/gcc-8.3.1/cuda-10.0.130-d2s3bnij3eihoxn4vblugfsljt3zsosv/lib64:/ocean/projects/asc130006p/alsm/venv/lib64/cuda-10.0.0
 
 echo '[START] training'
 date +"%D %T"
 
-time python3 main.py -i -v --al -strategy EnsembleTrainer -predst /pylon5/ac3uump/alsm/active-learning/data/nds300 -split 0.90 0.01 0.09 -net EFInception -data CellRep -init_train 500 -ac_steps 20 -emodels 3 -ac_function kmng_uncert -un_function ensemble_bald -acquire 200 -d -e 50 -b 60 -tdim 240 240 -clusters 20 -out logs/ -cpu 6 -gpu 2 -tn -sv -nsw -wpath results/$DIRID -model_dir results/$DIRID -logdir results/$DIRID -cache results/$DIRID -pca 50 -sample 2000 -wsi_split 5 -pred_size 15000 -load_train -spool 2 -k -tnet Inception -tnpred 2 -phi 3 -f1 30 -lr 0.0001 
+time python3 main.py -i -v --al -strategy EnsembleTrainer -predst /ocean/projects/asc130006p/alsm/active-learning/data/nds300 -split 0.90 0.01 0.09 -net Inception -data CellRep -init_train 500 -ac_steps 20 -emodels 3 -ac_function kmng_uncert -un_function ensemble_bald -acquire 200 -d -e 50 -b 60 -tdim 240 240 -clusters 20 -out logs/ -cpu 6 -gpu 2 -tn -sv -nsw -wpath results/$DIRID -model_dir results/$DIRID -logdir results/$DIRID -cache results/$DIRID -pca 50 -sample 2000 -wsi_split 5 -pred_size 15000 -load_train -spool 2 -k -f1 30 -plw -lyf 103 
+
+#-tnet EFInception -tnpred 2 -phi 3 -tnphi 2 -f1 30 -lr 0.0001 
 
 #-wsilist TCGA-BL-A13J-01Z-00 TCGA-FR-A728-01Z-00 TCGA-EE-A2MH-01Z-00 TCGA-C5-A1MH-01Z-00 TCGA-US-A77G-01Z-00 -wsimax 1.0 1.0 1.0 1.0 0.5
 

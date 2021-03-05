@@ -193,7 +193,7 @@ class EFInception(Inception):
         self.cache_m.registerFile(os.path.join(config.weights_path,self._weightsCache),self._weightsCache)
         self.cache_m.registerFile(os.path.join(config.weights_path,self._mgpu_weightsCache),self._mgpu_weightsCache)
 
-    def _build_architecture(self,input_shape,training=None,feature=False,preload=True,ensemble=False):
+    def _build_architecture(self,input_shape,training=None,feature=False,preload=True,ensemble=False,**kwargs):
 
         """
         Parameters:
