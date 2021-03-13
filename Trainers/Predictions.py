@@ -5,6 +5,9 @@ import importlib
 import os,sys
 from tqdm import tqdm
 import numpy as np
+import queue
+import concurrent.futures
+from threading import Thread
 
 from Datasources.CellRep import CellRep
 from .BatchGenerator import ThreadedGenerator
@@ -27,6 +30,16 @@ import tensorflow as tf
 #Scikit learn
 from sklearn import metrics
 
+def _fill_queue(queue,steps,generator,workers=3):
+    qw = concurrent.futures.ThreadPoolExecutor(max_workers=workers)
+
+    futures = {}
+    for i in range(steps):
+        futures[qw.submit(generator.next)] = i
+
+    for f in concurrent.futures.as_completed(futures):
+        queue.put(f.result(),block=True)
+        
 def run_prediction(config,locations=None):
     """
     Main training function, to work as a new process
@@ -245,9 +258,13 @@ class Predictor(object):
             l = tqdm(desc="Making predictions...",total=stp)
 
         Y_pred = np.zeros((len(X),self._ds.nclasses),dtype=np.float32)
+        q = queue.Queue(maxsize=self._config.cpu_count*2)
+        th = Thread(target=_fill_queue,name="Batch loader",args=(q,stp,test_generator,self._config.cpu_count))
+        th.start()
         for i in range(stp):
             start_idx = i*bsize
-            example = test_generator.next()
+            example = q.get(block=True)
+            #example = test_generator.next()
             with sess.as_default():
                 with sess.graph.as_default():
                     Y_pred[start_idx:start_idx+bsize] = pred_model.predict_on_batch(example[0])
@@ -261,6 +278,7 @@ class Predictor(object):
 
         del(X)
         del(test_generator)
+        th.join()
         
         if self._config.progressbar:
             l.close()
