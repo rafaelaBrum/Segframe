@@ -254,10 +254,14 @@ class Predictor(object):
                                                 shuffle=False)
 
             
+        del(Y)
+        
         if self._config.progressbar:
             l = tqdm(desc="Making predictions...",total=stp)
 
+        #Multi-threaded batch queue setup
         Y_pred = np.zeros((len(X),self._ds.nclasses),dtype=np.float32)
+        expected = np.zeros((len(X),self._ds.nclasses),dtype=np.int32)
         q = queue.Queue(maxsize=self._config.cpu_count*2)
         th = Thread(target=_fill_queue,name="Batch loader",args=(q,stp,test_generator,self._config.cpu_count))
         th.start()
@@ -268,13 +272,11 @@ class Predictor(object):
             with sess.as_default():
                 with sess.graph.as_default():
                     Y_pred[start_idx:start_idx+bsize] = pred_model.predict_on_batch(example[0])
+            expected[start_idx:start_idx+bsize] = example[1]
             if self._config.progressbar:
                 l.update(1)
             elif self._config.info:
                 print("Batch prediction ({0}/{1})".format(i,stp))
-            if self._config.verbose > 1:
-                if not np.array_equal(Y[start_idx:start_idx+bsize],example[1]):
-                    print("Datasource label ({0}) and batch label ({1}) differ".format(Y[start_idx:start_idx+bsize],example[1]))
 
         del(X)
         del(test_generator)
@@ -284,11 +286,7 @@ class Predictor(object):
             l.close()
 
         y_pred = np.argmax(Y_pred, axis=1)
-        if self._ensemble or self._config.delay_load:
-            expected = np.asarray(Y)
-            del(Y)
-        else:
-            expected = np.argmax(Y, axis=1)
+        expected = np.argmax(expected, axis=1)
 
         if self._config.verbose > 0:
             if self._config.verbose > 1:
