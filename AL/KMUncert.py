@@ -216,7 +216,7 @@ def _acq_ng_logic(posa,clusters,un_clusters,query,config,verbose,cache_m):
             sel[cln] = first+cl_aq
             j += 1
             n = j
-            if config.debug:
+            if config.debug or verbose > 0:
                 print("[km_uncert] Selected {} patches for acquisition from cluster {}".format(cl_aq,cln))
         else:
             l = len(q)

@@ -1065,7 +1065,7 @@ class Plotter(object):
         if not other is None:
             plt.legend(handles=metric_patches,loc=2,ncol=2,prop=dict(weight='bold'))
         else:
-            plt.legend(loc=0,ncol=2,labels=config.labels,prop=dict(weight='bold'))
+            plt.legend(loc=3,ncol=2,labels=config.labels,prop=dict(weight='bold'),bbox_to_anchor=(0.1,1.02))
             
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
@@ -1095,7 +1095,7 @@ class Plotter(object):
                 ticks = np.linspace(min(0.6,0.9*min(min_y)), max(max_y)+0.1, 8)
                 np.round(ticks,2,ticks)
             else:
-                ticks = np.arange(0.65,maxy,0.05)
+                ticks = np.arange(0.60,maxy,0.05)
                 np.round(ticks,2,ticks)
             axis_t.extend([ticks.min(),ticks.max()])
             plt.yticks(ticks)
