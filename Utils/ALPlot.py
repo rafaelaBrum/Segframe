@@ -64,6 +64,7 @@ linestyle = [
 #markers = ['','*','+','x','^','.','2','v']
 markers = ['*','+','x','^','.','2','v','s','p','D',8,9,10,'4','']
 patterns = ["+", ".", "/" , "\\" , "|" , "-","o"]
+lang = 'pt'
 
 class Plotter(object):
 
@@ -131,20 +132,30 @@ class Plotter(object):
                     lmax = np.max(clusters[c])
                     if cmax < lmax:
                         cmax = lmax
-                inset_ax.text(0,cmax-0.01,"Acquisition #{}".format(sub_acq),fontsize=8)
+                if lang == 'en':
+                    inset_ax.text(0,cmax-0.01,"Acquisition #{}".format(sub_acq),fontsize=8)
+                else:
+                    inset_ax.text(0,cmax-0.01,"Aquisição #{}".format(sub_acq),fontsize=8)
                 inset_ax.set_xlabel("Cluster #")
                 #inset_ax.set_xticks(list(clusters.keys()))
                 inset_ax.xaxis.set_tick_params(rotation=-35)
                 inset_ax.set_yticks(np.round(np.linspace(0.0, cmax, 5),2))
-            
-        labels = ['Uns. patches','Sel. patches','Sel. mean','Uns. mean']
+
+        if lang == 'en':
+            labels = ['Uns. patches','Sel. patches','Sel. mean','Uns. mean']
+        else:
+            labels = ['Patches NS','Patches Sel.','Média Sel.','Média NS']
         ncol = 1 if subfig else 2
         ax.legend(plots,labels=labels,loc=2,ncol=ncol,prop=dict(weight='bold'),fontsize=14)
         ax.set_xticks(xticks)
         ax.set_yticks(np.arange(0.0, maxu+0.1, 0.05))
         ax.set_title(title, loc='center', fontsize=12, fontweight=0, pad=2.0, color='orange')
-        ax.set_xlabel("Acquisition #")
-        ax.set_ylabel("Uncertainty")
+        if lang == 'en':
+            ax.set_xlabel("Acquisition #")
+            ax.set_ylabel("Uncertainty")
+        else:
+            ax.set_xlabel("Aquisição #")
+            ax.set_ylabel("Incerteza")
 
         plt.tight_layout()
         ax.grid(True)
@@ -204,7 +215,6 @@ class Plotter(object):
         fig = plt.gcf()
         maxy = max(Y)
         yticks = list(np.arange(0.0,maxy,0.01))
-        plt.ylabel("Uncertainty mean")
         plt.axis([-0.5,xticks[-1],0.01,maxy+0.001])
         sort_idx = py.argsort()
         colors = colors[sort_idx]
@@ -213,13 +223,20 @@ class Plotter(object):
         final_colors = np.array([(0.0,0.8,0.8),(0.0,0.85,0.85),(0.0,0.9,0.9),(0.0,0.95,0.95),(0.0,1.0,1.0)])
         colors = np.vstack((colors,final_colors))
         cmap = ListedColormap(colors,name='Heatm')
-        fig.colorbar(mpl.cm.ScalarMappable(norm=None,cmap=cmap),label='Positive %',pad=0.1,fraction=0.05)
+        if lang == 'en':
+            fig.colorbar(mpl.cm.ScalarMappable(norm=None,cmap=cmap),label='Positive %',pad=0.1,fraction=0.05)
+        else:
+            fig.colorbar(mpl.cm.ScalarMappable(norm=None,cmap=cmap),label='% Positivo',pad=0.1,fraction=0.05)
 
         plt.xticks(xticks)
         plt.yticks(yticks)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
-        plt.xlabel("Acquisition #")
-
+        if lang == 'en':
+            plt.xlabel("Acquisition #")
+            plt.ylabel("Uncertainty mean")
+        else:
+            plt.xlabel("Aquisição #")
+            plt.ylabel("Incerteza média")
 
         plt.tight_layout()
         plt.grid(True)
@@ -368,16 +385,28 @@ class Plotter(object):
 
         plt.axis(axis_t)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
-        plt.xlabel("Training set size")
+        if lang == 'en':
+            plt.xlabel("Training set size")
+        else:
+            plt.xlabel("Conjunto de treinamento")
 
         if not metrics is None:
             plt.grid(True, linestyle='--', which='major',color='grey', alpha=.25,axis='y')
             if metric == 'time':
-                plt.ylabel('AL step time \n(hh:min:sec)')
+                if lang == 'en':
+                    plt.ylabel('AL step time \n(hh:min:sec)')
+                else:
+                    plt.ylabel('Tempo da iteração AL\n(hh:min:sec)')
             elif metric == 'acqtime':
-                plt.ylabel('Acquisition step time \n(hh:min:sec)')
+                if lang == 'en':
+                    plt.ylabel('Acquisition step time \n(hh:min:sec)')
+                else:
+                    plt.ylabel('Tempo de aquisição \n(hh:min:sec)')
             elif metric == 'traintime':
-                plt.ylabel('Training step time \n(hh:min:sec)')
+                if lang == 'en':
+                    plt.ylabel('Training step time \n(hh:min:sec)')
+                else:
+                    plt.ylabel('Tempo de treinamento \n(hh:min:sec)')
             elif metric == 'auc':
                 plt.ylabel('AUC')
 
@@ -440,7 +469,11 @@ class Plotter(object):
             color += 1
             line = (line+1)%len(linestyle)
             marker = color%len(markers)
-            plt.xlabel("Trainset size")
+
+            if lang == 'en':
+                plt.xlabel("Trainset size")
+            else:
+                plt.xlabel("Conjunto de treinamento")
             plt.ylabel(y_label)
                 
         # Label the axes and provide a title
@@ -450,7 +483,7 @@ class Plotter(object):
         if yscale or maxy == 0.0:
             yrg = np.clip(np.arange(max(low,0.0), up + ydelta, ydelta),0.0,1.0)
         else:
-            yrg = np.clip(np.arange(0.60, maxy, ydelta),0.0,1.0)
+            yrg = np.clip(np.arange(0.55, maxy, ydelta),0.0,1.0)
         np.around(yrg,2,yrg)
         plt.yticks(yrg)
         xrg = np.arange(xmin, xmax+xticks, xticks)
@@ -581,8 +614,12 @@ class Plotter(object):
         if data['trainset'].max() > 1000:
             plt.setp(ax.get_xticklabels(),rotation=30)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
-        ax.set_xlabel("Training set size")
-        ax.set_ylabel("Time\n(hh:mm:ss)")
+        if lang == 'en':
+            ax.set_xlabel("Training set size")
+            ax.set_ylabel("Time\n(hh:mm:ss)")
+        else:
+            ax.set_xlabel("Conjunto de treinamento")
+            ax.set_ylabel("Tempo\n(hh:mm:ss)")
         plt.tight_layout()
         plt.grid(True, linestyle='--', which='major',color='grey', alpha=.25,axis='y')
         plt.show()
@@ -617,13 +654,19 @@ class Plotter(object):
 
                 #Prepare plot
                 if ax2 is None:
-                    ax1.set_ylabel("% Positive",color=palette(color))
+                    if lang == 'en':
+                        ax1.set_ylabel("% Positive",color=palette(color))
+                    else:
+                        ax1.set_ylabel("% Positivo",color=palette(color))
                     ax1.plot(data['trainset'],yd, marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
                     ax1.set_yticks(np.arange(max(0,min(yd)-10), min(100,10+max(yd)), 5))
                     ax1.tick_params(axis='y', labelcolor=palette(color))
                     ax2 = ax1.twinx()
                 else:
-                    ax2.set_ylabel("% Positive",color=palette(color))
+                    if lang == 'en':
+                        ax2.set_ylabel("% Positive",color=palette(color))
+                    else:
+                        ax2.set_ylabel("% Positivo",color=palette(color))
                     ax2.plot(data['trainset'],yd, marker='',color=palette(color),linewidth=1,alpha=0.9,label=lb)
                     ax2.tick_params(axis='y', labelcolor=palette(color))
                     ax2.set_yticks(np.arange(max(0,min(yd)-10), min(100,10+max(yd)), 5))
@@ -701,7 +744,10 @@ class Plotter(object):
         if data['trainset'].max() > 1000:
             plt.setp(ax1.get_xticklabels(),rotation=30)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
-        ax1.set_xlabel("Training set size")
+        if lang == 'en':
+            ax1.set_xlabel("Training set size")
+        else:
+            ax1.set_xlabel("Conjunto de treinamento")
         plt.tight_layout()
         plt.grid(True)
         plt.show()
@@ -786,7 +832,10 @@ class Plotter(object):
                     #This limits lower error bars so it won't go below 0
                     yerr = [data[k]['pdp']-(np.clip(data[k]['pdp']-data[k][m],0.0,maxerr)),np.clip(data[k]['pdp'],0.0,100)]
                     if ax2 is None:
-                        ax1.set_ylabel("Mean # of patches\nper WSI",color=y_color)
+                        if lang == 'en':
+                            ax1.set_ylabel("Mean # of patches\nper WSI",color=y_color)
+                        else:
+                            ax1.set_ylabel("# médio de patches\npor WSI",color=y_color)
                         random_displace = 0.0
                         if not multi_label:
                             random_displace = np.random.rand()
@@ -799,7 +848,10 @@ class Plotter(object):
                         if multi_label:
                             ax2 = ax1.twinx()
                     else:
-                        ax2.set_ylabel("Mean # of patches\nper WSI",color=y_color)
+                        if lang == 'en':
+                            ax2.set_ylabel("Mean # of patches\nper WSI",color=y_color)
+                        else:
+                            ax2.set_ylabel("# médio de patches\npor WSI",color=y_color)
                         pl=ax2.plot(X,data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                         if err_bar:
                             ax2.errorbar(X,data[k][m], yerr=yerr, fmt='none',color=palette(color),alpha=0.6,markersize=8,zorder=10)
@@ -826,7 +878,10 @@ class Plotter(object):
                     if multi_label:
                         ytick = 200
                     if ax2 is None:
-                        ax1.set_ylabel("Mean intra-cluster distance (pixels)",color=y_color)
+                        if lang == 'en':
+                            ax1.set_ylabel("Mean intra-cluster distance (pixels)",color=y_color)
+                        else:
+                            ax1.set_ylabel("Distância intra-cluster média (pixels)",color=y_color)
                         pl=ax1.plot(X,data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,
                                         linestyle=linestyle[line][1],alpha=0.9,label=lb,markersize=10)
                         ax1.tick_params(axis='y', labelcolor=y_color)
@@ -835,7 +890,10 @@ class Plotter(object):
                         if multi_label:
                             ax2 = ax1.twinx()
                     else:
-                        ax2.set_ylabel("Mean intra-cluster distance (pixels)",color=y_color)
+                        if lang == 'en':
+                            ax2.set_ylabel("Mean intra-cluster distance (pixels)",color=y_color)
+                        else:
+                            ax2.set_ylabel("Distância intra-cluster média (pixels)",color=y_color)
                         pl=ax2.plot(X,data[k][m], marker=markers[marker],color=palette(color),linewidth=2.3,linestyle=linestyle[line][1],alpha=0.9,label=lb)
                         ax2.tick_params(axis='y', labelcolor=y_color)
                         ax2.set_yticks(np.arange(data[k][m].min(), data[k][m].max(), ytick))
@@ -847,13 +905,16 @@ class Plotter(object):
             if multi_label:
                 lines2,labels2 = ax2.get_legend_handles_labels()
                 lines += lines2
-            ax1.legend(lines,labels,loc=0,ncol=2,prop=dict(weight='bold'))
+            ax1.legend(lines,labels,loc=0,ncol=2,prop=dict(weight='bold'),columnspacing=0.7)
 
         ax1.set_xticks(np.arange(min_x, max_x+1,xtick))
         if max_x > 1000:
             plt.setp(ax1.get_xticklabels(),rotation=30)
         ax1.set_title(title, loc='left', fontsize=12, fontweight=0, color='orange')
-        ax1.set_xlabel("Acquisition step")
+        if lang == 'en':
+            ax1.set_xlabel("Training set size")
+        else:
+            ax1.set_xlabel("Conjunto de treinamento")
         plt.tight_layout()
         ax1.grid(True)
         plt.show()
@@ -873,7 +934,7 @@ class Plotter(object):
         merge=kwargs.get('merge',False)
         
         color = 0
-        hatch_color = 'black'
+        hatch_color = 'white'
         line = 0
         marker = 0
         plotAUC = False
@@ -999,7 +1060,7 @@ class Plotter(object):
                     lb = labels[lbcount]
                     lbcount += 1
 
-                bar_x = tset + (lbcount-(nexp/2))*40
+                bar_x = tset + (lbcount-(nexp/2))*30
                 print("{}:\n - X:{};\n - Y:{}".format(lb,bar_x,tdata))
 
                 if not self._yIDX is None:
@@ -1017,10 +1078,10 @@ class Plotter(object):
                         _,bar_y = self.return_fndata(data[k],other[m],merge,self._yIDX)[1]
                         if bar_x.shape[0] > bar_y.shape[0]:
                             bar_y = np.hstack((bar_y,bar_y[-1:]))
-                        plt.bar(bar_x,bar_y,width=40,color=mcolor,bottom=bottom,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
-                    plt.bar(bar_x,tdata-bar_y,width=40,color=palette(color),label=lb,bottom=bar_y,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
+                        plt.bar(bar_x,bar_y,width=30,color=mcolor,bottom=bottom,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
+                    plt.bar(bar_x,tdata-bar_y,width=30,color=palette(color),label=lb,bottom=bar_y,edgecolor=hatch_color,hatch=patterns[color%len(patterns)],linewidth=2)
                 else:
-                    plt.bar(bar_x,tdata,width=40,color=palette(color),label=lb,edgecolor=hatch_color,hatch=patterns[color%len(patterns)])
+                    plt.bar(bar_x,tdata,width=30,color=palette(color),label=lb,edgecolor=hatch_color,hatch=patterns[color%len(patterns)])
                 metric_patches.append(mpatches.Patch(facecolor=palette(color),label=lb,hatch=patterns[color%len(patterns)],edgecolor=hatch_color))
                 if not metric == 'auc':
                     formatter = FuncFormatter(self.format_func)
@@ -1065,7 +1126,7 @@ class Plotter(object):
         if not other is None:
             plt.legend(handles=metric_patches,loc=2,ncol=2,prop=dict(weight='bold'))
         else:
-            plt.legend(loc=3,ncol=2,labels=config.labels,prop=dict(weight='bold'),bbox_to_anchor=(0.1,1.02))
+            plt.legend(loc=0,ncol=2,labels=config.labels,prop=dict(weight='bold'))
             
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
@@ -1092,27 +1153,39 @@ class Plotter(object):
             plt.yticks(ticks)
         else:
             if scale or maxy == 0.0:
-                ticks = np.linspace(min(0.6,0.9*min(min_y)), max(max_y)+0.1, 8)
+                ticks = np.linspace(min(0.6,0.9*min(min_y)), min(max(max_y)+0.1,1.0), 8)
                 np.round(ticks,2,ticks)
             else:
-                ticks = np.arange(0.60,maxy,0.05)
+                ticks = np.arange(0.50,maxy,0.05)
                 np.round(ticks,2,ticks)
             axis_t.extend([ticks.min(),ticks.max()])
             plt.yticks(ticks)
 
         plt.axis(axis_t)
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
-        plt.xlabel("Training set size")
+        if lang == 'en':
+            plt.xlabel("Training set size")
+        else:
+            plt.xlabel("Conjunto de treinamento")
 
         if not other is None:
             metric = other[0]
             plt.grid(True, linestyle='--', which='major',color='grey', alpha=.25,axis='y')
             if metric == 'time':
-                plt.ylabel('AL step time \n(hh:min:sec)')
+                if lang == 'en':
+                    plt.ylabel('AL step time \n(hh:min:sec)')
+                else:
+                    plt.ylabel('Tempo da iteração AL \n(hh:min:sec)')
             elif metric == 'acqtime':
-                plt.ylabel('Acquisition step time \n(hh:min:sec)')
+                if lang == 'en':
+                    plt.ylabel('Acquisition step time \n(hh:min:sec)')
+                else:
+                    plt.ylabel('Tempo de aquisição \n(hh:min:sec)')
             elif metric == 'traintime':
-                plt.ylabel('Training step time \n(hh:min:sec)')
+                if lang == 'en':
+                    plt.ylabel('Training step time \n(hh:min:sec)')
+                else:
+                    plt.ylabel('Tempo de treinamento \n(hh:min:sec)')
             elif metric == 'auc':
                 plt.ylabel('AUC')
         else:
@@ -1120,9 +1193,15 @@ class Plotter(object):
             if plotAUC:
                 plt.ylabel("AUC")
             elif pos:
-                plt.ylabel("% Positive")
+                if lang == 'en':
+                    plt.ylabel("% Positive")
+                else:
+                    plt.ylabel("% Positivo")
             else:
-                plt.ylabel("Accuracy")
+                if lang == 'en':
+                    plt.ylabel("Accuracy")
+                else:
+                    plt.ylabel("Acurácia")
 
         plt.tight_layout()
         plt.show()
@@ -1718,6 +1797,7 @@ class Plotter(object):
                     max_samples = min(max_samples,len(data[k]['fntrainset']))
 
             mvalues = np.zeros(shape=(exp_n,max_samples),dtype=np.float32)
+            print(mvalues)
             
             for k in data:
                 if not metric in data[k] or data[k][metric].shape[0] == 0:
@@ -1729,7 +1809,8 @@ class Plotter(object):
                     if dd > 0:
                         print("Wrong dimensions. Expected {} points in experiment {} but got {}".format(mvalues.shape[1],k,data[k]['auc'].shape[0]))
                         mvalues = np.delete(mvalues,mvalues.shape[1] - 1,axis=1)
-                        trainset = trainset[:-1]                    
+                        trainset = trainset[:-1]
+                        max_samples -= 1
                     mvalues[i] = data[k]['auc'][:max_samples]
                 if not auc_only and data[k][metric].shape[0] > 0:                    
                     trainset = data[k]['fntrainset'] if metric.startswith('fn') else data[k]['trainset']

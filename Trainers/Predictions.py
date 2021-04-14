@@ -271,7 +271,10 @@ class Predictor(object):
             #example = test_generator.next()
             with sess.as_default():
                 with sess.graph.as_default():
-                    Y_pred[start_idx:start_idx+bsize] = pred_model.predict_on_batch(example[0])
+                    if example[0].shape[0] < bsize:
+                        Y_pred[-example[0].shape[0]:] = pred_model.predict_on_batch(example[0])
+                    else:
+                        Y_pred[start_idx:start_idx+bsize] = pred_model.predict_on_batch(example[0])
             expected[start_idx:start_idx+bsize] = example[1]
             if self._config.progressbar:
                 l.update(1)
