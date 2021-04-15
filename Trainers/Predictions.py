@@ -38,7 +38,7 @@ def _fill_queue(queue,steps,generator,workers=3):
         futures[qw.submit(generator.next)] = i
 
     for f in concurrent.futures.as_completed(futures):
-        queue.put(f.result(),block=True)
+        queue.put((f.result(),futures[f]),block=True)
         
 def run_prediction(config,locations=None):
     """
@@ -265,9 +265,9 @@ class Predictor(object):
         q = queue.Queue(maxsize=self._config.cpu_count*2)
         th = Thread(target=_fill_queue,name="Batch loader",args=(q,stp,test_generator,self._config.cpu_count))
         th.start()
-        for i in range(stp):
+        for k in range(stp):
+            example,i = q.get(block=True)
             start_idx = i*bsize
-            example = q.get(block=True)
             #example = test_generator.next()
             with sess.as_default():
                 with sess.graph.as_default():
