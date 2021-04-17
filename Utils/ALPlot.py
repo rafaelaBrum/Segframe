@@ -1338,7 +1338,11 @@ class Plotter(object):
             return ((np.hstack((data['trainset'],data['fntrainset'])),[]),([],np.hstack((data[key][data['tnidx']],data[key][data['fnidx']]))))
         else:
             m = data[key].shape[0]
-            return ((data['trainset'],data[key][data['tnidx'][:m]]),(data['fntrainset'],data[key][data['fnidx'][:m]]))
+            fnkey = 'fn'+key
+            if not fnkey in data:
+                return ((data['trainset'],data[key][data['tnidx'][:m]]),(data['fntrainset'],data[key][data['fnidx'][:m]]))
+            else:
+                return ((data['trainset'],data[key]),(data['fntrainset'],data[fnkey]))
         
     def format_func(self,x, pos):
         hours = int(x//3600)
