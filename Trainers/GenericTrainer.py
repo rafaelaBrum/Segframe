@@ -28,10 +28,11 @@ from keras.utils import to_categorical
 #Preparing migration to TF 2.0
 import tensorflow as tf
 if tf.__version__ >= '1.14.0':
-    tf = tf.compat.v1
+    v1 = tf.compat.v1
     from tensorflow.python.util import deprecation
     deprecation._PRINT_DEPRECATION_WARNINGS = False
-    tf.logging.set_verbosity(tf.logging.ERROR)
+    v1.logging.set_verbosity(v1.logging.ERROR)
+    #v1.enable_eager_execution()
     #tf.disable_v2_behavior()
 
 def run_training(config,locations=None):
@@ -160,7 +161,7 @@ class Trainer(object):
 
         if self._config.delay_load or self._config.phi > 1:
             from Trainers import ThreadedGenerator
-            
+
             train_generator = ThreadedGenerator(dps=train_data,
                                                 classes=self._ds.nclasses,
                                                 dim=fix_dim,

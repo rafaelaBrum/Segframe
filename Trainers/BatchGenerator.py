@@ -203,8 +203,8 @@ class SingleGenerator(GenericIterator):
             
             #TEST PURPOSES ONLY - This is slow given the sizes
             #involved
-            if not self.image_generator is None:
-                example = self.image_generator.random_transform(example,self.seed)
+            #if not self.image_generator is None:
+            #    example = self.image_generator.random_transform(example,self.seed)
                 #example = self.image_generator.standardize(example)
 
             # add point to x_batch and diagnoses to y
