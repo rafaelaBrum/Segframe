@@ -339,7 +339,7 @@ class Trainer(object):
             print("Model parameters: {}".format(single.count_params()))
             print("Model layers: {}".format(len(single.layers)))
 
-        training_model.fit_generator(
+        hist = training_model.fit_generator(
             generator = train_generator,
             steps_per_epoch = len(train_generator), #// self._config.batch_size,
             epochs = self._config.epochs,
@@ -355,6 +355,9 @@ class Trainer(object):
         if self._verbose > 1:
             print("Done training model: {0}".format(hex(id(training_model))))
 
+        epad = (np.mean(hist.history['loss']) - hist.history['loss'][-1])*(np.mean(hist.history['acc'] - hist.history['acc'][-1]))
+        if self._verbose > 0:
+            print("Epoch correction index: {}".format(epad))
 
         sw_thread = threading.Thread(target=self._save_weights,name='save_weights',args=(model,single,parallel,clear_sess,save_numpy))
         sw_thread.start()
