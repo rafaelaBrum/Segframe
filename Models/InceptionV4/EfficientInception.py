@@ -90,20 +90,21 @@ def conv2d_bn(x,
                       padding=padding,
                       use_bias=use_bias,
                       name=name)(x)
+
+    axis = 1 if backend.image_data_format() == 'channels_first' else 3
     if not use_bias and use_bn:
-        bn_axis = 1 if backend.image_data_format() == 'channels_first' else 3
         bn_name = None if name is None else name + '_bn'
-        x = layers.BatchNormalization(axis=bn_axis,
+        x = layers.BatchNormalization(axis=axis,
                                       scale=False,
                                       name=bn_name)(x)
     else:
         bn_name = None if name is None else name + '_gn'
-        if x.shape[-1] % 16 != 0:
+        if x.shape[axis] % 32 != 0:
             divisors = np.asarray(list(divisorGenerator(int(x.shape[-1]))),dtype=np.int32)
             groups = divisors[np.where(divisors >= 16)[0][0]]
         else:
-            groups = 16
-        x = GroupNormalization(groups=groups,axis=-1,name=bn_name,scale=False)(x)
+            groups = 32 #16
+        x = GroupNormalization(groups=groups,axis=axis,name=bn_name,scale=False)(x)
         
     if activation is not None:
         ac_name = None if name is None else name + '_ac'

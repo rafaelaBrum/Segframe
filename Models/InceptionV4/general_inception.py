@@ -212,7 +212,7 @@ class EFInception(Inception):
                     'preload':preload,
                     'name':self.name,
                     'batch_n':False, #True if self._config.gpu_count <= 1 else False,
-                    'use_dp': True, #False if self.is_ensemble() else True
+                    'use_dp':True, #False if self.is_ensemble() else True
                     'model':self} 
 
         inp = Input(shape=input_shape)

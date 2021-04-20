@@ -271,12 +271,8 @@ class Predictor(object):
             #example = test_generator.next()
             with sess.as_default():
                 with sess.graph.as_default():
-                    if len(example[0]) < bsize:
-                        Y_pred[-len(example[0]):] = pred_model.predict_on_batch(example[0])
-                        expected[-len(example[1]):] = example[1]
-                    else:
-                        Y_pred[start_idx:start_idx+bsize] = pred_model.predict_on_batch(example[0])
-                        expected[start_idx:start_idx+bsize] = example[1]
+                    Y_pred[start_idx:start_idx+bsize] = pred_model.predict_on_batch(example[0])
+                    expected[start_idx:start_idx+bsize] = example[1]
             if self._config.progressbar:
                 l.update(1)
             elif self._config.info:
