@@ -140,8 +140,15 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             #Track training time
             train_time = time.time()
 
-            t_models,sw_thread = self._target_net_train(model,reset=True)
+            t_models,sw_thread,cpad = self._target_net_train(model,reset=True)
 
+            #Epoch adjustment
+            if self._config.dye:
+                ne,epad = 1,np.mean(cpad)
+                ne = int(self._config.epochs * (1-epad)) if epad < 0 else int((ne+epad)*self._config.epochs)
+                print("Adjusting epochs ({}): {}".format(self._config.epochs,ne))
+                self._config.epochs = ne
+                
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
 
@@ -180,7 +187,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         
     def _target_net_train(self,model,reset=True):
 
-        t_models, sw_thread = {},[]
+        t_models, sw_thread,cpad = {},[],[]
         for m in range(self._config.emodels):
             #Some models may take too long to save weights
             while True:
@@ -199,13 +206,14 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             if self._config.info:
                 print("[EnsembleTrainer] Starting model {} training".format(m))
                     
-            tm,st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
+            tm,st,epad = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
                                          set_session=False,stats=False,summary=False,
                                          clear_sess=False,save_numpy=True)
             t_models[m] = tm
             sw_thread.append(st)
+            cpad.append(epad)
 
         if reset:
             model.reset() #Last AL iteration, force ensemble build for prediction
             model.tmodels = t_models
-        return t_models,sw_thread
+        return t_models,sw_thread,epad

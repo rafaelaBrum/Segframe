@@ -356,13 +356,21 @@ class Trainer(object):
         if self._verbose > 1:
             print("Done training model: {0}".format(hex(id(training_model))))
 
-        epad = (np.mean(hist.history['loss']) - hist.history['loss'][-1])*(np.mean(hist.history['acc'] - hist.history['acc'][-1]))
+        if self._config.dye:
+            epad = (np.mean(hist.history['loss']) - hist.history['loss'][-1])/np.std(hist.history['loss'])
+            epad *= (np.mean(hist.history['acc']) - hist.history['acc'][-1])/np.std(hist.history['acc'])
+            sign = -np.sum(np.diff(hist.history['val_loss']))
+            sign = sign/abs(sign)
+            epad = sign*epad
+        else:
+            epad = 1
+            
         if self._verbose > 0:
             print("Epoch correction index: {}".format(epad))
 
         sw_thread = threading.Thread(target=self._save_weights,name='save_weights',args=(model,single,parallel,clear_sess,save_numpy))
         sw_thread.start()
-        return (training_model,sw_thread)
+        return (training_model,sw_thread,epad)
         
     def _save_weights(self,model,single,parallel,clear_sess,save_numpy):
         #Save weights for single tower model and for multigpu model (if defined)

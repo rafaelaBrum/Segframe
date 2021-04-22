@@ -257,6 +257,8 @@ if __name__ == "__main__":
         help='Phi defines network architecture reduction. Values bigger than 1 reduce nets by 1/phi. Default = 1 (use original sizes).',default=1)
     al_args.add_argument('-tnphi', dest='tnphi', type=int, 
         help='Phi defines network architecture reduction. Values bigger than 1 reduce nets by 1/phi. Default = 1 (use original sizes).',default=1)
+    al_args.add_argument('-dye', dest='dye', action='store_true', default=False,
+        help='Apply dynamic epoch count adjustment.')
     
     ##Postprocessing options
     post_args = parser.add_argument_group('Postprocessing', 'Generate bounding boxes or other operation')

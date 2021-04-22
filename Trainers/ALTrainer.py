@@ -355,7 +355,15 @@ class ActiveLearningTrainer(Trainer):
 
             #Track training time
             train_time = time.time()
-            tmodel,sw_thread = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),save_numpy=True)
+            tmodel,sw_thread,epad = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),save_numpy=True)
+
+            #Epoch adjustment
+            if self._config.dye:
+                ne = 1
+                ne = int(self._config.epochs * (1-epad)) if epad < 0 else int((ne+epad)*self._config.epochs)
+                print("Adjusting epochs ({} -> {}).".format(self._config.epochs,ne))
+                self._config.epochs = ne
+                                                             
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
 
@@ -499,11 +507,11 @@ class ActiveLearningTrainer(Trainer):
         """
         Override this function for AL Transfer training
         """
-        tm,st = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
+        tm,st,_ = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),
                                      set_session=False,stats=False,summary=False,
                                      clear_sess=False,save_numpy=True)
 
-        return [tm],[st]
+        return [tm],[st],None
     
     def test_target(self,predictor,acqn,end_train):
 
@@ -524,7 +532,7 @@ class ActiveLearningTrainer(Trainer):
 
         intime = time.time()
         
-        tm,st = self._target_net_train(model)
+        tm,st,_ = self._target_net_train(model)
 
         #Some models may take too long to save weights
         if not st is None and st[-1].is_alive():
