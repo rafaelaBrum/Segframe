@@ -356,13 +356,6 @@ class ActiveLearningTrainer(Trainer):
             #Track training time
             train_time = time.time()
             tmodel,sw_thread,epad = self.train_model(model,(self.train_x,self.train_y),(self.val_x,self.val_y),save_numpy=True)
-
-            #Epoch adjustment
-            if self._config.dye:
-                ne = 1
-                ne = int(self._config.epochs * (1-epad)) if epad < 0 else int((ne+epad)*self._config.epochs)
-                print("Adjusting epochs ({} -> {}).".format(self._config.epochs,ne))
-                self._config.epochs = ne
                                                              
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
@@ -374,6 +367,12 @@ class ActiveLearningTrainer(Trainer):
                 sw_thread.join()
                 
             run_pred = self.test_target(predictor,r,end_train)
+
+            #Epoch adjustment
+            if self._config.dye:
+                ne = int(self._config.epochs * epad) if epad < 0 else int((1-epad)*self._config.epochs)
+                print("Adjusting epochs ({} -> {}).".format(self._config.epochs,ne))
+                self._config.epochs = ne            
                 
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:

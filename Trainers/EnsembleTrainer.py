@@ -156,8 +156,8 @@ class EnsembleALTrainer(ActiveLearningTrainer):
 
             #Epoch adjustment
             if self._config.dye:
-                ne,epad = 1,np.mean(cpad)
-                ne = int(self._config.epochs * (1-epad)) if epad < 0 else int((ne+epad)*self._config.epochs)
+                epad = np.mean(cpad)
+                ne = int(self._config.epochs * epad) if epad < 0 else int((1-epad)*self._config.epochs)
                 print("Adjusting epochs ({}): {}".format(self._config.epochs,ne))
                 self._config.epochs = ne
                 
