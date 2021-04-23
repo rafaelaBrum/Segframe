@@ -359,7 +359,7 @@ class Trainer(object):
         if self._config.dye:
             epad = (np.mean(hist.history['loss']) - hist.history['loss'][-1])/np.std(hist.history['loss'])
             epad *= (np.mean(hist.history['acc']) - hist.history['acc'][-1])/np.std(hist.history['acc'])
-            sign = -np.sum(np.diff(np.subtract(hist.history['val_loss'],hist.history['loss'])))
+            sign = np.sum(np.diff(np.subtract(hist.history['val_loss'],hist.history['loss'])))
             sign = sign/abs(sign)
             epad = sign*epad
         else:

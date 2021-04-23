@@ -141,13 +141,6 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             train_time = time.time()
 
             t_models,sw_thread,cpad = self._target_net_train(model,reset=True)
-
-            #Epoch adjustment
-            if self._config.dye:
-                ne,epad = 1,np.mean(cpad)
-                ne = int(self._config.epochs * (1-epad)) if epad < 0 else int((ne+epad)*self._config.epochs)
-                print("Adjusting epochs ({}): {}".format(self._config.epochs,ne))
-                self._config.epochs = ne
                 
             if self._config.info:
                 print("Training step took: {}".format(timedelta(seconds=time.time()-train_time)))
@@ -160,6 +153,13 @@ class EnsembleALTrainer(ActiveLearningTrainer):
                         sw_thread[k].join()
 
             run_pred = self.test_target(predictor,r,end_train)
+
+            #Epoch adjustment
+            if self._config.dye:
+                ne,epad = 1,np.mean(cpad)
+                ne = int(self._config.epochs * (1-epad)) if epad < 0 else int((ne+epad)*self._config.epochs)
+                print("Adjusting epochs ({}): {}".format(self._config.epochs,ne))
+                self._config.epochs = ne
                 
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,emodels=t_models,sw_thread=sw_thread):
                 if self._config.info:
