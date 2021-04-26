@@ -372,7 +372,7 @@ class ActiveLearningTrainer(Trainer):
             if self._config.dye:
                 ne = int(self._config.epochs * epad) if epad < 0 else int((1-epad)*self._config.epochs)
                 print("Adjusting epochs ({} -> {}).".format(self._config.epochs,ne))
-                self._config.epochs = ne            
+                self._config.epochs = min(ne,100)            
                 
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,sw_thread=sw_thread):
                 if self._config.info:
