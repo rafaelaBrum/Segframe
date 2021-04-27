@@ -158,8 +158,8 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             if self._config.dye:
                 epad = np.mean(cpad)
                 ne = int(self._config.epochs * epad)
-                print("Adjusting epochs ({}): {}".format(self._config.epochs,ne))
-                self._config.epochs = min(ne,100)
+                print("Adjusting epochs ({}*{}): {}".format(self._config.epochs,epad,ne))
+                self._config.epochs = max(min(ne,100),15)
                 
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,emodels=t_models,sw_thread=sw_thread):
                 if self._config.info:
@@ -216,4 +216,4 @@ class EnsembleALTrainer(ActiveLearningTrainer):
         if reset:
             model.reset() #Last AL iteration, force ensemble build for prediction
             model.tmodels = t_models
-        return t_models,sw_thread,epad
+        return t_models,sw_thread,cpad

@@ -357,15 +357,18 @@ class Trainer(object):
             print("Done training model: {0}".format(hex(id(training_model))))
 
         if self._config.dye:
-            epad = (np.mean(hist.history['loss']) - hist.history['loss'][-1])/np.std(hist.history['loss'])
-            epad *= (np.mean(hist.history['acc']) - hist.history['acc'][-1])/np.std(hist.history['acc'])
-            print(np.diff(np.subtract(hist.history['val_loss'],hist.history['loss'])))
-            sign = -np.mean(np.diff(np.subtract(hist.history['val_loss'],hist.history['loss'])))
+            epad = ((np.mean(hist.history['loss']) - hist.history['loss'][-1]) + (np.mean(hist.history['acc']) - hist.history['acc'][-1]))/ \
+            (np.std(hist.history['loss'])+np.std(hist.history['acc']))
+            sign = np.mean(np.diff(np.subtract(hist.history['val_loss'][-15:],hist.history['loss'][-15:])))
+            sign *= np.mean(np.diff(hist.history['loss'][-15:]))
             sign = sign/abs(sign)
-            epad = sign*epad
+            print("Sign 1: \n{}".format(np.diff(np.subtract(hist.history['val_loss'],hist.history['loss']))))
+            print("Sign 2: \n{}".format(np.diff(hist.history['loss'][-15:])))
+            print("Epad befor sign: {}".format(epad))
+            epad = sign*abs(epad)
             if epad < -1.0:
                 print('Case 1')
-                epad = -1/(-1-epad)
+                epad = epad/(-1+epad)
             elif -1.0 <= epad < 0:
                 print('Case 2')
                 epad = abs(epad)
