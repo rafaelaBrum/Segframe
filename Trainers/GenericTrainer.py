@@ -361,11 +361,12 @@ class Trainer(object):
             epad = ((np.mean(hist.history['loss']) - hist.history['loss'][-1]) + (np.mean(hist.history['acc']) - hist.history['acc'][-1]))/ \
             (np.std(hist.history['loss'])+np.std(hist.history['acc']))
             dloss = np.subtract(hist.history['val_loss'],hist.history['loss'])
-            ldloss = np.std(dloss[:int(len(dloss)/2)])
+            ldloss = np.std(dloss)
+            lmean = np.mean(dloss)
             mhloss = np.mean(dloss[int(len(dloss)/2):])
-            sign = -1.0 if mhloss > ldloss else 1.0
-            print("Low band STD: {}; High band MEAN: {}".format(ldloss,mhloss))
-            print("Epad befor sign: {}".format(epad))
+            sign = -1.0 if mhloss > (lmean+ldloss) else 1.0
+            print(dloss)
+            print("Cut point: {}; High band MEAN: {}".format(lmean+ldloss,mhloss))
             epad = sign*abs(epad)
             if epad < -1.0:
                 print('Case 1')

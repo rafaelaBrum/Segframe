@@ -158,7 +158,7 @@ class EnsembleALTrainer(ActiveLearningTrainer):
             if self._config.dye:
                 epad = np.mean(cpad)
                 ne = int(self._config.epochs * epad)
-                print("Adjusting epochs ({}*{}): {}".format(self._config.epochs,epad,ne))
+                print("Adjusting epochs ({}): {}".format(self._config.epochs,ne))
                 self._config.epochs = max(min(ne,100),self.min_epochs)
                 
             if r == (self._config.acquisition_steps - 1) or not self.acquire(function,model,acquisition=r,emodels=t_models,sw_thread=sw_thread):
