@@ -80,7 +80,8 @@ class Trainer(object):
         self._verbose = config.verbose
         self._ds = None
         self._rex = r'{0}-t(?P<try>[0-9]+)e(?P<epoch>[0-9]+).h5'
-
+        self.min_epochs = config.epochs
+        
     def load_modules(self,net_name = None):
         if net_name is None:
             net_name = self._config.network
@@ -361,6 +362,7 @@ class Trainer(object):
             epad *= (np.mean(hist.history['acc']) - hist.history['acc'][-1])/np.std(hist.history['acc'])
             print(np.diff(np.subtract(hist.history['val_loss'],hist.history['loss'])))
             sign = -np.mean(np.diff(np.subtract(hist.history['val_loss'],hist.history['loss'])))
+            sign *= np.mean(np.diff(hist.history['loss']))
             sign = sign/abs(sign)
             epad = sign*epad
             if epad < -1.0:
