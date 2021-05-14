@@ -1126,7 +1126,7 @@ class Plotter(object):
         if not other is None:
             plt.legend(handles=metric_patches,loc=2,ncol=2,prop=dict(weight='bold'))
         else:
-            plt.legend(loc=0,ncol=2,labels=config.labels,prop=dict(weight='bold'))
+            plt.legend(loc=0,ncol=3,labels=config.labels,prop=dict(weight='bold'))
             
         if max(max_x) > 1000:
             plt.xticks(rotation=30)
@@ -1156,7 +1156,7 @@ class Plotter(object):
                 ticks = np.linspace(min(0.6,0.9*min(min_y)), min(max(max_y)+0.1,1.0), 8)
                 np.round(ticks,2,ticks)
             else:
-                ticks = np.arange(0.50,maxy,0.05)
+                ticks = np.arange(0.55,maxy,0.05)
                 np.round(ticks,2,ticks)
             axis_t.extend([ticks.min(),ticks.max()])
             plt.yticks(ticks)
@@ -1801,7 +1801,6 @@ class Plotter(object):
                     max_samples = min(max_samples,len(data[k]['fntrainset']))
 
             mvalues = np.zeros(shape=(exp_n,max_samples),dtype=np.float32)
-            print(mvalues)
             
             for k in data:
                 if not metric in data[k] or data[k][metric].shape[0] == 0:
@@ -2061,8 +2060,15 @@ if __name__ == "__main__":
             print("You should define a set of experiment IDs (-id).")
             sys.exit(1)
 
+        u,c = np.unique(config.ids, return_counts=True)
+        dup = u[c>1]
+        if np.any(dup):
+            print("Your are using duplicated IDs, change these: {}".format(dup))
+            sys.exit()
+                
         data = p.parseResults(exp_type,config.ids,config.n_exp,config.maxx,config.concat)
-
+        print(data.keys())
+        
         if isinstance(config.confidence,list):
             config.confidence = config.confidence[0]
 
