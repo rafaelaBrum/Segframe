@@ -72,17 +72,32 @@ class GenericEnsemble(GenericModel):
             return "{}.npy".format(self.cache_m.fileLocation(self._mgpu_weightsCache).split('.')[0])
         else:
             return self.cache_m.fileLocation(self._mgpu_weightsCache).split('.')[0]
+
+    def adjustWeightCache(self):
+            
+        self.cache_m.registerFile(os.path.join(self._config.weights_path,self._weightsCache),self._weightsCache)
+        self.cache_m.registerFile(os.path.join(self._config.weights_path,self._mgpu_weightsCache),self._mgpu_weightsCache)
+        self.cache_m.registerFile(os.path.join(self._config.model_path,self._modelCache),self._modelCache)
+        
+    def setName(self,name):
+        """
+        Override GenericModel's method to redefine cache file names
+        """
+        self.name = name
+        self._weightsCache = "{0}-weights.h5".format(self.name,m)
+        self._mgpu_weightsCache = "{0}-mgpu-weights.h5".format(self.name,m)
+        self._modelCache = "{0}-model.h5".format(self.name,m)
+
+        self.adjustWeightCache()
     
     def register_ensemble(self,m):
         self._model_n = m
         self._weightsCache = "{0}-EM{1}-weights.h5".format(self.name,m)
         self._mgpu_weightsCache = "{0}-EM{1}-mgpu-weights.h5".format(self.name,m)
-        self._modelCache = "{0}-EM{1}-model.h5".format(self.name,m)
-        
-        self.cache_m.registerFile(os.path.join(self._config.weights_path,self._weightsCache),self._weightsCache)
-        self.cache_m.registerFile(os.path.join(self._config.weights_path,self._mgpu_weightsCache),self._mgpu_weightsCache)
-        self.cache_m.registerFile(os.path.join(self._config.model_path,self._modelCache),self._modelCache)
+        self._modelCache = "{0}-EM{1}-model.h5".format(self.name,m)        
 
+        self.adjustWeightCache()
+        
     def return_model_n(self):
         if hasattr(self,'_model_n'):
             return self._model_n
