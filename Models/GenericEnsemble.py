@@ -84,8 +84,8 @@ class GenericEnsemble(GenericModel):
         Override GenericModel's method to redefine cache file names
         """
         self.name = name
-        self._weightsCache = "{0}-weights.h5".format(self.name,m)
-        self._mgpu_weightsCache = "{0}-mgpu-weights.h5".format(self.name,m)
+        self._weightsCache = "{0}-weights.h5".format(self.name)
+        self._mgpu_weightsCache = "{0}-mgpu-weights.h5".format(self.name)
         self._modelCache = "{0}-model.h5".format(self.name,m)
 
         self.adjustWeightCache()
