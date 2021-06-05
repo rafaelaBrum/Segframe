@@ -1338,7 +1338,7 @@ class Plotter(object):
             return ((np.hstack((data['trainset'],data['fntrainset'])),[]),([],np.hstack((data[key][data['tnidx']],data[key][data['fnidx']]))))
         else:
             m = data[key].shape[0]
-            fnkey = 'fn'+key
+            fnkey = 'fn'+ key if not key.startswith('fn') else key
             if not fnkey in data:
                 return ((data['trainset'],data[key][data['tnidx'][:m]]),(data['fntrainset'],data[key][data['fnidx'][:m]]))
             else:
@@ -2067,7 +2067,6 @@ if __name__ == "__main__":
             sys.exit()
                 
         data = p.parseResults(exp_type,config.ids,config.n_exp,config.maxx,config.concat)
-        print(data.keys())
         
         if isinstance(config.confidence,list):
             config.confidence = config.confidence[0]
