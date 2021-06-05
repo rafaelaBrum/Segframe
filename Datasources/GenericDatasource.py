@@ -318,10 +318,17 @@ class GenericDS(ABC):
 
         def regen_idx(s_x,X):
             samples = np.zeros(len(s_x),dtype=np.int32)
+            print("Regenerating indexes...")
+            xd = {}
+            for i in range(len(X)):
+                xd[X[i]] = i
+
             for k in range(len(s_x)):
-                idx, = np.where(X == s_x[k])
-                if idx.shape[0] > 0:
-                    samples[k] = idx[0]
+                idx = xd.get(s_x[k],-1)
+                if idx > 0:
+                    samples[k] = idx
+                else:
+                    print("[GenericDataSource] Element not found: {}".format(s_x[k]))
             print("[GenericDatasource] Sample indexes regeneration: \n{}".format(samples))
 
             return samples

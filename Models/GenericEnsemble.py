@@ -86,7 +86,7 @@ class GenericEnsemble(GenericModel):
         self.name = name
         self._weightsCache = "{0}-weights.h5".format(self.name)
         self._mgpu_weightsCache = "{0}-mgpu-weights.h5".format(self.name)
-        self._modelCache = "{0}-model.h5".format(self.name,m)
+        self._modelCache = "{0}-model.h5".format(self.name)
 
         self.adjustWeightCache()
     
