@@ -34,7 +34,7 @@ import os
 import numpy as np
 from sklearn.metrics import pairwise_distances
 
-from .Common import load_model_weights
+from .Common import extract_feature_from_function
 
 def __flatten_X(X):
     shape = X.shape
@@ -213,38 +213,25 @@ def core_set(bayesian_model,generator,data_size,**kwargs):
 
     #Run feature extraction and clustering
     if hasattr(model,'build_extractor'):
-        single_m,parallel_m = model.build_extractor(model=bayesian_model,training=False,feature=True,parallel=True)
+        pred_model = model.build_extractor(model=bayesian_model,training=False,feature=True,parallel=True)
     else:
         if config.info:
             print("[core_set] Model is not prepared to produce features. No feature extractor")
         return None
 
-    if not model.is_ensemble():
-        pred_model = load_model_weights(config,model,single_m,parallel_m)
-    else:
+    if model.is_ensemble():
         generator.set_input_n(config.emodels)
         train_gen.set_input_n(config.emodels)
-        if not parallel_m is None:
-            pred_model = parallel_m
-        else:
-            pred_model = single_m
+
             
     #Extract features for all images in the pool
     if config.info:
         print("Starting feature extraction ({} batches)...".format(len(generator)))
-    pool_features = pred_model.predict_generator(generator,
-                                            workers=4*cpu_count,
-                                            max_queue_size=100*gpu_count,
-                                            verbose=0)
+    pool_features = extract_feature_from_function(pred_model,generator)
 
-    train_features = pred_model.predict_generator(train_gen,
-                                            workers=4*cpu_count,
-                                            max_queue_size=100*gpu_count,
-                                            verbose=0)
+    train_features = extract_feature_from_function(pred_model,train_gen)
 
     del(pred_model)
-    del(parallel_m)
-    del(single_m)
     del(generator)
     del(train_gen)
     
