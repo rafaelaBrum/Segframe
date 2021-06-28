@@ -1448,6 +1448,7 @@ class Plotter(object):
         #zero_num = mdates.date2num(zero)
         wstime = None
         wltime = None
+        skip_repeat = False
         for line in lines:
             lstrip = line.strip()
             trainmatch = trainrc.fullmatch(lstrip)
@@ -1468,9 +1469,15 @@ class Plotter(object):
             if trmatch:
                 ssize = int(trmatch.group('set'))
                 if ssize in data['trainset']:
+                    skip_repeat = True
                     continue
                 else:
                     data['trainset'].append(ssize)
+                    skip_repeat = False
+            #Skip aquisition if concatenation is on        
+            if skip_repeat and concat:
+                continue
+            
             if tmatch:
                 td = datetime.timedelta(hours=int(tmatch.group('hours')),minutes=int(tmatch.group('min')),seconds=round(float(tmatch.group('sec'))))
                 data['time'].append(td.total_seconds())
@@ -1574,9 +1581,9 @@ class Plotter(object):
             if np.max(data['fntrainset']) >= fnids.shape[0]:
                 upl = np.where(data['fntrainset'] >= fnids.shape[0])[0][0]
                 data['fntrainset'] = data['fntrainset'][:upl] #Don't use indexes already removed by maxx
-                data['auc'] = data['auc'][:upl]
+                #data['auc'] = data['auc'][:upl]
                 data['fnauc'] = data['fnauc'][:upl]
-                data['accuracy'] = data['accuracy'][:upl]
+                #data['accuracy'] = data['accuracy'][:upl]
                 data['fnaccuracy'] = data['fnaccuracy'][:upl]
             fnids[data['fntrainset']] = 1
             data['fnidx'] = data['fntrainset']
@@ -1586,12 +1593,12 @@ class Plotter(object):
             
         #Round AUC to 2 decimal places
         np.around(data['auc'],2,data['auc'])
-        
+
+        print("Experiment {}:".format(os.path.basename(path)))
         if data['auc'].shape[0] > 0:
-            print("Experiment {}:".format(os.path.basename(path)))
+            print("X: {}; Y: {}".format(data['trainset'],data['auc']))
             print("Min AUC: {0}; Max AUC: {1}; Mean AUC: {2:.3f}\n".format(data['auc'].min(),data['auc'].max(),data['auc'].mean()))
         if data['accuracy'].shape[0] > 0:
-            print("Experiment {}:".format(os.path.basename(path)))
             print("Min accuracy: {0}; Max accuracy: {1}; Mean accuracy: {2:.3f}\n".format(data['accuracy'].min(),data['accuracy'].max(),data['accuracy'].mean()))
 
         return data
@@ -1800,6 +1807,9 @@ class Plotter(object):
                 elif not auc_only and data[k][metric].shape[0] > 0:
                     max_samples = min(max_samples,len(data[k]['fntrainset']))
 
+            if max_samples == np.inf:
+                return (None,None,None)
+            
             mvalues = np.zeros(shape=(exp_n,max_samples),dtype=np.float32)
             
             for k in data:
