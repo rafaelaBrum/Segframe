@@ -213,7 +213,7 @@ def core_set(bayesian_model,generator,data_size,**kwargs):
 
     #Run feature extraction and clustering
     if hasattr(model,'build_extractor'):
-        single_m,parallel_m = model.build_extractor(training=False,feature=True,parallel=True)
+        single_m,parallel_m = model.build_extractor(model=bayesian_model,training=False,feature=True,parallel=True)
     else:
         if config.info:
             print("[core_set] Model is not prepared to produce features. No feature extractor")
