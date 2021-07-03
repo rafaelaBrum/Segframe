@@ -209,6 +209,7 @@ def _acq_ng_logic(posa,clusters,un_clusters,query,config,verbose,cache_m):
         cln = n % clusters
         q = un_clusters[cln]
         cl_aq = int(np.ceil(frac[cln]*query))
+        cl_aq = 1 if cl_aq == 0 else cl_aq #Select at least 1 patch from each cluster
         first = sel[cln]
         if len(q) >= first + cl_aq:
             acquired.extend(q[first:first+cl_aq])
