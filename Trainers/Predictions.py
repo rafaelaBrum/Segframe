@@ -174,7 +174,7 @@ class Predictor(object):
             unique,count = np.unique(y_test,return_counts=True)
             l_count = dict(zip(unique,count))
             if target:
-                print("\n[Predictions] Starting target net evaluatioin")
+                print("\n[Predictions] Starting target net evaluation")
             else:
                 print("\n[Predictions] Starting prediction phase")
             if len(unique) > 2:
