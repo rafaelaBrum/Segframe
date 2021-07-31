@@ -84,6 +84,31 @@ def _process_al_metadata(config):
 
     return ac_imgs
 
+def _process_test_images(config):
+    """
+    Selects a predefined number of test patches for extraction
+    """
+    if config.sdir is None or not os.path.isdir(config.sdir):
+        print("Directory not found: {}".format(config.sdir))
+        sys.exit(1)
+
+    files = os.listdir(config.sdir)
+
+    dsfiles = {}
+    testfile = '{}-testset.pik'.format(config.ds)
+    if not testfile in files:
+        return None
+    else:
+        with open(os.path.join(config.sdir,testfile),'rb') as fd:
+            _,tset = pickle.load(fd)
+        with open(os.path.join(config.sdir,'{}-metadata.pik'.format(config.ds)),'rb') as fd:
+            X,Y,_ = pickle.load(fd)
+
+        tx = X[tset[:config.test]]
+
+    return tx
+        
+    
 def _process_wsi_cluster(km,s,members,config):
     """
     Generate statistics for each cluster.
@@ -595,6 +620,15 @@ def process_al_metadata(config):
                     os.mkdir(copy_to)
                 shutil.copy(img.getPath(),copy_to)
 
+    #Extract some test patches
+    if config.test > 0:
+        ts_imgs = _process_test_images(config)
+        copy_to = os.path.join(config.out_dir,'testset')
+        for img in ts_imgs:
+            img_path = change_root(img.getPath(),config.cp_orig)
+            img_name = os.path.basename(img_path)
+            shutil.copy(img_path,os.path.join(copy_to,img_name))
+
     if config.gen_label:
         print("Generating label files...")
         _generate_label_files(config)
@@ -794,6 +828,8 @@ if __name__ == "__main__":
         help='Do NOT display info.',default=True)
     parser.add_argument('-bplot', action='store_true', dest='bplot',
         help='Save plotable data.',default=False)
+    parser.add_argument('-test', dest='test', type=int, 
+        help='Grab this many images from test set (Default: 0)', default=0,required=False)
     parser.add_argument('-db', action='store_true', dest='debug',
         help='Execute debuging actions for each run mode.',default=False)
     
