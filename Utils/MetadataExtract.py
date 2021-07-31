@@ -74,7 +74,7 @@ def _process_al_metadata(config):
                 mask = np.isin(ctrain,initial_set,assume_unique=True,invert=True)
                 if config.debug:
                     dbm = np.isin(ctrain,initial_set,assume_unique=True,invert=False)
-                    print("Images in both sets ({}): {}".format(dbm.shape[0],train[0][dbm]))
+                    print("Images in both sets: {}".format(dbm.shape[0]))
 
             imgs = train[0][mask]
             labels = train[1][mask]
