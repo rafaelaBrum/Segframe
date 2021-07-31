@@ -301,9 +301,13 @@ class Plotter(object):
                 self._nX = x_data
                 tset = x_data
             else:
-                if len(self._nX) < len(x_data):
+                if len(self._nX) != len(x_data):
                     self._yIDX = np.in1d(x_data,self._nX)
                     tset = x_data[self._yIDX]
+                    if len(tdata) < len(self._yIDX):
+                        samples = min(len(x_data),len(tdata))
+                        self._yIDX = self._yIDX[:samples]
+                        #tset = tset[:samples]
                     tdata = tdata[self._yIDX]
                 else:
                     tset = x_data
@@ -313,6 +317,10 @@ class Plotter(object):
                 print("Shape mismatch:\n Trainset: {}; {}:{}".format(tset.shape,tdata.shape,metric))
                 tdata = np.hstack((tdata,tdata[-1:]))
 
+            #Set bar x positions
+            bar_x = tset + (lbcount-(nexp/2))*40
+            print("{}:\n - X:{};\n - Y:{}".format(lb,bar_x,tdata))
+            
             #Check lower and upper values to axis scaling
             local_max = np.max(x_data)
             local_min = np.min(x_data)
@@ -321,10 +329,7 @@ class Plotter(object):
             local_max = np.max(tdata)
             local_min = np.min(tdata)
             tmax = local_max if local_max > tmax else tmax
-            tmin = local_min if local_min < tmin else tmin            
-
-            bar_x = tset + (lbcount-(nexp/2))*40
-            print("{}:\n - X:{};\n - Y:{}".format(lb,bar_x,tdata))
+            tmin = local_min if local_min < tmin else tmin
 
             if not self._yIDX is None:
                 print("Plotting only predefined FN points")
@@ -364,7 +369,7 @@ class Plotter(object):
         axis_t = []
         xlim = xmax+(0.7*xticks)
         mtick = np.arange(xmin, xlim, xticks)
-        axis_t.extend([mtick.min()*0.8,xlim])
+        axis_t.extend([mtick.min()*0.6,xlim])
         plt.xticks(mtick)
 
         if not metrics is None:
@@ -488,7 +493,7 @@ class Plotter(object):
         plt.yticks(yrg)
         xrg = np.arange(xmin, xmax+xticks, xticks)
         plt.xticks(xrg)
-        plt.axis([min(xrg),max(xrg),min(yrg),max(yrg)])
+        plt.axis([min(xrg)-20,max(xrg),min(yrg),max(yrg)])
         plt.title(title, loc='left', fontsize=12, fontweight=0, color='orange')
         if xmax > 1000:
             plt.xticks(rotation=30)
@@ -1392,13 +1397,14 @@ class Plotter(object):
                 with open(slurm_path,'r') as fd:
                     lines.extend(fd.readlines())
         else:
-            slurm_path = os.path.join(path,dir_contents[0])
+            slurm_path = os.path.join(path,dir_contents[-1])
             with open(slurm_path,'r') as fd:
                 lines = fd.readlines()
             
         data = {'time':[],
                 'acqtime':[],
                 'traintime':[],
+                'taqtime':[],
                 'auc':[],
                 'fnauc':[],
                 'trainset':[],
@@ -1540,6 +1546,9 @@ class Plotter(object):
 
         #Use NP arrays
         data['traintime'] = np.asarray(data['traintime'])
+        #Last iteration doesn't have an aquisition phase (zero time)
+        if len(data['traintime']) > len(data['acqtime']):
+            data['acqtime'].append(0.0)
         data['acqtime'] = np.asarray(data['acqtime'])
         data['time'] = np.asarray(data['time'])
         data['wsave'] = np.asarray(data['wsave'])
@@ -1552,6 +1561,7 @@ class Plotter(object):
         data['accuracy'] = np.asarray(data['accuracy'])
         data['fnaccuracy'] = np.asarray(data['fnaccuracy'])        
         data['labels'] = np.asarray(data['labels'])
+        data['taqtime'] = data['acqtime'] + data['traintime']
             
         if not maxx is None:
             if maxx > np.max(data['trainset']):
@@ -1573,6 +1583,7 @@ class Plotter(object):
             data['trainset'] = data['trainset'][:upl]
             data['accuracy'] = data['accuracy'][:upl]
             data['labels'] = data['labels'][:upl]
+            data['taqtime'] = data['taqtime'][:upl]
 
         #Generate indexes that correspond to data from Feature Net and Target Net
         if data['fnauc'].shape[0] > 0:
@@ -1594,9 +1605,9 @@ class Plotter(object):
         #Round AUC to 2 decimal places
         np.around(data['auc'],2,data['auc'])
 
-        print("Experiment {}:".format(os.path.basename(path)))
+        print("Experiment {} ({}):".format(os.path.basename(path),os.path.basename(slurm_path)))
         if data['auc'].shape[0] > 0:
-            print("X: {}; Y: {}".format(data['trainset'],data['auc']))
+            print("X: {}; AUC: {}".format(data['trainset'],data['auc']))
             print("Min AUC: {0}; Max AUC: {1}; Mean AUC: {2:.3f}\n".format(data['auc'].min(),data['auc'].max(),data['auc'].mean()))
         if data['accuracy'].shape[0] > 0:
             print("Min accuracy: {0}; Max accuracy: {1}; Mean accuracy: {2:.3f}\n".format(data['accuracy'].min(),data['accuracy'].max(),data['accuracy'].mean()))
@@ -1804,7 +1815,9 @@ class Plotter(object):
                     continue
                 if (auc_only and data[k]['auc'].shape[0] > 0) or not 'fntrainset' in data[k]:
                     max_samples = min(max_samples,len(data[k]['trainset']))
-                elif not auc_only and data[k][metric].shape[0] > 0:
+                elif not auc_only and not metric.startswith('fn'):
+                    max_samples = min(max_samples,len(data[k]['trainset']))
+                elif not auc_only: #data[k][metric].shape[0] > 0:
                     max_samples = min(max_samples,len(data[k]['fntrainset']))
 
             if max_samples == np.inf:
@@ -1827,15 +1840,15 @@ class Plotter(object):
                     mvalues[i] = data[k]['auc'][:max_samples]
                 if not auc_only and data[k][metric].shape[0] > 0:                    
                     trainset = data[k]['fntrainset'] if metric.startswith('fn') else data[k]['trainset']
-                    tdata = None
-                    (_,_),(_,tdata) = self.return_fndata(data[k],metric,False)
+                    tdata = data[k][metric][:max_samples]
+                    #(_,_),(_,tdata) = self.return_fndata(data[k],metric,False)
                     if not tdata is None:
                         dd = mvalues.shape[1] - tdata.shape[0]
                         if dd > 0:
                             print("Wrong dimensions. Expected {} points in experiment {} but got {}".format(mvalues.shape[1],k,tdata.shape[0]))
-                            mvalues = np.delete(mvalues,mvalues.shape[1] - 1,axis=1)
-                            trainset = trainset[:-1]
-                        mvalues[i] = tdata
+                            mvalues = np.delete(mvalues,mvalues.shape[1] - dd,axis=1)
+                            trainset = trainset[:-dd]
+                        mvalues[i,:tdata.shape[0]] = tdata[:mvalues[i].shape[0]]
                     else:
                         mvalues[i] = data[k][metric][:max_samples]
                 
@@ -1844,6 +1857,7 @@ class Plotter(object):
                     
                 i += 1
 
+            print(trainset,mvalues,max_samples)
             return (trainset,mvalues,max_samples)
 
         metric = None
@@ -1909,6 +1923,7 @@ if __name__ == "__main__":
         time - AL iteration time; \n \
         traintime - Train step time; \n \
         acqtime - Acquisition step time; \n \
+        taqtime - Train + Acquisition step time; \n \
         wsave - Weights saving time; \n \
         wload - Weights loading time; \n \
         kmeans - KMeans execution time; \n \
@@ -1921,7 +1936,7 @@ if __name__ == "__main__":
         pmean - Mean # of patches acquired from each WSI; \n \
         wsicount - # of WSIs used in each acquisition step; \n \
         wsimeandis - Mean distance, in pixels, from patches to its cluster centers.',
-       choices=['time','auc','acc','labels','traintime','acqtime','pmean','wsicount','wsimeandis','wsave','wload','kmeans','feature','fnauc','fnacc'],
+       choices=['time','auc','acc','labels','traintime','acqtime','taqtime','pmean','wsicount','wsimeandis','wsave','wload','kmeans','feature','fnauc','fnacc'],
                             default=None)    
     parser.add_argument('-type', dest='tmode', type=str, nargs='+',
         help='Experiment type: \n \

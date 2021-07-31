@@ -72,6 +72,9 @@ def _process_al_metadata(config):
                 mask = np.isin(ctrain,initial_set,assume_unique=True,invert=False)
             else:
                 mask = np.isin(ctrain,initial_set,assume_unique=True,invert=True)
+                if config.debug:
+                    dbm = np.isin(ctrain,initial_set,assume_unique=True,invert=False)
+                    print("Images in both sets ({}): {}".format(dbm.shape[0],train[0][dbm]))
 
             imgs = train[0][mask]
             labels = train[1][mask]
@@ -790,7 +793,9 @@ if __name__ == "__main__":
     parser.add_argument('-ni', action='store_false', dest='info',
         help='Do NOT display info.',default=True)
     parser.add_argument('-bplot', action='store_true', dest='bplot',
-        help='Save plotable data.',default=False)    
+        help='Save plotable data.',default=False)
+    parser.add_argument('-db', action='store_true', dest='debug',
+        help='Execute debuging actions for each run mode.',default=False)
     
     config, unparsed = parser.parse_known_args()
 
