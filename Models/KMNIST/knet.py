@@ -173,7 +173,7 @@ class BayesKNet(KNet):
                     name='block1_conv2')(x)
         x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        x = Dropout(0.25)(x,name='feature',training=training)
+        x = Dropout(0.25)(x,training=training)
         
         x = Flatten()(x)
         x = Dense(128,kernel_regularizer=regularizers.l2(weight_decay))(x)
