@@ -96,6 +96,7 @@ def _process_test_images(config):
 
     dsfiles = {}
     testfile = '{}-testset.pik'.format(config.ds)
+    fX = None
     if not testfile in files:
         return None
     else:
@@ -103,8 +104,10 @@ def _process_test_images(config):
             _,tset = pickle.load(fd)
         with open(os.path.join(config.sdir,'{}-metadata.pik'.format(config.ds)),'rb') as fd:
             X,Y,_ = pickle.load(fd)
-
-        tx = X[tset[:config.test]]
+            fX = np.asarray(X)
+            del(X)
+        
+        tx = fX[tset[:config.test]]
 
     return tx
         
@@ -624,6 +627,8 @@ def process_al_metadata(config):
     if config.test > 0:
         ts_imgs = _process_test_images(config)
         copy_to = os.path.join(config.out_dir,'testset')
+        if not os.path.isdir(copy_to):
+            os.mkdir(copy_to)
         for img in ts_imgs:
             img_path = change_root(img.getPath(),config.cp_orig)
             img_name = os.path.basename(img_path)
