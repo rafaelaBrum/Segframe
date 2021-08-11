@@ -136,6 +136,9 @@ class GenericDS(ABC):
         files = os.listdir(path)
         X,Y = ([],[])
 
+        dirs = list(filter(lambda i:os.path.isdir(os.path.join(path,i)),files))
+        self.multi_dir = True if len(dirs) > 0 else False
+
         if self.multi_dir:
             for f in files:
                 item = os.path.join(path,f)
@@ -147,7 +150,7 @@ class GenericDS(ABC):
                                         step_size=1,output_dim=2,txt_label='directories',verbose=self._verbose)
 
         else:
-            mdata = self._load_metadata_from_dir(self.path)
+            mdata = self._load_metadata_from_dir(path)
 
         X.extend(mdata[0]) #samples
         Y.extend(mdata[1]) #labels
