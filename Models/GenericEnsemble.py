@@ -19,7 +19,7 @@ if tf.__version__ >= '1.14.0':
     tf.logging.set_verbosity(tf.logging.ERROR)
     #tf.disable_v2_behavior()
     
-from keras.layers import Average,Concatenate
+from keras.layers import Average,Concatenate, Flatten
 from keras import backend as K
 from keras.models import Model
 
@@ -146,7 +146,12 @@ class GenericEnsemble(GenericModel):
             f = K.function(model.inputs, [x])
         else:
             layer = model.get_layer('feature')
-            f = K.function(model.inputs, [layer.output])
+            print(layer.output_shape)
+            if len(layer.output_shape[1:]) > 1:
+                x = Flatten()(layer.output)
+            else:
+                x = layer.output
+            f = K.function(model.inputs, [x])
 
         return f
         
