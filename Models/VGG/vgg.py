@@ -21,9 +21,9 @@ from keras import backend as K
 
 #Locals
 from Utils import CacheManager
-from Models.GenericModel import GenericModel
+from Models.GenericEnsemble import GenericEnsemble
 
-class VGG16(GenericModel):
+class VGG16(GenericEnsemble):
     """
     Implements abstract methods from GenericModel.
     Producess a VGG16 model as implemented by Keras, with convolutional layers
@@ -60,13 +60,12 @@ class VGG16(GenericModel):
         """
         return self.cache_m.fileLocation(self._mgpu_weightsCache)
     
-    def build(self,**kwargs):
+    def _build(self,width,height,channels,**kwargs):
         """
         Returns a VGG 16 model instance, final fully-connected layers are substituted by Conv2Ds
         
         @param pre_trained <boolean>: returned model should be pre-trained or not
         """
-        width,height,channels = self._check_input_shape()
         
         if backend.image_data_format() == 'channels_first':
             input_shape = (channels, height, width)
@@ -83,7 +82,7 @@ class VGG16(GenericModel):
         #Check if previous training and LR is saved, if so, use it
         lr_cache = "{0}_learning_rate.txt".format(self.name)
         self.cache_m.registerFile(os.path.join(self._config.cache,lr_cache),lr_cache)
-        l_rate = 0.0005
+        l_rate = self._config.learn_r
         if os.path.isfile(self.cache_m.fileLocation(lr_cache)) and not self._config.new_net:
             l_rate = float(self.cache_m.read(lr_cache))
             if self._config.info:
@@ -145,12 +144,12 @@ class VGG16(GenericModel):
 
         return model
 
-class VGG16A2(VGG16):
+class EFVGG16(VGG16):
     """
     VGG variation, uses GroupNormalization and more dropout
     """
     def __init__(self,config,ds):
-        super(VGG16A2,self).__init__(config=config,ds=ds,name = "VGG16_A2")
+        super(EFVGG16,self).__init__(config=config,ds=ds,name = "EFVGG16")
 
     def _build_architecture(self,input_shape):
 
@@ -163,13 +162,27 @@ class VGG16A2(VGG16):
         if hasattr(self,'data_size'):
             S = self.data_size
         wd = lambda p,N: (1-p)*0.5/N
+
+        filters = {32:self.rescale('width',32),
+                    48:self.rescale('width',48),
+                    64:self.rescale('width',64),
+                    80:self.rescale('width',80),
+                    96:self.rescale('width',96),
+                    128:self.rescale('width',128),
+                    160:self.rescale('width',160),
+                    192:self.rescale('width',192),
+                    224:self.rescale('width',224),
+                    256:self.rescale('width',256),
+                    512:self.rescale('width',512),
+                    4096:self.rescale('width',4096)}
             
         inp = Input(shape=input_shape)
-        x = Convolution2D(64, (3, 3),input_shape=input_shape,
+        x = Convolution2D(filters.get(64,64), (3, 3),input_shape=input_shape,
                     strides=1,
                     padding='valid',
                     name='block1_conv1',
-                    weights=layer_dict['block1_conv1'].get_weights(),
+                    kernel_initializer='he_normal',
+                    #weights=layer_dict['block1_conv1'].get_weights(),
                     kernel_regularizer=regularizers.l2(wd(0.1,S)))(inp)
         #x = GroupNormalization(groups=4,axis=-1))(x)
         x = Activation('relu')(x)
@@ -177,10 +190,11 @@ class VGG16A2(VGG16):
  
         #Second layer
         x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(64, (3, 3),strides=1,
+        x = Convolution2D(filters.get(64,64), (3, 3),strides=1,
                     padding='valid',
                     name='block1_conv2',
-                    weights=layer_dict['block1_conv2'].get_weights(),
+                    kernel_initializer='he_normal',
+                    #weights=layer_dict['block1_conv2'].get_weights(),
                     kernel_regularizer=regularizers.l2(wd(0.1,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
@@ -189,10 +203,11 @@ class VGG16A2(VGG16):
  
         #Third layer
         x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(128, (3, 3),strides=1,
+        x = Convolution2D(filters.get(128,128), (3, 3),strides=1,
                     padding='valid',
                     name='block2_conv1',
-                    weights=layer_dict['block2_conv1'].get_weights(),
+                    kernel_initializer='he_normal',
+                    #weights=layer_dict['block2_conv1'].get_weights(),
                     kernel_regularizer=regularizers.l2(wd(0.1,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
@@ -200,10 +215,11 @@ class VGG16A2(VGG16):
  
         #Fourth layer
         x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(128, (3, 3),strides=1,
+        x = Convolution2D(filters.get(128,128), (3, 3),strides=1,
                 padding='valid',
                 name='block2_conv2',
-                weights=layer_dict['block2_conv2'].get_weights(),
+                kernel_initializer='he_normal',
+                #weights=layer_dict['block2_conv2'].get_weights(),
                 kernel_regularizer=regularizers.l2(wd(0.1,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
@@ -212,10 +228,11 @@ class VGG16A2(VGG16):
  
         #Fifth layer
         x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(256, (3, 3),strides=1,
+        x = Convolution2D(filters.get(256,256), (3, 3),strides=1,
                 padding='valid',
                 name='block3_conv1',
-                weights=layer_dict['block3_conv1'].get_weights(),
+                kernel_initializer='he_normal',
+                #weights=layer_dict['block3_conv1'].get_weights(),
                 kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
@@ -223,10 +240,11 @@ class VGG16A2(VGG16):
  
         #Sith layer
         x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(256, (3, 3),strides=1,
+        x = Convolution2D(filters.get(256,256), (3, 3),strides=1,
                 padding='valid',
                 name='block3_conv2',
-                weights=layer_dict['block3_conv2'].get_weights(),
+                kernel_initializer='he_normal',
+                #weights=layer_dict['block3_conv2'].get_weights(),
                 kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
@@ -234,10 +252,11 @@ class VGG16A2(VGG16):
  
         #Seventh layer
         x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(256, (3, 3),strides=1,
+        x = Convolution2D(filters.get(256,256), (3, 3),strides=1,
             padding='valid',
             name='block3_conv3',
-            weights=layer_dict['block3_conv3'].get_weights(),
+            kernel_initializer='he_normal',
+            #weights=layer_dict['block3_conv3'].get_weights(),
             kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
@@ -246,10 +265,11 @@ class VGG16A2(VGG16):
  
         #Eigth layer
         x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(512, (3, 3),strides=1,
+        x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
             padding='valid',
             name='block4_conv1',
-            weights=layer_dict['block4_conv1'].get_weights(),
+            kernel_initializer='he_normal',
+            #weights=layer_dict['block4_conv1'].get_weights(),
             kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
@@ -257,10 +277,11 @@ class VGG16A2(VGG16):
  
         #Nineth layer
         x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(512, (3, 3),strides=1,
+        x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
             padding='valid',
             name='block4_conv2',
-            weights=layer_dict['block4_conv2'].get_weights(),
+            kernel_initializer='he_normal',
+            #weights=layer_dict['block4_conv2'].get_weights(),
             kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
@@ -268,10 +289,11 @@ class VGG16A2(VGG16):
  
         #Tenth layer
         x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(512, (3, 3),strides=1,
+        x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
             padding='valid',
             name='block4_conv3',
-            weights=layer_dict['block4_conv3'].get_weights(),
+            kernel_initializer='he_normal',
+            #weights=layer_dict['block4_conv3'].get_weights(),
             kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
@@ -280,11 +302,11 @@ class VGG16A2(VGG16):
  
         #Eleventh layer
         x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(512, (3, 3),strides=1,
+        x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
             padding='valid',
             name='block5_conv1',
-            #kernel_initializer='he_normal',
-            weights=layer_dict['block5_conv1'].get_weights(),
+            kernel_initializer='he_normal',
+            #weights=layer_dict['block5_conv1'].get_weights(),
             kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
@@ -292,11 +314,11 @@ class VGG16A2(VGG16):
  
         #Twelth layer
         x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(512, (3, 3),strides=1,
+        x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
             padding='valid',
             name='block5_conv2',
-            #kernel_initializer='he_normal',
-            weights=layer_dict['block5_conv2'].get_weights(),
+            kernel_initializer='he_normal',
+            #weights=layer_dict['block5_conv2'].get_weights(),
             kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
@@ -304,26 +326,26 @@ class VGG16A2(VGG16):
 
         #Thirtenth layer
         x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(512, (3, 3),strides=1,
+        x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
             padding='valid',
             name='block5_conv3',
-            #kernel_initializer='he_normal',
-            weights=layer_dict['block5_conv3'].get_weights(),
+            kernel_initializer='he_normal',
+            #weights=layer_dict['block5_conv3'].get_weights(),
             kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
         #x = GroupNormalization(groups=4,axis=-1)(x)
         x = Activation('relu')(x)
-        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
+        x = MaxPooling2D(pool_size=(2, 2),strides=2,name='feature')(x)
         x = Dropout(0.3)(x)
 
         #Freeze initial layers, except for the last 3:
         #for layer in original_vgg16.layers[:-2]:
         #    layer.trainable = False
         
-        x = Convolution2D(4096, (7, 7),strides=1,padding='valid',kernel_initializer='he_normal',
+        x = Convolution2D(filters.get(4096,4096), (7, 7),strides=1,padding='valid',kernel_initializer='he_normal',
                               kernel_regularizer=regularizers.l2(wd(0.5,S)))(x)
         x = Activation('relu')(x)
         x = Dropout(0.5)(x)
-        x = Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal',
+        x = Convolution2D(filters.get(4096,4096), (1, 1),strides=1,padding='valid',kernel_initializer='he_normal',
                               kernel_regularizer=regularizers.l2(wd(0.5,S)))(x)
         x = Activation('relu')(x)
         x = Dropout(0.5)(x)
@@ -334,35 +356,3 @@ class VGG16A2(VGG16):
 
         return Model(inp,output)
 
-class VGG16A3(VGG16):
-    """
-    VGG variation, uses GroupNormalization and more dropout
-    """
-    def __init__(self,config,ds):
-        super(VGG16A3,self).__init__(config=config,ds=ds,name = "VGG16_A3")
-
-    def _build_architecture(self,input_shape):
-        original_vgg16 = vgg16.VGG16(weights=self.cache_m.fileLocation('vgg16_weights_notop.h5'),
-                                         include_top=False,
-                                         input_shape=input_shape)
-
-        #Freeze initial 3 layers:
-        for layer in original_vgg16.layers[:-13]:
-            layer.trainable = False
-            
-        model = Sequential()
-        model.add(original_vgg16)
-        model.add(Dropout(0.5))
-        model.add(Convolution2D(4096, (5, 5),strides=1,padding='valid',kernel_initializer='he_normal'))
-        model.add(Activation('relu'))
-        model.add(Dropout(0.5))
-        model.add(Convolution2D(4096, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
-        model.add(Activation('relu'))
-        #model.add(Convolution2D(2, (1, 1)))
-        model.add(Dropout(0.5))
-        model.add(Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal'))
-        model.add(Flatten())
-        model.add(Dense(self._ds.nclasses))
-        model.add(Activation('softmax'))
-        
-        return model

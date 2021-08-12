@@ -3,7 +3,7 @@
 
 __all__ = ['VGG16','UNet','Inception','SmallNet']
 
-from .VGG import VGG16,VGG16A2,VGG16A3
+from .VGG import VGG16,EFVGG16
 from .VGG import BayesVGG16, BayesVGG16A2
 from .KMNIST import KNet,BayesKNet,GalKNet
 from .EKNet import BayesEKNet
