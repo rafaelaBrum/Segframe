@@ -183,7 +183,7 @@ class Predictor(object):
             else:
                 if not 1 in l_count:
                     l_count[1] = 0
-                print("Test labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count[0],l_count[1],(l_count[1]/(l_count[0]+l_count[1]))))
+                print("Test labels: {0} are 0; {1} are 1;\n - {2:.2f} are positives".format(l_count.get(0,0),l_count.get(1,0),(l_count.get(1,0)/(l_count.get(0,1)+l_count.get(1,1)))))
             print("Test set: {} items".format(len(y_test)))
 
         if self._ensemble or self._config.delay_load:
