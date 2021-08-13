@@ -146,7 +146,6 @@ class GenericEnsemble(GenericModel):
             f = K.function(model.inputs, [x])
         else:
             layer = model.get_layer('feature')
-            print(layer.output_shape)
             if len(layer.output_shape[1:]) > 1:
                 x = Flatten()(layer.output)
             else:
