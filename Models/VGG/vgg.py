@@ -357,3 +357,8 @@ class EFVGG16(VGG16):
 
         return Model(inp,output)
 
+    def rescaleEnabled(self):
+        """
+        Returns if the network is rescalable
+        """
+        return True

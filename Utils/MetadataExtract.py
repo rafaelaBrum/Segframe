@@ -99,6 +99,7 @@ def _process_test_images(config):
     dsfiles = {}
     testfile = '{}-testset.pik'.format(config.ds)
     if not testfile in files:
+        #TODO: if no test file, test set is defined as last items in metadata array and can be returned
         return None
     else:
         with open(os.path.join(config.sdir,testfile),'rb') as fd:
