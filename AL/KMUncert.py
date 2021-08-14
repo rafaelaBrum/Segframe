@@ -152,7 +152,7 @@ def _km_uncert(trained_models,generator,data_size,**kwargs):
     for iid in un_indexes:
         un_clusters[km.labels_[iid]].append(iid)
 
-    #Save clusters
+    #Saves clusters
     if config.save_var:
         fid = 'al-clustermetadata-{1}-r{0}.pik'.format(acq,model.name)
         cache_m.registerFile(os.path.join(config.logdir,fid),fid)

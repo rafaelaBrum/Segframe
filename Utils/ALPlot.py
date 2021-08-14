@@ -133,9 +133,9 @@ class Plotter(object):
                     if cmax < lmax:
                         cmax = lmax
                 if lang == 'en':
-                    inset_ax.text(0,cmax-0.01,"Acquisition #{}".format(sub_acq),fontsize=8)
+                    inset_ax.text(0,0.97*cmax,"Acquisition #{}".format(sub_acq),fontsize=8)
                 else:
-                    inset_ax.text(0,cmax-0.01,"Aquisição #{}".format(sub_acq),fontsize=8)
+                    inset_ax.text(0,0.97*cmax,"Aquisição #{}".format(sub_acq),fontsize=8)
                 inset_ax.set_xlabel("Cluster #")
                 #inset_ax.set_xticks(list(clusters.keys()))
                 inset_ax.xaxis.set_tick_params(rotation=-35)

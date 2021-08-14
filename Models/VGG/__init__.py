@@ -3,5 +3,5 @@
 
 __all__ = ['vgg']
 
-from .vgg import VGG16,VGG16A2,VGG16A3
+from .vgg import VGG16,EFVGG16
 from .bvgg import BayesVGG16, BayesVGG16A2
