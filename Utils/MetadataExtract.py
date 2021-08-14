@@ -10,6 +10,7 @@ import math
 import argparse
 import pickle
 import importlib
+import re
 from sklearn.cluster import KMeans
     
 def _process_al_metadata(config):
@@ -30,6 +31,8 @@ def _process_al_metadata(config):
         elif f.startswith('al-metadata'):
             ac_id = int(f.split('.')[0].split('-')[3][1:]) + 1
             net = f.split('.')[0].split('-')[2]
+            if not config.ac_n is None and max(config.ac_n)+1 < ac_id:
+                continue
             if (not config.net is None and config.net == net) or config.net is None:
                 acfiles[ac_id] = os.path.join(config.sdir,f)
 
@@ -221,7 +224,8 @@ def _generate_label_files(config):
     labels = {}
     for d in dirs:
         if not d in labels:
-            ol = open(os.path.join(config.cp_orig,d,'label.txt'),'r')
+            if config.keep:
+                ol = open(os.path.join(config.cp_orig,d,'label.txt'),'r')
             labels[d] = {}
             for line in ol.readlines():
                 fields = line.strip().split(' ')
@@ -238,6 +242,24 @@ def _generate_label_files(config):
 
         fd.close()
 
+def _generate_label_from_name(config):
+    """
+    Regenerate the label.txt files based on patch name
+    """
+    pf_form = '(UN-(?P<unc>[0-9])+-){,1}(?P<tcga>TCGA-.*-.*-.*-.*-.*)-(?P<x>[0-9]+)-(?P<y>[0-9]+)-(?P<s1>[0-9]+)-(?P<s2>[0-9]+)(_(?P<lb>[01])){,1}\\.png'
+    rg = re.compile(pf_form)
+    dirs = os.listdir(config.out_dir)
+
+    for d in dirs:
+        files = os.listdir(os.path.join(config.out_dir,d))
+        files = list(filter(lambda i:i.endswith('png'),files))
+        label = open(os.path.join(config.out_dir,d,'label.txt'),'w')
+        for f in files:
+            match = rg.match(f)
+            if not match:
+                continue
+            line = '{} {} {} {} {}\n'.format(f,match.group('lb'),match.group('tcga'),match.group('x'),match.group('y'))
+            label.write(line)
 
 def _append_label(config):
     """
@@ -629,14 +651,23 @@ def process_al_metadata(config):
         copy_to = os.path.join(config.out_dir,'testset')
         if not os.path.isdir(copy_to):
             os.mkdir(copy_to)
+        if config.gen_label:
+            label = open(os.path.join(config.out_dir,'testset','label.txt'),'w')
         for img in ts_imgs:
             img_path = change_root(img.getPath(),config.cp_orig)
             img_name = os.path.basename(img_path)
             shutil.copy(img_path,os.path.join(copy_to,img_name))
-
+            if config.gen_label:
+                im_lb = img_name.split('.')[0].split('_')[1]
+                x,y = img.getCoord()
+                label.write("{} {} {} {} {}\n".format(img_name,im_lb,img.getOrigin(),x,y))
+                
     if config.gen_label:
         print("Generating label files...")
-        _generate_label_files(config)
+        if config.keep:
+            _generate_label_files(config)
+        else:
+            _generate_label_from_name(config)
     elif config.add_label:
         print("Appending label to file names...")
         _append_label(config)

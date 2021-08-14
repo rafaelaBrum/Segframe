@@ -1683,7 +1683,8 @@ class Plotter(object):
             posa = {}
             un_clusters = {}
             cl_labels = {}
-            #print('ACQ {} ****************************'.format(acq))
+            verbose = 1
+            print('ACQ {} ****************************'.format(acq))
             with open(os.path.join(config.sdir,fc),'rb') as fd:
                 (X,Y),clusters,un_indexes = pickle.load(fd)
             with open(os.path.join(config.sdir,fu),'rb') as fd:
@@ -1700,8 +1701,8 @@ class Plotter(object):
                 #If debug
                 if config.debug:
                     expected = Y
-                    #print("Cluster {}, # of items: {}".format(k,ind.shape[0]))
-                    #print("Cluster {} first items positions in index array (first 30): {}".format(k,posa[k][:30]))
+                    print("Cluster {}, # of items: {}".format(k,ind.shape[0]))
+                    print("Cluster {} first items positions in index array (first 30): {}".format(k,posa[k][:30]))
                     #Check % of items of each class in cluster k
                     c_labels = expected[ind]
                     unique,count = np.unique(c_labels,return_counts=True)
@@ -1719,24 +1720,36 @@ class Plotter(object):
             #Selection
             ac_count = 0
             acquired = []
-            j = 0
+            j,n = 0,0
             cmean = np.asarray([np.mean(posa[k]) for k in range(config.kmclusters)])
             glb = np.sum(cmean)
             frac = (glb/cmean)/np.sum(glb/cmean)
+            frac[np.isnan(frac)] = 1/config.kmclusters #Prevent NaN values if cmean is zero
+            sel = np.zeros(config.kmclusters,dtype=np.int32)
             while ac_count < config.query:
-                cln = j % config.kmclusters
+                cln = n % config.kmclusters
                 q = clusters[cln]
                 cl_aq = int(np.ceil(frac[cln]*config.query))
-                if len(q) >= cl_aq:
-                    acquired.extend(q[:cl_aq])
+                cl_aq = 1 if cl_aq == 0 else cl_aq #Select at least 1 patch from each cluster
+                first = sel[cln]
+                if len(q) >= first + cl_aq:
+                    acquired.extend(q[first:first+cl_aq])
                     ac_count += cl_aq
+                    sel[cln] = first+cl_aq
+                    j += 1
+                    n = j
+                    if config.debug or verbose > 0:
+                        print("[km_uncert] Selected {} patches for acquisition from cluster {}".format(cl_aq,cln))
                 else:
-                    #acquired.extend(q)
-                    #ac_count += len(q)
-                    print("Cluster {} exausted. Required {} patches. Will try to acquire patches from cluster {}".format(cln,cl_aq,(cln+1)%config.kmclusters))
-                j += 1
-
-            #print("Total selected: {}".format(len(acquired)))
+                    l = len(q)
+                    acquired.extend(q[first:l])
+                    ac_count += l-first
+                    sel[cln] = l
+                    np.random.seed(n*(n+1))
+                    r = np.random.randint(0,config.kmclusters)
+                    n = r if r != n else n+1
+                    if verbose > 0:
+                        print("[km_uncert] Cluster {} exausted, all {} patches acquired. Will try to acquire remaining patches from cluster {}".format(cln,l-first,(n)%config.kmclusters))
             acquired = np.asarray(acquired[:config.query],dtype=np.int32)
             return acquired,uncertainties,un_clusters,cl_labels
         ####
