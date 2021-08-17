@@ -361,4 +361,4 @@ class EFVGG16(VGG16):
         """
         Returns if the network is rescalable
         """
-        return True
+        return False
