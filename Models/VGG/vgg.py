@@ -164,7 +164,8 @@ class EFVGG16(VGG16):
             S = self.data_size
         wd = lambda p,N: (1-p)*0.5/N
 
-        filters = {32:self.rescale('width',32),
+        filters = {7:self.rescale('width',7),
+                    32:self.rescale('width',32),
                     48:self.rescale('width',48),
                     64:self.rescale('width',64),
                     80:self.rescale('width',80),
@@ -176,11 +177,13 @@ class EFVGG16(VGG16):
                     256:self.rescale('width',256),
                     512:self.rescale('width',512),
                     4096:self.rescale('width',4096)}
-            
+
+        depth = round(self.rescale('depth',13))+3 #13 feature layers, keep the first tree always
+        
         inp = Input(shape=input_shape)
         x = Convolution2D(filters.get(64,64), (3, 3),input_shape=input_shape,
                     strides=1,
-                    padding='valid',
+                    padding='same',
                     name='block1_conv1',
                     kernel_initializer='he_normal',
                     #weights=layer_dict['block1_conv1'].get_weights(),
@@ -228,131 +231,142 @@ class EFVGG16(VGG16):
         x = Dropout(0.1)(x)
  
         #Fifth layer
-        x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(filters.get(256,256), (3, 3),strides=1,
-                padding='valid',
-                name='block3_conv1',
-                kernel_initializer='he_normal',
-                #weights=layer_dict['block3_conv1'].get_weights(),
-                kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
-        x = Activation('relu')(x)
-        x = Dropout(0.2)(x)
+        if depth >= 6:
+            x = ZeroPadding2D(padding=1)(x)
+            x = Convolution2D(filters.get(256,256), (3, 3),strides=1,
+                                  padding='valid',
+                                  name='block3_conv1',
+                                  kernel_initializer='he_normal',
+                                  #weights=layer_dict['block3_conv1'].get_weights(),
+                                  kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+            #x = GroupNormalization(groups=4,axis=-1)(x)
+            x = Activation('relu')(x)
+            x = Dropout(0.2)(x)
  
         #Sith layer
-        x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(filters.get(256,256), (3, 3),strides=1,
-                padding='valid',
-                name='block3_conv2',
-                kernel_initializer='he_normal',
-                #weights=layer_dict['block3_conv2'].get_weights(),
-                kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
-        x = Activation('relu')(x)
-        x = Dropout(0.2)(x)
- 
+        if depth >= 7:
+            x = ZeroPadding2D(padding=1)(x)
+            x = Convolution2D(filters.get(256,256), (3, 3),strides=1,
+                                  padding='valid',
+                                  name='block3_conv2',
+                                  kernel_initializer='he_normal',
+                                  #weights=layer_dict['block3_conv2'].get_weights(),
+                                  kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+            #x = GroupNormalization(groups=4,axis=-1)(x)
+            x = Activation('relu')(x)
+            x = Dropout(0.2)(x)
+
         #Seventh layer
-        x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(filters.get(256,256), (3, 3),strides=1,
-            padding='valid',
-            name='block3_conv3',
-            kernel_initializer='he_normal',
-            #weights=layer_dict['block3_conv3'].get_weights(),
-            kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
-        x = Activation('relu')(x)
-        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        x = Dropout(0.2)(x)
+        if depth >= 8:
+            x = ZeroPadding2D(padding=1)(x)
+            x = Convolution2D(filters.get(256,256), (3, 3),strides=1,
+                                  padding='valid',
+                                  name='block3_conv3',
+                                  kernel_initializer='he_normal',
+                                  #weights=layer_dict['block3_conv3'].get_weights(),
+                                  kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+            #x = GroupNormalization(groups=4,axis=-1)(x)
+            x = Activation('relu')(x)
+            x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
+            x = Dropout(0.2)(x)
  
         #Eigth layer
-        x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
-            padding='valid',
-            name='block4_conv1',
-            kernel_initializer='he_normal',
-            #weights=layer_dict['block4_conv1'].get_weights(),
-            kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
-        x = Activation('relu')(x)
-        x = Dropout(0.2)(x)
- 
+        if depth >= 9:
+            x = ZeroPadding2D(padding=1)(x)
+            x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
+                                  padding='valid',
+                                  name='block4_conv1',
+                                  kernel_initializer='he_normal',
+                                  #weights=layer_dict['block4_conv1'].get_weights(),
+                                  kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+            #x = GroupNormalization(groups=4,axis=-1)(x)
+            x = Activation('relu')(x)
+            x = Dropout(0.2)(x)
+
         #Nineth layer
-        x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
-            padding='valid',
-            name='block4_conv2',
-            kernel_initializer='he_normal',
-            #weights=layer_dict['block4_conv2'].get_weights(),
-            kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
-        x = Activation('relu')(x)
-        x = Dropout(0.2)(x)
+        if depth >= 10:
+            x = ZeroPadding2D(padding=1)(x)
+            x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
+                                  padding='valid',
+                                  name='block4_conv2',
+                                  kernel_initializer='he_normal',
+                                  #weights=layer_dict['block4_conv1'].get_weights(),
+                                  kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+            #x = GroupNormalization(groups=4,axis=-1)(x)
+            x = Activation('relu')(x)
+            x = Dropout(0.2)(x)        
  
         #Tenth layer
-        x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
-            padding='valid',
-            name='block4_conv3',
-            kernel_initializer='he_normal',
-            #weights=layer_dict['block4_conv3'].get_weights(),
-            kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
-        x = Activation('relu')(x)
-        x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
-        x = Dropout(0.2)(x)
+        if depth >= 11:
+            x = ZeroPadding2D(padding=1)(x)
+            x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
+                                  padding='valid',
+                                  name='block4_conv3',
+                                  kernel_initializer='he_normal',
+                                  #weights=layer_dict['block4_conv2'].get_weights(),
+                                  kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+            #x = GroupNormalization(groups=4,axis=-1)(x)
+            x = Activation('relu')(x)
+            x = MaxPooling2D(pool_size=(2, 2),strides=2)(x)
+            x = Dropout(0.2)(x)
  
         #Eleventh layer
-        x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
-            padding='valid',
-            name='block5_conv1',
-            kernel_initializer='he_normal',
-            #weights=layer_dict['block5_conv1'].get_weights(),
-            kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
-        x = Activation('relu')(x)
-        x = Dropout(0.3)(x)
+        if depth >= 12:
+            x = ZeroPadding2D(padding=1)(x)
+            x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
+                                  padding='valid',
+                                  name='block5_conv1',
+                                  kernel_initializer='he_normal',
+                                  #weights=layer_dict['block4_conv3'].get_weights(),
+                                  kernel_regularizer=regularizers.l2(wd(0.2,S)))(x)
+            #x = GroupNormalization(groups=4,axis=-1)(x)
+            x = Activation('relu')(x)
+            x = Dropout(0.2)(x)
  
         #Twelth layer
-        x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
-            padding='valid',
-            name='block5_conv2',
-            kernel_initializer='he_normal',
-            #weights=layer_dict['block5_conv2'].get_weights(),
-            kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
-        x = Activation('relu')(x)
-        x = Dropout(0.3)(x)
+        if depth >= 12:
+            print(f"depth {depth}")
+            x = ZeroPadding2D(padding=1)(x)
+            x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
+                                  padding='valid',
+                                  name='block5_conv2',
+                                  kernel_initializer='he_normal',
+                                  #weights=layer_dict['block5_conv1'].get_weights(),
+                                  kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
+            #x = GroupNormalization(groups=4,axis=-1)(x)
+            x = Activation('relu')(x)
+            x = Dropout(0.3)(x)
 
         #Thirtenth layer
-        x = ZeroPadding2D(padding=1)(x)
-        x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
-            padding='valid',
-            name='block5_conv3',
-            kernel_initializer='he_normal',
-            #weights=layer_dict['block5_conv3'].get_weights(),
-            kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
-        #x = GroupNormalization(groups=4,axis=-1)(x)
-        x = Activation('relu')(x)
+        if depth >= 13:
+            x = ZeroPadding2D(padding=1)(x)
+            x = Convolution2D(filters.get(512,512), (3, 3),strides=1,
+                                  padding='valid',
+                                  name='block5_conv3',
+                                  kernel_initializer='he_normal',
+                                  #weights=layer_dict['block5_conv3'].get_weights(),
+                                  kernel_regularizer=regularizers.l2(wd(0.3,S)))(x)
+            #x = GroupNormalization(groups=4,axis=-1)(x)
+            x = Activation('relu')(x)
         x = MaxPooling2D(pool_size=(2, 2),strides=2,name='feature')(x)
         x = Dropout(0.3)(x)
-
-        #Freeze initial layers, except for the last 3:
-        #for layer in original_vgg16.layers[:-2]:
-        #    layer.trainable = False
         
-        x = Convolution2D(filters.get(4096,4096), (7, 7),strides=1,padding='valid',kernel_initializer='he_normal',
-                              kernel_regularizer=regularizers.l2(wd(0.5,S)))(x)
-        x = Activation('relu')(x)
-        x = Dropout(0.5)(x)
-        x = Convolution2D(filters.get(4096,4096), (1, 1),strides=1,padding='valid',kernel_initializer='he_normal',
-                              kernel_regularizer=regularizers.l2(wd(0.5,S)))(x)
-        x = Activation('relu')(x)
-        x = Dropout(0.5)(x)
-        x = Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal')(x)
+        #x = Convolution2D(filters.get(4096,4096), (7, 7),strides=1,padding='valid',kernel_initializer='he_normal',
+        #                      kernel_regularizer=regularizers.l2(wd(0.5,S)))(x)
+
         x = Flatten()(x)
-        x = Dense(self._ds.nclasses)(x)
+        x = Dense(4096,kernel_initializer='he_normal')(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.5)(x)
+        
+        #x = Convolution2D(filters.get(4096,4096), (1, 1),strides=1,padding='valid',kernel_initializer='he_normal',
+        #                      kernel_regularizer=regularizers.l2(wd(0.5,S)))(x)
+        x = Dense(4096,kernel_initializer='he_normal')(x)
+        x = Activation('relu')(x)
+        x = Dropout(0.5)(x)
+        
+        #x = Convolution2D(self._ds.nclasses, (1, 1),strides=1,padding='valid',kernel_initializer='he_normal')(x)
+        x = Dense(self._ds.nclasses,kernel_initializer='he_normal')(x)
         output = Activation('softmax')(x)
 
         return Model(inp,output)
@@ -361,4 +375,4 @@ class EFVGG16(VGG16):
         """
         Returns if the network is rescalable
         """
-        return False
+        return True
