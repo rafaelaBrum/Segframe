@@ -122,7 +122,7 @@ class VGG16(GenericEnsemble):
         return (model,parallel_model)
 
     def _build_architecture(self,input_shape):
-        original_vgg16 = vgg16.VGG16(weights=self.cache_m.fileLocation('vgg16_weights_notop.h5'),
+        original_vgg16 = vgg16.VGG16(weights='imagenet',
                                          include_top=False,
                                          input_shape=input_shape)
 
