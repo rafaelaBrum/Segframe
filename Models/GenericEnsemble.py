@@ -135,7 +135,7 @@ class GenericEnsemble(GenericModel):
             else:
                 model = s_model
 
-        f = None
+        x = None
         if self.is_ensemble():
             if parallel:
                  p_features = [model.get_layer('EM{}-{}'.format(e,self.name)) for e in range(self._config.emodels)]
@@ -143,14 +143,11 @@ class GenericEnsemble(GenericModel):
             else:
                  layers = [model.get_layer('EM{}-{}'.format(e,'feature')).output for e in range(self._config.emodels)]
             x = Concatenate()(layers)
-            f = K.function(model.inputs, [x])
         else:
-            layer = model.get_layer('feature')
-            if len(layer.output_shape[1:]) > 1:
-                x = Flatten()(layer.output)
-            else:
-                x = layer.output
-            f = K.function(model.inputs, [x])
+            x = model.get_layer('feature').output
+
+        x = Flatten()(x)
+        f = K.function(model.inputs, [x])
 
         return f
         
