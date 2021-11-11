@@ -161,7 +161,7 @@ class GenericDS(ABC):
     def _shuffle(self,X,Y):
         #Shuffle samples and labels maintaining relative order
         combined = list(zip(X,Y))
-        random.shuffle(combined)
+        # random.shuffle(combined)
         X[:],Y[:] = zip(*combined)
 
         return X,Y
